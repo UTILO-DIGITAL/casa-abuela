@@ -57,10 +57,10 @@ const ctx = {
   ScriptApp: { getService: () => ({ getUrl: () => '' }) },
   Utilities: { getUuid: () => 'u' + Math.random().toString(36).slice(2, 8),
     formatDate: (d, tz, f) => f === 'yyyy-MM-dd' ? HOY : HOY + 'T10:00:00' },
-  ContentService: {}, HtmlService: {}, console,
+  ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, api_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -211,3 +211,11 @@ err = ''; try { R.guardarPersona('(N) - Nacio', { fallecio: '2099' }, M_, V2); }
 ver('ni una del futuro', /fallecimiento/.test(err));
 d = R.guardarPersona(M_, { cumple: '1952' }, M_, V2);
 ver('cumpleaños con solo el año', quien(M_).cumple === '00/00/1952');
+
+// ---------- v4.17: la clave de la familia ----------
+ver('sin CLAVE en MESA_CONFIG, no se pide', R.api_('getDatos', [V2], undefined).ok === true);
+hojas.MESA_CONFIG.filas.push(['CLAVE', 'Paella']);
+ver('con CLAVE, sin clave no se puede', /^CLAVE/.test(R.api_('getDatos', [V2], '').error || ''));
+ver('con una clave que no es, tampoco', /^CLAVE/.test(R.api_('getDatos', [V2], 'paela').error || ''));
+ver('con la clave, sí (da igual mayúsculas y acentos)', R.api_('getDatos', [V2], ' PÁELLA ').ok === true);
+ver('y también para guardar', /^CLAVE/.test(R.api_('guardarPersona', [M_, { alergias: 'x' }, M_, V2], 'no').error || ''));

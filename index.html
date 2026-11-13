@@ -549,7 +549,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.16.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.17.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -607,9 +607,9 @@
    * - web servida por Apps Script: google.script.run.
    */
   function llamar(fn, args) {
-    if (window.MESA_PREVIEW) return window.MESA_PREVIEW.llamar(fn, args);
+    if (window.MESA_PREVIEW) return window.MESA_PREVIEW.llamar(fn, args, leerClave());
     if (window.CASA_API) {
-      return fetch(window.CASA_API, { method: 'POST', credentials: 'omit', redirect: 'follow', body: JSON.stringify({ fn: fn, args: args || [] }) })
+      return fetch(window.CASA_API, { method: 'POST', credentials: 'omit', redirect: 'follow', body: JSON.stringify({ fn: fn, args: args || [], clave: leerClave() }) })
         .then(function (r) { if (!r.ok) throw new Error('network'); return r.json(); })
         .then(function (j) { if (!j || !j.ok) throw new Error((j && j.error) || ''); return j.r; });
     }
@@ -620,8 +620,35 @@
   function leerYo() { try { return localStorage.getItem(CLAVE_YO) || ''; } catch (e) { return ''; } }
   function guardarYo(v) { try { localStorage.setItem(CLAVE_YO, v); } catch (e) {} }
   /* Errores en castellano y con qué hacer */
+  /* v4.17: la clave de la familia, una vez en cada móvil */
+  const CLAVE_CLAVE = 'casa-abuela-clave';
+  function leerClave() { try { return localStorage.getItem(CLAVE_CLAVE) || ''; } catch (e) { return ''; } }
+  function guardarClave(v) { try { localStorage.setItem(CLAVE_CLAVE, v); } catch (e) {} }
+  function esErrorClave(err) { return /^CLAVE/.test(String((err && err.message) || '').replace(/^(Exception|Error|ScriptError):\s*/i, '').trim()); }
+  let pidiendoClave = false;
+  function pedirClave() {
+    if (pidiendoClave) return;
+    pidiendoClave = true;
+    const habia = !!leerClave();
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Clave de la familia</h2></div>' +
+      '<div class="dlg-cuerpo"><p class="ayuda">Para ver Casa Abuela hace falta la clave que os hemos pasado por el grupo. Solo se pide una vez en este móvil.</p>' +
+      '<label class="campo" for="dlg-clave">Clave<input id="dlg-clave" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>' +
+      '<div class="dlg-pie"><p class="dlg-error" id="dlg-error"' + (habia ? '' : ' hidden') + '>' + (habia ? 'Esa clave no es. Vuelve a probar.' : '') + '</p><div class="botones">' +
+      '<button type="button" class="principal" id="dlg-guardar">Entrar</button></div></div>');
+    const entrar = function () {
+      const v = $('dlg-clave').value.trim();
+      if (!v) { errorDialogo('Escribe la clave.'); return; }
+      guardarClave(v);
+      pidiendoClave = false;
+      cerrarDialogo();
+      cargar();
+    };
+    $('dlg-guardar').addEventListener('click', entrar);
+    $('dlg-clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') entrar(); });
+  }
   function mensajeError(err) {
     let m = String((err && err.message) || '').replace(/^(Exception|Error|ScriptError):\s*/i, '').trim();
+    if (/^CLAVE/.test(m)) return 'Hace falta la clave de la familia.';
     if (!m || /network|failed to fetch|NetworkError|connection/i.test(m)) return 'No hay conexión o Google no responde. Comprueba internet y vuelve a probar.';
     if (/lock|timeout|timed out|tiempo/i.test(m) && !/otra persona/.test(m)) return 'Google ha tardado demasiado. Vuelve a probar en unos segundos.';
     if (/permission|permiso|authoriz|autoriz/i.test(m)) return 'La web no tiene permiso para escribir en el Excel. Avisa a Javi.';
@@ -859,6 +886,7 @@
       cargando = false;
       document.querySelector('.pagina').classList.remove('cargando');
       marcarActualizando(false);
+      if (esErrorClave(arguments[0])) { pedirClave(); return; }
       aviso('No hemos podido cargar el calendario. ' + mensajeError(arguments[0]), 8000);
     });
   }
@@ -1789,6 +1817,7 @@
     }).catch(function (err) {
       pendientes--;
       if (pendientes === 0) { datos = JSON.parse(copia); pintar(); }
+      if (esErrorClave(err)) { pedirClave(); return; }
       aviso('No se ha guardado. ' + mensajeError(err), 9000);
       cargar(true);
     });
@@ -1898,7 +1927,8 @@
   function errorDialogo(t) { const e = $('dlg-error'); if (e) { e.textContent = t; e.hidden = false; } }
   // El aviso «close» llega un momento después: si para entonces ya se ha abierto otra ventana, no se vacía (v4.12)
   $dlg.addEventListener('close', function () { if (!$dlg.open) $dlg.innerHTML = ''; });
-  $dlg.addEventListener('click', function (e) { if (e.target === $dlg) cerrarDialogo(); });
+  $dlg.addEventListener('click', function (e) { if (e.target === $dlg && !pidiendoClave) cerrarDialogo(); });
+  $dlg.addEventListener('cancel', function (e) { if (pidiendoClave) e.preventDefault(); });  // v4.17: la clave no se puede saltar
   function pie(textoGuardar, extra) {
     return '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones">' +
       '<button type="button" class="principal" id="dlg-guardar">' + textoGuardar + '</button>' + (extra || '') +
