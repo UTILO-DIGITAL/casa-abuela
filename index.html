@@ -190,6 +190,11 @@
   /* v4.12: nada se sale de la ventana (un fieldset crece por defecto hasta el desplegable más largo) */
   .dlg-cuerpo fieldset { min-width: 0; }
   .dlg-cuerpo .campo select, .dlg-cuerpo .campo input { width: 100%; min-width: 0; }
+  .basico { display: grid; gap: 4px; margin: 0; padding: 10px 14px; border-radius: var(--radio); background: #fff; border: 1px solid var(--color-linea); }
+  .basico div { display: flex; gap: 8px; }
+  .basico dt { min-width: 64px; font-size: 14px; font-weight: 800; color: var(--color-texto-suave); }
+  .basico dd { margin: 0; font-weight: 700; }
+  .basico .alergia dd { color: var(--color-error); }
   .falta-ficha { margin: 0; padding: 10px 14px; border-radius: var(--radio); background: var(--color-destacado-claro); font-weight: 700; color: var(--color-error); }
   .campo input[type="date"] { font: inherit; min-height: 44px; padding: 8px 10px; border-radius: calc(var(--radio) / 2); border: 1px solid var(--color-principal-oscuro); background: #fff; color: var(--color-texto); }
   .tabla-turnos { width: 100%; border-collapse: collapse; font-size: 16px; }
@@ -491,7 +496,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.13.4</footer>
+  <footer>Hecho con cariño por Utilo · v4.13.5</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1642,10 +1647,19 @@
     let html = '<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2><div><span class="p ' + clase(p) + '"><small>' + esc(deQuien(p)) + '</small></span></div></div><div class="dlg-cuerpo">';
     /* v4.12: desde Semana y Hoy y mañana, solo ese turno; sus datos se cambian en Personas */
     if (fecha) {
+      // v4.13: lo básico para no confundir a nadie (solo se lee; se cambia en su ficha)
+      const e = edad(p), completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
+      const m = p.menu ? etiquetaMenu(p.menu) : '';
+      const basico = [
+        completo ? ['Nombre', completo] : null,
+        e !== null ? ['Edad', e === 1 ? '1 año' : e + ' años'] : null,
+        ['Come', m === 'Entero' ? 'Entero' : (m === 'Medio' ? 'La mitad' : (m === 'Nada' ? 'No come' : (m || 'Sin anotar')))],
+        p.alergias ? ['No come', p.alergias] : null,
+      ].filter(Boolean);
+      html += '<dl class="basico">' + basico.map(function (b) { return '<div' + (b[0] === 'No come' ? ' class="alergia"' : '') + '><dt>' + b[0] + '</dt><dd>' + esc(b[1]) + '</dd></div>'; }).join('') + '</dl>';
       html += '<fieldset><legend>' + esc(nombreTurno(fecha, turno).replace(/^./, function (c) { return c.toUpperCase(); })) + '</legend>' +
         '<label class="check"><input type="checkbox" data-k="' + fecha + '|' + turno + '"' + (a ? ' checked' : '') + '> Viene' + (a && a.fijo ? ' (va siempre este día)' : '') + '</label>' +
         '<label class="campo" for="dlg-nota">Nota para ese día<input id="dlg-nota" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: llega tarde" value="' + esc(a ? a.nota : '') + '"></label></fieldset>' +
-        (p.alergias ? '<p class="ayuda"><b>No come:</b> ' + esc(p.alergias) + '</p>' : '') +
         '<button type="button" class="enlace ver-ficha" id="dlg-ver-ficha">Ir a su ficha para cambiar sus datos</button></div>' + pie('Guardar');
       abrirDialogo(html);
       $('dlg-ver-ficha').addEventListener('click', function () { irAPersona(id); });  // la ficha se abre en la misma ventana
