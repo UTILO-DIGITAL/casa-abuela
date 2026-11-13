@@ -515,7 +515,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.14.1</footer>
+  <footer>Hecho con cariño por Utilo · v4.14.2</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1954,37 +1954,51 @@
   }
 
   /* ---------- Compartir por WhatsApp ---------- */
+  /* v4.14.2: el mensaje de WhatsApp, más legible: negritas (*…*), un icono por cosa y la gente en lista */
+  const ICONO_TURNO = { COMIDA: '🍽️', CENA: '🌙', DORMIR: '🛏️' };
   function mensaje(tipo) {
     const dias = semana(lunesSel);
-    const enlace = datos.url ? '\n\nApúntate aquí: ' + datos.url : '';
-    const nombres = function (ids) { return lista(ids.map(function (id) { return (persona(id) || {}).apodo || id; })); };
+    const enlace = datos.url ? '\n\n👉 Apúntate aquí: ' + datos.url : '';
+    const titulo = '🏡 *Casa Abuela*\n_Semana del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '_';
+    const apodo = function (id) { return (persona(id) || {}).apodo || id; };
     if (tipo === 'huecos') {
+      // Lo mismo que la pestaña Huecos: sin nadie o solo con el servicio (no cuentan si no hace falta o la abuela no está)
       const lineas = [];
       dias.forEach(function (f) {
         if (f < hoy()) return;
-        const faltan = TURNOS.filter(function (t) { return sinTurno(f, t.id) === null && !compania(idsDe(f, t.id), t.id).length; }).map(function (t) { return t.nombre.toLowerCase(); });
-        if (faltan.length) lineas.push('- ' + diaLargo(f) + ': ' + lista(faltan));
+        const faltan = [];
+        TURNOS.forEach(function (t) {
+          if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id)) return;
+          const ids = idsDe(f, t.id);
+          if (ids.some(function (id) { return !esServicio(persona(id)); })) return;
+          faltan.push((t.id === 'DORMIR' ? 'noche' : t.nombre.toLowerCase()) + (ids.length ? ' (solo el servicio)' : ''));
+        });
+        if (faltan.length) lineas.push('• *' + diaLargo(f) + '*: ' + lista(faltan));
       });
-      return 'Casa Abuela, semana del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '\n\n' +
-        (lineas.length ? 'Falta alguien para:\n' + lineas.join('\n') : 'Están todas las comidas y cenas cubiertas. Gracias a todos.') + enlace;
+      return titulo + '\n\n' + (lineas.length ? '⚠️ *Falta alguien para:*\n' + lineas.join('\n') : '✅ Están todas las comidas, cenas y noches cubiertas. ¡Gracias a todos!') + enlace;
     }
-    const lista_dias = tipo === 'semana' ? dias : [tipo];
-    const bloques = lista_dias.map(function (f) {
-      const lineas = TURNOS.map(function (t) {
+    const bloques = (tipo === 'semana' ? dias : [tipo]).map(function (f) {
+      let b = '📅 *' + diaLargo(f) + '*';
+      if (fueraTodo(f)) return b + '\n🧳 La abuela no está' + (fuera(f).motivoFuera ? ' (' + fuera(f).motivoFuera + ')' : '') + '.';
+      textoCumples(f).forEach(function (c) { b += '\n🎂 ' + c; });
+      const nd = notaDia(f);
+      if (nd && nd.nota) b += '\n📝 ' + nd.nota;
+      TURNOS.forEach(function (t) {
         const ids = idsDe(f, t.id), comp = compania(ids, t.id), serv = servicioDe(ids, t.id), motivo = sinTurno(f, t.id);
-        let l = '- ' + t.nombre + ': ';
-        if (fueraTurno(f, t.id)) l += 'la abuela no está' + (comp.length ? ' (iba ' + nombres(comp) + ')' : '');
-        else if (motivo !== null && !comp.length) l += 'no hace falta nadie' + (motivo ? ' (' + motivo + ')' : '');
-        else l += comp.length ? nombres(comp) : 'falta alguien';
-        if (serv.length) l += ' (y ' + nombres(serv) + ', del servicio)';
-        return l;
+        b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (comp.length > 1 ? ' (' + comp.length + ')' : '');
+        if (fueraTurno(f, t.id)) b += '\n🧳 La abuela no está';
+        else if (motivo !== null && !comp.length) { b += '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.'; return; }
+        else if (!comp.length) b += '\n⚠️ Falta alguien';
+        comp.concat(serv).forEach(function (id) {
+          const a = apunte(f, t.id, id);
+          b += '\n• ' + apodo(id) + (serv.indexOf(id) !== -1 ? ' (servicio)' : '') + (a && a.nota ? ' _(' + a.nota + ')_' : '');
+        });
       });
-      const extra = textoCumples(f).concat(notaDia(f) && notaDia(f).nota ? [notaDia(f).nota] : []);
-      if (fueraTodo(f)) return diaLargo(f) + ': la abuela no está' + (fuera(f).motivoFuera ? ' (' + fuera(f).motivoFuera + ')' : '') + '.';
-      return diaLargo(f) + ', contamos con:\n' + lineas.join('\n') + (extra.length ? '\n' + extra.map(function (e) { return '(' + e + ')'; }).join('\n') : '');
+      return b;
     });
-    return (tipo === 'semana' ? 'Casa Abuela, semana del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '\n\n' : '') + bloques.join('\n\n') + enlace;
+    return (tipo === 'semana' ? titulo + '\n\n' : '🏡 *Casa Abuela*\n\n') + bloques.join('\n\n— — —\n\n') + enlace;
   }
+
 
   function abrirCompartir() {
     const dias = semana(lunesSel);
