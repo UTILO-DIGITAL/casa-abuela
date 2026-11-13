@@ -312,8 +312,10 @@
   .miembros { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
   .miembros.hijos { margin-top: 8px; }
   .miembros .et { font-size: 13px; font-weight: 800; color: var(--color-texto-suave); margin-right: 2px; }
-  button.persona-chip { min-height: 40px; justify-content: center; }
-  button.persona-chip { flex-direction: row; align-items: center; gap: 6px; }
+  .nucleo-card .per-filas { border-top: 0; }
+  .nucleo-card .per-filas li:last-child { border-bottom: 0; }
+  button.fila-persona.fila-caja { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 2px; }
+  .et-hijos { margin: 8px 0 0; padding-top: 6px; border-top: 1px solid var(--color-linea); font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
   .punto-falta { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--color-error); flex: none; }
   .leyenda-falta { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; color: var(--color-texto-suave); }
   button.enlace.ver-ficha { justify-self: start; margin: 0; text-align: left; }
@@ -463,7 +465,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.12.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.12.1</footer>
 </div>
 
 <div id="impresion"></div>
@@ -935,7 +937,14 @@
     const enArbol = hayNucleos() && !q && filtroPersonas === 'todos';
     $('per-lista').innerHTML = orden.map(function (f) {
       const cab = '<h3 class="per-familia">' + (f === 'Servicio' || f === 'Otros' ? esc(f) : 'Familia ' + esc(f)) + ' <span>' + porFamilia[f].length + '</span></h3>';
-      if (enArbol) return (f === orden[0] && conFalta.length ? '<p class="leyenda-falta"><span class="punto-falta" aria-hidden="true"></span> Le faltan datos: tócalo para ver qué, o mira «Les falta algo».</p>' : '') + '<section class="familia">' + cab + (f !== 'Servicio' && f !== 'Otros' ? arbolFamilia(porFamilia[f]) : tarjeta('', '', porFamilia[f], [], '')) + '</section>';
+      if (enArbol) {
+        const leyenda = f === orden[0] && conFalta.length ? '<p class="leyenda-falta"><span class="punto-falta" aria-hidden="true"></span> Le faltan datos: tócalo para ver qué, o mira «Les falta algo».</p>' : '';
+        if (f === 'Servicio' || f === 'Otros') return leyenda + '<section class="familia">' + cab + tarjeta('', '', porFamilia[f], [], '') + '</section>';
+        // v4.12.1: la familia se llama como el núcleo de arriba («Familia Canela Ribas»), si tiene uno solo
+        const a = arbolFamilia(porFamilia[f]);
+        const titulo = a.nombre || 'Familia ' + f;
+        return leyenda + '<section class="familia"><h3 class="per-familia">' + esc(titulo) + ' <span>' + porFamilia[f].length + '</span></h3>' + a.html + '</section>';
+      }
       return cab + '<ul class="per-filas">' + porFamilia[f].map(function (p) { return filaPersona(p); }).join('') + '</ul>';
     }).join('');
   }
@@ -947,15 +956,17 @@
       (completo && completo !== p.apodo ? '<small class="fp-completo">' + esc(completo) + '</small>' : '') + '<small>' + esc(deQuien(p)) + '</small></span>' +
       (fl.length ? '<span class="fp-falta">Falta: ' + esc(lista_(fl)) + '</span>' : '') + '</button></li>';
   }
-  /* v4.12: en el árbol, cada persona es un botón con su apodo; si le falta algo, un punto rojo (lo que falta, dentro) */
-  function botonPersona(p) {
-    return '<button type="button" class="p ' + clase(p) + ' persona-chip" data-persona="' + esc(p.id) + '"><b>' + esc(p.apodo) + '</b>' +
-      (falta(p).length ? '<span class="punto-falta" role="img" aria-label="faltan datos" title="Faltan datos"></span>' : '') + '</button>';
+  /* v4.12.1: dentro de cada caja, una lista: el apodo, su nombre completo en pequeño y un punto rojo si le falta algo */
+  function filaCaja(p) {
+    const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
+    return '<li><button type="button" class="fila-persona fila-caja" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' + esc(p.apodo) + '</b>' +
+      (completo && completo !== p.apodo ? '<small>' + esc(completo) + '</small>' : '') + '</span>' +
+      (falta(p).length ? '<span class="punto-falta" role="img" aria-label="faltan datos" title="Faltan datos"></span>' : '') + '</button></li>';
   }
   function tarjeta(titulo, estado, cabezas, hijos, dentro) {
     return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + (estado ? '<span class="estado-pareja">' + esc(estado) + '</span>' : '') + '</div>' : '') +
-      (cabezas.length ? '<div class="miembros">' + cabezas.map(botonPersona).join('') + '</div>' : '') +
-      (hijos.length ? '<div class="miembros hijos"><span class="et">Hijos</span>' + hijos.map(botonPersona).join('') + '</div>' : '') +
+      (cabezas.length ? '<ul class="per-filas">' + cabezas.map(filaCaja).join('') + '</ul>' : '') +
+      (hijos.length ? '<p class="et-hijos">Hijos</p><ul class="per-filas">' + hijos.map(filaCaja).join('') + '</ul>' : '') +
       (dentro || '') + '</div>';
   }
 
@@ -1039,9 +1050,21 @@
       const n = nucleos[k];
       return tarjeta(nombreNucleo(n.cabezas[0], n.cabezas[1]), estado(n), n.cabezas, n.hijos, n.dentro.map(pinta).join(''));
     };
-    let html = arriba.map(pinta).join('');
+    // Con un solo núcleo arriba y los dos apellidos, la familia toma su nombre y la caja de arriba lleva los nombres de la pareja
+    let nombre = '';
+    if (arriba.length === 1) {
+      const n = nucleos[arriba[0]];
+      const t = nombreNucleo(n.cabezas[0], n.cabezas[1]);
+      if (t.indexOf('Familia ') === 0) nombre = t;
+    }
+    let html = arriba.map(function (k, i) {
+      const n = nucleos[k];
+      if (!nombre || i) return pinta(k);
+      const xy = n.cabezas[1] ? ordenPareja(n.cabezas[0], n.cabezas[1]) : n.cabezas;
+      return tarjeta(xy.map(function (x) { return x.apodo; }).join(' y '), estado(n), n.cabezas, n.hijos, n.dentro.map(pinta).join(''));
+    }).join('');
     if (sueltos.length) html += arriba.length ? tarjeta('Sin núcleo', '', sueltos, [], '') : tarjeta('', '', sueltos, [], '');
-    return html;
+    return { html: html, nombre: nombre };
   }
   function opcionesPersonas(sel, sin) {
     const grupos = {}, orden = [];
