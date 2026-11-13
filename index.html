@@ -526,7 +526,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.15.3</footer>
+  <footer>Hecho con cariño por Utilo · v4.15.4</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1039,7 +1039,8 @@
     pintarFiltros();
     // La abuela, arriba: lo que come, para todos. v4.12.6: sin botón de cambiar (se abre al tocarla, sin invitar a hacerlo)
     $('per-abuela').innerHTML = abuelas().map(function (a) {
-      const come = comeTexto(a, true) || 'sin anotar lo que come';
+      const e = edad(a);  // v4.15.4: también su edad
+      const come = [e === null ? '' : e + ' años', comeTexto(a, true) || 'sin anotar lo que come'].join(e === null ? '' : ' · ');
       return '<button type="button" class="abuela-ficha" data-comida-abuela aria-label="' + esc(a.apodo) + ': ' + esc(come) + '"><h2>' + esc(a.apodo) + '</h2><p>' + esc(come) + '</p></button>';
     }).join('');
     const q = sinAcentos($('per-q').value.trim());
@@ -1990,23 +1991,40 @@
     rejilla();
   }
 
+  /* v4.15.4: la ficha de la abuela, como la de los demás: nombre y apellido, lo que come y el cumpleaños con el año */
   function abrirComidaAbuela() {
     const a = abuelas()[0];
     if (!a) return;
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Lo que come ' + esc(a.apodo.toLowerCase()) + '</h2></div>' +
-      '<div class="dlg-cuerpo"><p class="ayuda">Sale en cada comida y cena de «Hoy y mañana» y en la hoja para imprimir, para quien cocina.</p>' +
+    const cd = a.cumple ? Number(a.cumple.slice(0, 2)) : 0, cm = a.cumple ? Number(a.cumple.slice(3, 5)) : 0;
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(a.apodo) + '</h2></div><div class="dlg-cuerpo">' +
+      (hayNombre() ? '<fieldset><legend>Nombre completo</legend><div class="dos dos-iguales">' +
+        '<label class="campo" for="dlg-nombre">Nombre<input id="dlg-nombre" type="text" maxlength="40" autocomplete="off" value="' + esc(a.nombre || '') + '"></label>' +
+        '<label class="campo" for="dlg-apellido">Apellido<input id="dlg-apellido" type="text" maxlength="40" autocomplete="off" value="' + esc(a.apellido || '') + '"></label></div></fieldset>' : '') +
+      '<fieldset><legend>Lo que come</legend><p class="ayuda">Sale en cada comida y cena de «Hoy y mañana» y en la hoja para imprimir, para quien cocina.</p>' +
       '<label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + opcionesMenu(a.menu) + '</select></label>' +
-      '<label class="campo" for="dlg-alergias">Dieta, alergias o cómo se lo preparan<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Por ejemplo: sin sal, todo blando" value="' + esc(a.alergias) + '"></label></div>' +
+      '<label class="campo" for="dlg-alergias">Dieta, alergias o cómo se lo preparan<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Por ejemplo: sin sal, todo blando" value="' + esc(a.alergias) + '"></label></fieldset>' +
+      '<fieldset><legend>Cumpleaños</legend><div class="tres">' +
+      '<label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
+      Array.from({ length: 31 }, function (_, k) { return '<option value="' + (k + 1) + '"' + (cd === k + 1 ? ' selected' : '') + '>' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' +
+      MESES.map(function (m, k) { return '<option value="' + (k + 1) + '"' + (cm === k + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
+      campoAno((a.cumple || '').slice(6, 10)) + '</div></fieldset></div>' +
       pie('Guardar'));
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
       const cambios = {};
       if ($('dlg-menu').value !== a.menu) cambios.menu = $('dlg-menu').value;
       if ($('dlg-alergias').value.trim() !== a.alergias) cambios.alergias = $('dlg-alergias').value.trim();
+      if ($('dlg-nombre') && $('dlg-nombre').value.trim() !== (a.nombre || '')) cambios.nombre = $('dlg-nombre').value.trim();
+      if ($('dlg-apellido') && $('dlg-apellido').value.trim() !== (a.apellido || '')) cambios.apellido = $('dlg-apellido').value.trim();
+      const lc = leerCumple();
+      if (lc.error) { errorDialogo(lc.error); return; }
+      if (lc.cumple !== (a.cumple || '')) cambios.cumple = lc.cumple;
       if (!Object.keys(cambios).length) { cerrarDialogo(); return; }
-      conQuien(function () { guardarCambios(a.id, cambios, 'Guardado lo que come ' + a.apodo.toLowerCase() + '.'); });
+      conQuien(function () { guardarCambios(a.id, cambios, 'Guardados los datos de ' + a.apodo.toLowerCase() + '.'); });
     });
   }
+
 
   function abrirMisComidas() {
     const l = datos.misProximas || [];
