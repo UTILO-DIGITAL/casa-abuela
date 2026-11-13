@@ -57,10 +57,10 @@ const ctx = {
   ScriptApp: { getService: () => ({ getUrl: () => '' }) },
   Utilities: { getUuid: () => 'u' + Math.random().toString(36).slice(2, 8),
     formatDate: (d, tz, f) => f === 'yyyy-MM-dd' ? HOY : HOY + 'T10:00:00' },
-  ContentService: {}, HtmlService: {}, console,
+  ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, api_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -194,3 +194,28 @@ d = R.guardarPersona('(O) - Amiga M', { apodo: 'Amiga N' }, M_, V2);
 ver('con tablas: cambiar el apodo (MESA_ALIAS)', !!d.personas.find(x => x.id === '(O) - Amiga N'));
 d = R.guardarPersona(M_, { fijos: [{ dow: 3, turno: 'CENA' }] }, M_, V2);
 ver('con tablas: va siempre (MESA_FIJOS)', d.fijos.some(f => f.persona === M_ && f.dow === 3));
+
+// ---------- v4.16: fallecidos y fechas como se sepan ----------
+Object.values(hojas).forEach(h => { h.tabla = false; });
+d = R.crearPersona({ apodo: 'Nacio', jerarquia: 'Nietos', familia: 'Canela', nombre: 'Ignacio', cumple: '01/2008', fallecio: '06/2008', hijoDe: M_ }, M_, V2);
+const nacio = d.personas.find(p => p.id === '(N) - Nacio') || {};
+ver('Nacio, nacido en enero de 2008 y fallecido en junio de 2008', nacio.cumple === '00/01/2008' && nacio.fallecio === '00/06/2008' && nacio.hijoDe === M_);
+ver('título de la columna P', hojas.PERSONAS.filas[0][15] === 'Falleció');
+d = R.guardarPersona('(N) - Nacio', { fallecio: '2008' }, M_, V2);
+ver('solo el año', (d.personas.find(p => p.id === '(N) - Nacio') || {}).fallecio === '00/00/2008');
+d = R.guardarPersona('(N) - Nacio', { fallecio: '10/06/2008' }, M_, V2);
+ver('fecha completa', (d.personas.find(p => p.id === '(N) - Nacio') || {}).fallecio === '10/06/2008');
+err = ''; try { R.guardarPersona('(N) - Nacio', { fallecio: '31/02/2008' }, M_, V2); } catch (e) { err = e.message; }
+ver('una fecha que no existe no se guarda', /fallecimiento/.test(err));
+err = ''; try { R.guardarPersona('(N) - Nacio', { fallecio: '2099' }, M_, V2); } catch (e) { err = e.message; }
+ver('ni una del futuro', /fallecimiento/.test(err));
+d = R.guardarPersona(M_, { cumple: '1952' }, M_, V2);
+ver('cumpleaños con solo el año', quien(M_).cumple === '00/00/1952');
+
+// ---------- v4.17: la clave de la familia ----------
+ver('sin CLAVE en MESA_CONFIG, no se pide', R.api_('getDatos', [V2], undefined).ok === true);
+hojas.MESA_CONFIG.filas.push(['CLAVE', 'Paella']);
+ver('con CLAVE, sin clave no se puede', /^CLAVE/.test(R.api_('getDatos', [V2], '').error || ''));
+ver('con una clave que no es, tampoco', /^CLAVE/.test(R.api_('getDatos', [V2], 'paela').error || ''));
+ver('con la clave, sí (da igual mayúsculas y acentos)', R.api_('getDatos', [V2], ' PÁELLA ').ok === true);
+ver('y también para guardar', /^CLAVE/.test(R.api_('guardarPersona', [M_, { alergias: 'x' }, M_, V2], 'no').error || ''));

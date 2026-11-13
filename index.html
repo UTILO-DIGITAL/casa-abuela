@@ -311,6 +311,28 @@
   .evento-titulo span { font-size: 14px; font-weight: 700; color: var(--color-texto-suave); }
   .evento-texto { margin: 0; font-size: 15px; font-weight: 600; white-space: pre-line; }
   .evento-dia button.mini { justify-self: start; margin-left: 0; }
+  /* v4.16: aniversarios y árbol genealógico */
+  .nota-dia.recuerdo { background: var(--color-linea); }
+  #per-arbol-btn.activos { background: var(--color-principal-oscuro); color: #fff; }
+  .arbol-barra { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
+  .arbol-barra span { flex: 1; font-family: var(--letra-titulos); font-weight: 600; font-size: 20px; }
+  .arbol-barra button.icono { font-size: 22px; font-weight: 800; }
+  .arbol-lienzo { overflow: auto; max-height: 74vh; border: 1px solid var(--color-linea); border-radius: var(--radio); background: var(--color-fondo); -webkit-overflow-scrolling: touch; }
+  .arbol-lienzo svg { display: block; }
+  .arbol-lineas path { fill: none; stroke: #CDBFAD; stroke-width: 2; stroke-linejoin: round; }
+  .arbol-caja { fill: #fff; stroke: #E3D6C5; stroke-width: 1.5; filter: drop-shadow(0 1px 2px rgba(28, 43, 38, .10)); }
+  .arbol-caja.raiz { fill: var(--color-principal-claro); stroke: var(--color-principal); }
+  .arbol-caja.muerto { fill: #F3EFE9; }
+  .arbol-raya { stroke: #EADFD2; stroke-width: 1.5; }
+  .arbol-anillo rect { fill: #fff; stroke: #E3D6C5; }
+  .arbol-anillo circle, .arbol-anillo path { fill: none; stroke: var(--color-principal-oscuro); stroke-width: 2.2; stroke-linejoin: round; }
+  .arbol-zona { fill: transparent; }
+  .arbol-persona[data-persona], .arbol-persona[data-comida-abuela] { cursor: pointer; }
+  .arbol-persona[data-persona]:hover .arbol-zona, .arbol-persona[data-comida-abuela]:hover .arbol-zona { fill: rgba(14, 138, 122, .06); }
+  .arbol-persona.soy-yo .arbol-zona { stroke: var(--color-accion); stroke-width: 2.5; }
+  .arbol-nombre { font-family: var(--letra-texto); font-weight: 800; font-size: 15px; fill: var(--color-texto); }
+  .arbol-dato { font-family: var(--letra-texto); font-weight: 600; font-size: 12.5px; fill: var(--color-texto-suave); }
+  .arbol-persona.muerto .arbol-nombre { fill: var(--color-texto-suave); }
   /* v4.14: pestaña Huecos */
   .huecos-resumen { margin: 0 0 16px; font-size: 18px; font-weight: 800; }
   .huecos-dia { margin: 0 0 12px; padding: 10px 14px; background: #fff; border: 1px solid var(--color-linea); border-radius: var(--radio); }
@@ -492,8 +514,9 @@
 
   <section id="vista-personas" hidden>
     <div class="personas-cab">
-      <label class="buscar" for="per-q"><span class="oculto">Buscar</span><input id="per-q" type="search" autocomplete="off" placeholder="Buscar por nombre o familia"></label>
+      <label class="buscar" for="per-q"><span class="oculto">Buscar</span><input id="per-q" type="search" autocomplete="off" placeholder="Buscar"></label>
       <button type="button" class="accion" id="per-filtros-btn" aria-expanded="false" aria-controls="per-filtros">Filtros</button>
+      <button type="button" class="accion" id="per-arbol-btn" aria-pressed="false">Árbol</button>
       <button type="button" class="accion" data-nueva-persona>Añadir</button>
     </div>
     <div id="per-filtros" class="per-filtros-panel" hidden></div>
@@ -526,7 +549,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.15.3</footer>
+  <footer>Hecho con cariño por Utilo · v4.17.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -584,9 +607,9 @@
    * - web servida por Apps Script: google.script.run.
    */
   function llamar(fn, args) {
-    if (window.MESA_PREVIEW) return window.MESA_PREVIEW.llamar(fn, args);
+    if (window.MESA_PREVIEW) return window.MESA_PREVIEW.llamar(fn, args, leerClave());
     if (window.CASA_API) {
-      return fetch(window.CASA_API, { method: 'POST', credentials: 'omit', redirect: 'follow', body: JSON.stringify({ fn: fn, args: args || [] }) })
+      return fetch(window.CASA_API, { method: 'POST', credentials: 'omit', redirect: 'follow', body: JSON.stringify({ fn: fn, args: args || [], clave: leerClave() }) })
         .then(function (r) { if (!r.ok) throw new Error('network'); return r.json(); })
         .then(function (j) { if (!j || !j.ok) throw new Error((j && j.error) || ''); return j.r; });
     }
@@ -597,8 +620,35 @@
   function leerYo() { try { return localStorage.getItem(CLAVE_YO) || ''; } catch (e) { return ''; } }
   function guardarYo(v) { try { localStorage.setItem(CLAVE_YO, v); } catch (e) {} }
   /* Errores en castellano y con qué hacer */
+  /* v4.17: la clave de la familia, una vez en cada móvil */
+  const CLAVE_CLAVE = 'casa-abuela-clave';
+  function leerClave() { try { return localStorage.getItem(CLAVE_CLAVE) || ''; } catch (e) { return ''; } }
+  function guardarClave(v) { try { localStorage.setItem(CLAVE_CLAVE, v); } catch (e) {} }
+  function esErrorClave(err) { return /^CLAVE/.test(String((err && err.message) || '').replace(/^(Exception|Error|ScriptError):\s*/i, '').trim()); }
+  let pidiendoClave = false;
+  function pedirClave() {
+    if (pidiendoClave) return;
+    pidiendoClave = true;
+    const habia = !!leerClave();
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Clave de la familia</h2></div>' +
+      '<div class="dlg-cuerpo"><p class="ayuda">Para ver Casa Abuela hace falta la clave que os hemos pasado por el grupo. Solo se pide una vez en este móvil.</p>' +
+      '<label class="campo" for="dlg-clave">Clave<input id="dlg-clave" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>' +
+      '<div class="dlg-pie"><p class="dlg-error" id="dlg-error"' + (habia ? '' : ' hidden') + '>' + (habia ? 'Esa clave no es. Vuelve a probar.' : '') + '</p><div class="botones">' +
+      '<button type="button" class="principal" id="dlg-guardar">Entrar</button></div></div>');
+    const entrar = function () {
+      const v = $('dlg-clave').value.trim();
+      if (!v) { errorDialogo('Escribe la clave.'); return; }
+      guardarClave(v);
+      pidiendoClave = false;
+      cerrarDialogo();
+      cargar();
+    };
+    $('dlg-guardar').addEventListener('click', entrar);
+    $('dlg-clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') entrar(); });
+  }
   function mensajeError(err) {
     let m = String((err && err.message) || '').replace(/^(Exception|Error|ScriptError):\s*/i, '').trim();
+    if (/^CLAVE/.test(m)) return 'Hace falta la clave de la familia.';
     if (!m || /network|failed to fetch|NetworkError|connection/i.test(m)) return 'No hay conexión o Google no responde. Comprueba internet y vuelve a probar.';
     if (/lock|timeout|timed out|tiempo/i.test(m) && !/otra persona/.test(m)) return 'Google ha tardado demasiado. Vuelve a probar en unos segundos.';
     if (/permission|permiso|authoriz|autoriz/i.test(m)) return 'La web no tiene permiso para escribir en el Excel. Avisa a Javi.';
@@ -724,9 +774,33 @@
     // v4.13: con el año, la edad que cumple ese día
     const out = cumplesDe(fecha).map(function (p) {
       const ano = Number((p.cumple || '').slice(6, 10));
-      return 'Cumple de ' + p.apodo + (ano ? ': ' + (Number(fecha.slice(0, 4)) - ano) + ' años' : '');
+      const n = ano ? Number(fecha.slice(0, 4)) - ano : 0;
+      if (esFallecido(p)) return 'Cumple de ' + p.apodo + (n > 0 ? ': habría cumplido ' + n + ' años' : '');  // v4.16
+      return 'Cumple de ' + p.apodo + (ano ? ': ' + n + ' años' : '');
     });
     return out;
+  }
+  /* v4.16: el aniversario de quien ha fallecido (si se sabe el día) */
+  function textoRecuerdos(fecha) {
+    const dm = fecha.slice(8, 10) + '/' + fecha.slice(5, 7);
+    return datos.personas.concat(datos.editores || []).filter(function (p) {
+      return esFallecido(p) && p.fallecio.slice(0, 5) === dm && Number(p.fallecio.slice(6, 10)) < Number(fecha.slice(0, 4));
+    }).map(function (p) {
+      const n = Number(fecha.slice(0, 4)) - Number(p.fallecio.slice(6, 10));
+      return 'Hace ' + (n === 1 ? 'un año' : n + ' años') + ' que nos dejó ' + p.apodo;
+    });
+  }
+  /* v4.16: fechas como se sepan (dd/mm/aaaa, con 00 en lo que no se sabe) y quien ha fallecido */
+  function esFallecido(p) { return !!(p && p.fallecio); }
+  function fechaTexto(c) {
+    if (!c || c.length < 10) return c || '';
+    const d = Number(c.slice(0, 2)), m = Number(c.slice(3, 5)), a = c.slice(6, 10);
+    if (!m) return a;
+    return (d ? d + ' de ' : '') + MESES[m - 1] + ' de ' + a;
+  }
+  function vidaTexto(p) {
+    const n = p.cumple && p.cumple.length >= 10 ? fechaTexto(p.cumple) : '';
+    return (n ? n + ' – ' : 'falleció en ') + fechaTexto(p.fallecio);
   }
   function menusTexto(ids) {
     const menus = {};
@@ -766,7 +840,7 @@
     const m = turno === 'DORMIR' ? '' : menusTexto(comp);
     return (total === 1 ? '1 persona' : total + ' personas') + (m ? ' · ' + m : '');
   }
-  function abuelas() { return datos.editores || []; }
+  function abuelas() { return (datos.editores || []).filter(function (e) { return !e.fallecio; }); }  // v4.16: el abuelo, fallecido, no
 
   /* ---------- Carga ---------- */
   function rango() {
@@ -812,6 +886,7 @@
       cargando = false;
       document.querySelector('.pagina').classList.remove('cargando');
       marcarActualizando(false);
+      if (esErrorClave(arguments[0])) { pedirClave(); return; }
       aviso('No hemos podido cargar el calendario. ' + mensajeError(arguments[0]), 8000);
     });
   }
@@ -912,6 +987,8 @@
       (!grande ? '<button type="button" class="mini' + (plegable && !abierto ? ' solo-escritorio' : '') + '" data-dia="' + fecha + '" aria-label="Notas del ' + diaLargo(fecha).toLowerCase() + '">Nota</button>' : '') + '</div>';
     const cumples = textoCumples(fecha);
     if (cumples.length) html += '<p class="nota-dia cumple">' + cumples.map(esc).join('<br>') + '</p>';
+    const recuerdos = textoRecuerdos(fecha);
+    if (recuerdos.length) html += '<p class="nota-dia recuerdo">' + recuerdos.map(esc).join('<br>') + '</p>';
     // v4.15: un evento puntual (la castañada…), destacado y con su botón para compartirlo
     if (nd && nd.evento) html += '<div class="evento-dia"><p class="evento-titulo">' + ICONO_EVENTO + '<b>' + esc(nd.evento) + '</b><span>' + (nd.eventoTurno === 'DORMIR' ? 'noche' : etiquetaTurno(nd.eventoTurno).toLowerCase()) + '</span></p>' +
       (nd.eventoTexto ? '<p class="evento-texto">' + esc(nd.eventoTexto) + '</p>' : '') +
@@ -1022,6 +1099,7 @@
   }
   function falta(p) {
     const f = [];
+    if (esFallecido(p)) return f;  // v4.16
     if (apodoRepetido(p.apodo, p.id)) f.push('un apodo que no se repita');  // v4.11
     // v4.12: de la familia (no del Servicio ni de Otros), también su nombre completo y su sitio en el árbol
     const deFamilia = !esServicio(p) && p.familia !== 'Otros';
@@ -1037,9 +1115,18 @@
   function pintarPersonas() {
     if (vista !== 'personas') return;
     pintarFiltros();
+    // v4.16: el árbol genealógico, en lugar de la lista
+    $('per-arbol-btn').setAttribute('aria-pressed', String(vistaArbol));
+    $('per-arbol-btn').classList.toggle('activos', vistaArbol);
+    if (vistaArbol) {
+      $('per-filtros').hidden = true; $('per-resultado').hidden = true; $('per-abuela').innerHTML = '';
+      pintarArbol();
+      return;
+    }
     // La abuela, arriba: lo que come, para todos. v4.12.6: sin botón de cambiar (se abre al tocarla, sin invitar a hacerlo)
     $('per-abuela').innerHTML = abuelas().map(function (a) {
-      const come = comeTexto(a, true) || 'sin anotar lo que come';
+      const e = edad(a);  // v4.15.4: también su edad
+      const come = [e === null ? '' : e + ' años', comeTexto(a, true) || 'sin anotar lo que come'].join(e === null ? '' : ' · ');
       return '<button type="button" class="abuela-ficha" data-comida-abuela aria-label="' + esc(a.apodo) + ': ' + esc(come) + '"><h2>' + esc(a.apodo) + '</h2><p>' + esc(come) + '</p></button>';
     }).join('');
     const q = sinAcentos($('per-q').value.trim());
@@ -1122,7 +1209,107 @@
     semanasExtra += 2;
     cargar();
   });
-  $('per-filtros-btn').addEventListener('click', function () { panelFiltros = !panelFiltros; pintarPersonas(); });
+  $('per-filtros-btn').addEventListener('click', function () { panelFiltros = !panelFiltros; vistaArbol = false; pintarPersonas(); });
+  $('per-arbol-btn').addEventListener('click', function () { vistaArbol = !vistaArbol; panelFiltros = false; pintarPersonas(); });
+  $('per-lista').addEventListener('click', function (e) {
+    const z = e.target.closest('[data-zoom]');
+    if (!z) return;
+    const lienzo = document.querySelector('.arbol-lienzo');
+    const centro = lienzo ? (lienzo.scrollLeft + lienzo.clientWidth / 2) / arbolZoom : 0;
+    arbolZoom = Math.max(0.3, Math.min(1.6, arbolZoom * (z.dataset.zoom === '1' ? 1.25 : 0.8)));
+    pintarArbol(centro);
+  });
+
+  /* v4.16: el árbol dibujado, de los abuelos hacia abajo: cada pareja en una caja y sus hijos debajo, unidos con líneas.
+     Se mueve deslizando y se acerca o aleja con los botones (en esta web, el zoom con los dedos está quitado). */
+  let vistaArbol = false, arbolZoom = 0.8;
+  function pintarArbol(centroX) {
+    const todos = (datos.editores || []).concat(datos.personas);
+    const porId = {};
+    todos.forEach(function (p) { porId[p.id] = p; });
+    const parejaDeP = function (p) { const x = p.pareja && porId[p.pareja]; return x && x.pareja === p.id ? x : null; };
+    const raiz = abuelas()[0] || (datos.editores || [])[0];
+    if (!raiz) { $('per-lista').innerHTML = '<p class="vacio">Falta la abuela en la lista.</p>'; return; }
+    const hijosDe = {};
+    todos.forEach(function (p) { if (p.hijoDe) (hijosDe[p.hijoDe] = hijosDe[p.hijoDe] || []).push(p); });
+    const usados = {};
+    /* Cada pareja (o persona con hijos) es una caja; sus hijos con pareja o hijos, cajas debajo, una al lado de otra;
+       los hijos sin pareja ni hijos, cada uno en su caja, uno debajo de otro (así el árbol no se hace tan ancho). */
+    // Cada pareja (o persona) es una caja, y todos sus hijos van debajo, al mismo nivel, cada uno en su caja
+    const nodo = function (p, nivel) {
+      usados[p.id] = true;
+      const pa = parejaDeP(p);
+      if (pa) usados[pa.id] = true;
+      const cabezas = pa ? ordenPareja(p, pa) : [p];
+      const n = { cabezas: cabezas, hijos: [], nivel: nivel, raiz: nivel === 0, casados: !!pa && (p.casados === 'Sí' || pa.casados === 'Sí') };
+      cabezas.reduce(function (l, c) { return l.concat(hijosDe[c.id] || []); }, []).forEach(function (h) {
+        if (!usados[h.id] && nivel < 8) n.hijos.push(nodo(h, nivel + 1));
+      });
+      return n;
+    };
+    const arbol = nodo(raiz, 0);
+    const corta = function (t, k) { return t.length > k ? t.slice(0, k - 1) + '…' : t; };
+    const nombreDe = function (p) { return corta(p.nombre ? p.nombre + (p.apellido ? ' ' + p.apellido : '') : p.apodo, 22); };
+    const datoDe = function (p) {
+      if (esFallecido(p)) {
+        const n = p.cumple && p.cumple.length >= 10 ? p.cumple.slice(6, 10) : '';
+        const f = p.fallecio.slice(6, 10);
+        return '† ' + (n && n !== f ? n + ' – ' + f : f);
+      }
+      const e = edad(p);
+      return e === null ? '' : (e === 1 ? '1 año' : e + ' años');
+    };
+    // Medidas ajustadas al contenido: el ancho, por lo largo del nombre; el alto, con o sin la línea de la edad
+    const PAD = 12, GX = 14, GY = 44;
+    const altoP = function (p) { return datoDe(p) ? 44 : 28; };
+    const anchoCaja = function (n) { return n.bw || (n.bw = Math.max(96, Math.round(n.cabezas.reduce(function (m, p) { return Math.max(m, nombreDe(p).length * 8.4, datoDe(p).length * 6.8); }, 0)) + 2 * PAD)); };
+    const alto = function (n) { return n.cabezas.length > 1 ? 6 + altoP(n.cabezas[0]) + 12 + altoP(n.cabezas[1]) + 6 : 6 + altoP(n.cabezas[0]) + 6; };
+    const ancho = function (n) { return n.w || (n.w = Math.max(anchoCaja(n), n.hijos.reduce(function (t, h) { return t + ancho(h); }, 0) + GX * Math.max(0, n.hijos.length - 1))); };
+    let H = 0;
+    const situa = function (n, x, y) {
+      n.x = x + ancho(n) / 2;
+      n.y = y;
+      H = Math.max(H, y + alto(n) + 20);
+      let cx = n.x - (n.hijos.reduce(function (t, h) { return t + ancho(h); }, 0) + GX * Math.max(0, n.hijos.length - 1)) / 2;
+      n.hijos.forEach(function (h) { situa(h, cx, y + alto(n) + GY); cx += ancho(h) + GX; });
+    };
+    situa(arbol, 20, 20);
+    const W = ancho(arbol) + 40;
+    const persona_ = function (p, py, bw) {
+      const clic = editor(p.id) ? (p.fallecio ? '' : ' data-comida-abuela') : ' data-persona="' + esc(p.id) + '"';
+      const dato = datoDe(p);
+      return '<g class="arbol-persona' + (esFallecido(p) ? ' muerto' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic + '>' +
+        '<rect x="3" y="' + (py - 3) + '" width="' + (bw - 6) + '" height="' + (altoP(p) + 6) + '" rx="9" class="arbol-zona"/>' +
+        '<text x="' + PAD + '" y="' + (py + 19) + '" class="arbol-nombre">' + esc(nombreDe(p)) + '</text>' +
+        (dato ? '<text x="' + PAD + '" y="' + (py + 37) + '" class="arbol-dato">' + esc(dato) + '</text>' : '') + '</g>';
+    };
+    let lineas = '', cajas = '';
+    (function dibuja(n) {
+      const bw = anchoCaja(n), h = alto(n), x = n.x - bw / 2, y = n.y;
+      let dentro = persona_(n.cabezas[0], 6, bw);
+      if (n.cabezas.length > 1) {
+        const yr = 6 + altoP(n.cabezas[0]) + 6;
+        dentro += '<path class="arbol-raya" d="M' + PAD + ' ' + yr + 'H' + (bw - PAD) + '"/>';
+        if (n.casados) dentro += '<g class="arbol-anillo" transform="translate(' + (bw / 2 - 10) + ',' + (yr - 10) + ')"><rect width="20" height="20" rx="10"/>' +
+          '<g transform="translate(2.5,2.5) scale(0.62)"><circle cx="12" cy="15" r="6"/><path d="M12 3.5l2.5 2.5L12 8.5 9.5 6z"/></g><title>Casados</title></g>';
+        dentro += persona_(n.cabezas[1], yr + 6, bw);
+      }
+      cajas += '<g transform="translate(' + x + ',' + y + ')"><rect class="arbol-caja ' + (n.raiz ? 'raiz' : '') + (n.cabezas.every(esFallecido) ? ' muerto' : '') + '" width="' + bw + '" height="' + h + '" rx="12"/>' + dentro + '</g>';
+      if (n.hijos.length) {
+        const ym = y + h + GY / 2;
+        lineas += '<path d="M' + n.x + ' ' + (y + h) + 'V' + ym + '"/>';
+        if (n.hijos.length > 1) lineas += '<path d="M' + n.hijos[0].x + ' ' + ym + 'H' + n.hijos[n.hijos.length - 1].x + '"/>';
+        n.hijos.forEach(function (c) { lineas += '<path d="M' + c.x + ' ' + ym + 'V' + c.y + '"/>'; dibuja(c); });
+      }
+    })(arbol);
+    $('per-lista').innerHTML = '<div class="arbol-barra"><span>Árbol de la familia</span><button type="button" class="icono" data-zoom="-1" aria-label="Alejar">−</button><button type="button" class="icono" data-zoom="1" aria-label="Acercar">+</button></div>' +
+      '<div class="arbol-lienzo"><svg width="' + Math.round(W * arbolZoom) + '" height="' + Math.round(H * arbolZoom) + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Árbol genealógico de la familia">' +
+      '<g class="arbol-lineas">' + lineas + '</g>' + cajas + '</svg></div>' +
+      '<p class="ayuda">Desliza para moverte y toca a alguien para ver su ficha. El anillo, casados; †, fallecido.</p>';
+    const lienzo = document.querySelector('.arbol-lienzo');
+    lienzo.scrollLeft = (centroX !== undefined ? centroX : arbol.x) * arbolZoom - lienzo.clientWidth / 2;
+  }
+
   $('per-filtros').addEventListener('click', function (e) {
     const b = e.target.closest('[data-fk]');
     if (!b) return;
@@ -1160,7 +1347,7 @@
   /* v4.13: la edad, si se sabe el año del cumpleaños (y según si ya los ha cumplido este año) */
   function edad(p) {
     const c = p.cumple || '';
-    if (c.length < 10) return null;
+    if (c.length < 10 || esFallecido(p)) return null;
     const h = hoy();
     const n = Number(h.slice(0, 4)) - Number(c.slice(6, 10)) - (h.slice(5, 7) + h.slice(8, 10) < c.slice(3, 5) + c.slice(0, 2) ? 1 : 0);
     return n >= 0 ? n : null;
@@ -1168,11 +1355,11 @@
   function filaCaja(p) {
     const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
     const e = edad(p);
-    const come = [e === null ? '' : (e === 1 ? '1 año' : e + ' años'), comeTexto(p)].filter(Boolean).join(' · ');
+    const come = esFallecido(p) ? vidaTexto(p) : [e === null ? '' : (e === 1 ? '1 año' : e + ' años'), comeTexto(p)].filter(Boolean).join(' · ');
     // v4.12.5: un circulito a quien entró en la familia por su pareja (los «+1»: no son de sangre)
     const deFuera = esDeFuera(p) && !esServicio(p) && p.familia !== 'Otros';
     return '<li><button type="button" class="fila-persona fila-caja' + (p.id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' +
-      (deFuera ? '<span class="marca-politico" role="img" aria-label="entró en la familia por su pareja" title="Entró en la familia por su pareja"></span>' : '') + esc(p.apodo) + '</b>' +
+      (deFuera ? '<span class="marca-politico" role="img" aria-label="entró en la familia por su pareja" title="Entró en la familia por su pareja"></span>' : '') + esc(p.apodo) + (esFallecido(p) ? ' †' : '') + '</b>' +
       (completo && completo !== p.apodo ? '<small>' + esc(completo) + '</small>' : '') +
       (come ? '<span class="fp-come' + (p.alergias ? ' con-alergia' : '') + '">' + esc(come) + '</span>' : '') +
       (falta(p).length ? '<span class="fp-falta-corto">' + esc(faltaCorto(p)) + '</span>' : '') + '</span></button></li>';
@@ -1393,6 +1580,7 @@
       p.casados = '';
     }
     if (c.casados !== undefined) { p.casados = c.casados; const pa = parejaDe(p); if (pa) pa.casados = c.casados; }
+    if (c.fallecio !== undefined) p.fallecio = c.fallecio;
   }
   function lista_(a) { return lista(a); }
   $('per-q').addEventListener('input', function () { pintarPersonas(); });
@@ -1416,13 +1604,33 @@
   function campoAno(v) {
     return '<label class="campo" for="dlg-cano">Año<input id="dlg-cano" type="number" inputmode="numeric" min="1900" max="' + hoy().slice(0, 4) + '" placeholder="aaaa" value="' + esc(v || '') + '"></label>';
   }
-  function leerCumple() {
-    const d = $('dlg-cdia').value, m = $('dlg-cmes').value, a = ($('dlg-cano') ? $('dlg-cano').value : '').trim();
-    if ((d && !m) || (!d && m)) return { error: 'Para el cumpleaños, elige el día y el mes, o deja los dos vacíos.' };
-    if (a && !d) return { error: 'Para poner el año, elige también el día y el mes del cumpleaños.' };
+  /* v4.16: una fecha como se sepa: día y mes (con o sin año), mes y año, o solo el año */
+  function leerFecha(pre, que, desde) {
+    const d = $('dlg-' + pre + 'dia').value, m = $('dlg-' + pre + 'mes').value, a = ($('dlg-' + pre + 'ano') ? $('dlg-' + pre + 'ano').value : '').trim();
+    if (d && !m) return { error: 'Para ' + que + ', con el día elige también el mes.' };
+    if (!d && m && !a) return { error: 'Para ' + que + ', con el mes pon también el día o el año.' };
     const max = Number(hoy().slice(0, 4));
-    if (a && !(/^\d{4}$/.test(a) && Number(a) >= 1900 && Number(a) <= max)) return { error: 'El año del cumpleaños tiene que ser de 1900 a ' + max + ', con cuatro cifras.' };
-    return { cumple: d ? ('0' + d).slice(-2) + '/' + ('0' + m).slice(-2) + (a ? '/' + a : '') : '' };
+    if (a && !(/^\d{4}$/.test(a) && Number(a) >= desde && Number(a) <= max)) return { error: 'El año de ' + que + ' tiene que ser de ' + desde + ' a ' + max + ', con cuatro cifras.' };
+    const dd = ('0' + (d || 0)).slice(-2), mm = ('0' + (m || 0)).slice(-2);
+    return { valor: d && !a ? dd + '/' + mm : (a ? dd + '/' + mm + '/' + a : '') };
+  }
+  function leerCumple() { const r = leerFecha('c', 'el cumpleaños', 1900); return r.error ? r : { cumple: r.valor }; }
+  function campoFallecio(v) {
+    const fd = v ? Number(v.slice(0, 2)) : 0, fm = v ? Number(v.slice(3, 5)) : 0;
+    return '<fieldset class="solo-familia"><legend>Si ha fallecido</legend><div class="tres">' +
+      '<label class="campo" for="dlg-fdia">Día<select id="dlg-fdia"><option value="">—</option>' +
+      Array.from({ length: 31 }, function (_, k) { return '<option value="' + (k + 1) + '"' + (fd === k + 1 ? ' selected' : '') + '>' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="campo" for="dlg-fmes">Mes<select id="dlg-fmes"><option value="">—</option>' +
+      MESES.map(function (m, k) { return '<option value="' + (k + 1) + '"' + (fm === k + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
+      '<label class="campo" for="dlg-fano">Año<input id="dlg-fano" type="number" inputmode="numeric" min="1850" max="' + hoy().slice(0, 4) + '" placeholder="aaaa" value="' + esc(v ? v.slice(6, 10) : '') + '"></label></div>' +
+      '<p class="ayuda">Lo que sepáis: el día, el mes y el año; el mes y el año; o solo el año.</p></fieldset>';
+  }
+  function leerFallecio() {
+    if (!$('dlg-fano')) return { valor: undefined };
+    const r = leerFecha('f', 'el fallecimiento', 1850);
+    if (r.error) return r;
+    if (r.valor && r.valor.length < 10) return { error: 'Para el fallecimiento, pon también el año.' };
+    return r;
   }
   function abrirNuevaPersona(nombre) {
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Añadir persona</h2></div><div class="dlg-cuerpo">' + camposFicha(null) + camposNucleo(null) +
@@ -1430,7 +1638,7 @@
       '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna"></label></fieldset>' +
       '<fieldset class="solo-no-otros"><legend>Cumpleaños</legend><div class="tres"><label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
       Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
-      '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' + MESES.map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select></label>' + campoAno('') + '</div></fieldset></div>' +
+      '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' + MESES.map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select></label>' + campoAno('') + '</div></fieldset>' + campoFallecio('') + '</div>' +
       pie('Añadir a la lista'));
     if (nombre) $('dlg-apodo').value = nombre;
     montarFormularioFamilia();
@@ -1444,13 +1652,16 @@
       if (errorA) { errorDialogo(errorA); return; }
       const lc = leerCumple();
       if (lc.error) { errorDialogo(lc.error); return; }
+      const lf = leerFallecio();
+      if (lf.error) { errorDialogo(lf.error); return; }
       const nueva = { apodo: apodo, jerarquia: jer, familia: fam, menu: $('dlg-menu').value, alergias: $('dlg-alergias').value.trim(),
         cumple: lc.cumple };
+      if (lf.valor) nueva.fallecio = lf.valor;
       const nucleo = leerNucleo(null);
       Object.assign(nueva, nucleo);
       conQuien(function () {
         enSegundoPlano('crearPersona', [nueva, yo, rango()], apodo + ' ya está en la lista.', function () {
-          const p = { id: id, apodo: apodo, jerarquia: jer, familia: fam, menu: nueva.menu, alergias: nueva.alergias, cumple: nueva.cumple };
+          const p = { id: id, apodo: apodo, jerarquia: jer, familia: fam, menu: nueva.menu, alergias: nueva.alergias, cumple: nueva.cumple, fallecio: nueva.fallecio || '' };
           if (hayNucleos()) { p.apellido = ''; p.sexo = ''; p.pareja = ''; p.hijoDe = ''; }
           if (hayNombre()) p.nombre = '';
           datos.personas.push(p);
@@ -1498,7 +1709,7 @@
   }
   function montarBuscador(opciones) {
     elegidoBuscador = opciones.seleccion || '';
-    const candidatos = (opciones.editores ? abuelas() : []).concat(datos.personas.filter(function (p) { return (opciones.excluir || []).indexOf(p.id) === -1; }));
+    const candidatos = (opciones.editores ? abuelas() : []).concat(datos.personas.filter(function (p) { return (opciones.excluir || []).indexOf(p.id) === -1 && !esFallecido(p); }));
     function pintarRes() {
       const q = sinAcentos($('bus-q').value.trim());
       let res;
@@ -1606,6 +1817,7 @@
     }).catch(function (err) {
       pendientes--;
       if (pendientes === 0) { datos = JSON.parse(copia); pintar(); }
+      if (esErrorClave(err)) { pedirClave(); return; }
       aviso('No se ha guardado. ' + mensajeError(err), 9000);
       cargar(true);
     });
@@ -1715,7 +1927,8 @@
   function errorDialogo(t) { const e = $('dlg-error'); if (e) { e.textContent = t; e.hidden = false; } }
   // El aviso «close» llega un momento después: si para entonces ya se ha abierto otra ventana, no se vacía (v4.12)
   $dlg.addEventListener('close', function () { if (!$dlg.open) $dlg.innerHTML = ''; });
-  $dlg.addEventListener('click', function (e) { if (e.target === $dlg) cerrarDialogo(); });
+  $dlg.addEventListener('click', function (e) { if (e.target === $dlg && !pidiendoClave) cerrarDialogo(); });
+  $dlg.addEventListener('cancel', function (e) { if (pidiendoClave) e.preventDefault(); });  // v4.17: la clave no se puede saltar
   function pie(textoGuardar, extra) {
     return '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones">' +
       '<button type="button" class="principal" id="dlg-guardar">' + textoGuardar + '</button>' + (extra || '') +
@@ -1761,7 +1974,8 @@
       '<label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
       Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '"' + (cd === i + 1 ? ' selected' : '') + '>' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' +
-      MESES.map(function (m, i) { return '<option value="' + (i + 1) + '"' + (cm === i + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' + campoAno((p.cumple || '').slice(6, 10)) + '</div></fieldset>';
+      MESES.map(function (m, i) { return '<option value="' + (i + 1) + '"' + (cm === i + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' + campoAno((p.cumple || '').slice(6, 10)) + '</div></fieldset>' +
+      campoFallecio(p.fallecio || '');
     html += '<fieldset><legend>Va siempre, desde hoy</legend><table class="tabla-turnos tabla-fijos"><thead><tr><th scope="col">Día</th>' + TURNOS.map(function (t) { return '<th scope="col">' + t.nombre + '</th>'; }).join('') + '</tr></thead><tbody>' +
       [1, 2, 3, 4, 5, 6, 0].map(function (d) {
         return '<tr><td>' + DIAS[d] + '</td>' + TURNOS.map(function (t) {
@@ -1818,6 +2032,9 @@
       const lc = leerCumple();
       if (lc.error) { errorDialogo(lc.error); return; }
       if (lc.cumple !== (p.cumple || '')) cambios.cumple = lc.cumple;
+      const lf = leerFallecio();
+      if (lf.error) { errorDialogo(lf.error); return; }
+      if (lf.valor !== undefined && lf.valor !== (p.fallecio || '')) cambios.fallecio = lf.valor;
       const fijosAhora = Array.from($dlg.querySelectorAll('input[data-fijo]:checked')).map(function (c) { return c.dataset.fijo; });
       if (fijosAhora.sort().join(',') !== fijosAntes.slice().sort().join(',')) {
         cambios.fijos = fijosAhora.map(function (k) { return { dow: Number(k.split('|')[0]), turno: k.split('|')[1] }; });
@@ -1990,23 +2207,40 @@
     rejilla();
   }
 
+  /* v4.15.4: la ficha de la abuela, como la de los demás: nombre y apellido, lo que come y el cumpleaños con el año */
   function abrirComidaAbuela() {
     const a = abuelas()[0];
     if (!a) return;
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Lo que come ' + esc(a.apodo.toLowerCase()) + '</h2></div>' +
-      '<div class="dlg-cuerpo"><p class="ayuda">Sale en cada comida y cena de «Hoy y mañana» y en la hoja para imprimir, para quien cocina.</p>' +
+    const cd = a.cumple ? Number(a.cumple.slice(0, 2)) : 0, cm = a.cumple ? Number(a.cumple.slice(3, 5)) : 0;
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(a.apodo) + '</h2></div><div class="dlg-cuerpo">' +
+      (hayNombre() ? '<fieldset><legend>Nombre completo</legend><div class="dos dos-iguales">' +
+        '<label class="campo" for="dlg-nombre">Nombre<input id="dlg-nombre" type="text" maxlength="40" autocomplete="off" value="' + esc(a.nombre || '') + '"></label>' +
+        '<label class="campo" for="dlg-apellido">Apellido<input id="dlg-apellido" type="text" maxlength="40" autocomplete="off" value="' + esc(a.apellido || '') + '"></label></div></fieldset>' : '') +
+      '<fieldset><legend>Lo que come</legend><p class="ayuda">Sale en cada comida y cena de «Hoy y mañana» y en la hoja para imprimir, para quien cocina.</p>' +
       '<label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + opcionesMenu(a.menu) + '</select></label>' +
-      '<label class="campo" for="dlg-alergias">Dieta, alergias o cómo se lo preparan<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Por ejemplo: sin sal, todo blando" value="' + esc(a.alergias) + '"></label></div>' +
+      '<label class="campo" for="dlg-alergias">Dieta, alergias o cómo se lo preparan<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Por ejemplo: sin sal, todo blando" value="' + esc(a.alergias) + '"></label></fieldset>' +
+      '<fieldset><legend>Cumpleaños</legend><div class="tres">' +
+      '<label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
+      Array.from({ length: 31 }, function (_, k) { return '<option value="' + (k + 1) + '"' + (cd === k + 1 ? ' selected' : '') + '>' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' +
+      MESES.map(function (m, k) { return '<option value="' + (k + 1) + '"' + (cm === k + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
+      campoAno((a.cumple || '').slice(6, 10)) + '</div></fieldset></div>' +
       pie('Guardar'));
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
       const cambios = {};
       if ($('dlg-menu').value !== a.menu) cambios.menu = $('dlg-menu').value;
       if ($('dlg-alergias').value.trim() !== a.alergias) cambios.alergias = $('dlg-alergias').value.trim();
+      if ($('dlg-nombre') && $('dlg-nombre').value.trim() !== (a.nombre || '')) cambios.nombre = $('dlg-nombre').value.trim();
+      if ($('dlg-apellido') && $('dlg-apellido').value.trim() !== (a.apellido || '')) cambios.apellido = $('dlg-apellido').value.trim();
+      const lc = leerCumple();
+      if (lc.error) { errorDialogo(lc.error); return; }
+      if (lc.cumple !== (a.cumple || '')) cambios.cumple = lc.cumple;
       if (!Object.keys(cambios).length) { cerrarDialogo(); return; }
-      conQuien(function () { guardarCambios(a.id, cambios, 'Guardado lo que come ' + a.apodo.toLowerCase() + '.'); });
+      conQuien(function () { guardarCambios(a.id, cambios, 'Guardados los datos de ' + a.apodo.toLowerCase() + '.'); });
     });
   }
+
 
   function abrirMisComidas() {
     const l = datos.misProximas || [];
@@ -2060,6 +2294,7 @@
       let b = '📅 *' + diaLargo(f) + '*';
       if (fueraTodo(f)) return b + '\n🧳 La abuela no está' + (fuera(f).motivoFuera ? ' (' + fuera(f).motivoFuera + ')' : '') + '.';
       textoCumples(f).forEach(function (c) { b += '\n🎂 ' + c; });
+      textoRecuerdos(f).forEach(function (c) { b += '\n🕯️ ' + c; });
       const nd = notaDia(f);
       if (nd && nd.nota) b += '\n📝 ' + nd.nota;
       TURNOS.forEach(function (t) {

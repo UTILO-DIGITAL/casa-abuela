@@ -10,6 +10,7 @@
  *                 Los Ids siguen a MESA_ALIAS. La web arma con ellos el árbol de núcleos de cada familia.
  *                 Nombre (N, v4.11): el nombre de verdad; el Apodo (B) es como le llaman en casa y no se repite.
  *                 Casados (O, v4.12): Sí o No, en los dos de la pareja; se borra si cambia la pareja.
+ *                 Falleció (P, v4.16): dd/mm/aaaa, 00/mm/aaaa o 00/00/aaaa (como se sepa). El cumpleaños admite lo mismo.
  *   MESA_APUNTES  ID_APUNTE | FECHA | TURNO | PERSONA_ID | CREADO_EN | NOTA | ESTADO ('' va · 'NO' no va ese día aunque sea fijo) | NOTA_POR | NOTA_EN
  *   MESA_FIJOS    ID_FIJO | PERSONA_ID | DIA_SEMANA (0 domingo … 6 sábado) | TURNO | DESDE | HASTA | NOTA | CREADO_POR | CREADO_EN
  *   MESA_DIAS     FECHA | NOTA | SIN_TURNO | CAMBIADO_POR | CAMBIADO_EN | SIN_COMIDA | MOTIVO_COMIDA | SIN_CENA | MOTIVO_CENA | NOTA_SERVICIO | SIN_DORMIR | MOTIVO_DORMIR
@@ -18,7 +19,7 @@
  *                 (la abuela no está en esa comida, cena o noche; FUERA = las tres, de versiones anteriores)
  *   MESA_CAMBIOS  CUANDO | QUIEN_ID | QUIEN | CAMBIO   (registro de quién cambia qué)
  *   MESA_ALIAS    ID_ANTIGUO | ID_NUEVO | NOTA   (si a alguien se le cambia el apodo o la jerarquía en PERSONAS)
- *   MESA_CONFIG   FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
+ *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
  *                 (EXCLUIR_IDS: no salen para apuntarse, pero pueden hacer cambios, como la abuela)
  * Turnos: COMIDA, CENA y DORMIR (quién pasa la noche en casa).
  * El servicio son las personas de PERSONAS con Familia = «Servicio»: cuentan para cocinar y no como compañía en comida y cena; para dormir, sí.
@@ -28,7 +29,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.15.2
+ * Versión 4.17.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -52,8 +53,9 @@ const COL_PAREJA = 12;   // L: Id de su pareja
 const COL_HIJO_DE = 13;  // M: Id de su padre o su madre
 const COL_NOMBRE = 14;   // N: nombre de verdad (v4.11)
 const COL_CASADOS = 15;  // O: Sí o No (v4.12)
-const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de', 14: 'Nombre', 15: 'Casados' };
-const CAMPOS_NUCLEO = ['nombre', 'apellido', 'sexo', 'pareja', 'hijoDe', 'casados'];
+const COL_FALLECIO = 16; // P: fecha de fallecimiento, como se sepa (v4.16)
+const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de', 14: 'Nombre', 15: 'Casados', 16: 'Falleció' };
+const CAMPOS_NUCLEO = ['nombre', 'apellido', 'sexo', 'pareja', 'hijoDe', 'casados', 'fallecio'];
 const CASADOS = ['Sí', 'No'];
 const SEXOS = ['Hombre', 'Mujer'];
 const COLS_APUNTES = 10;  // v4.15: J ACOMPANANTES (cuántos vienen con esa persona sin estar en la lista)
@@ -67,7 +69,7 @@ const MAX_NOTA = 140;
 const MAX_DIAS_RANGO = 400;
 
 function doGet(e) {
-  if (e && e.parameter && e.parameter.fn) return api_(e.parameter.fn, JSON.parse(e.parameter.args || '[]'));
+  if (e && e.parameter && e.parameter.fn) return api_(e.parameter.fn, JSON.parse(e.parameter.args || '[]'), e.parameter.clave);
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('Casa Abuela')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
@@ -80,7 +82,7 @@ function doGet(e) {
 function doPost(e) {
   let peticion = {};
   try { peticion = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) { peticion = {}; }
-  return api_(peticion.fn, peticion.args || []);
+  return api_(peticion.fn, peticion.args || [], peticion.clave);
 }
 
 const API_ = {
@@ -92,15 +94,31 @@ const API_ = {
   darDeBaja: function (a) { return darDeBaja(a[0], a[1], a[2]); },
 };
 
-function api_(fn, args) {
+function api_(fn, args, clave) {
   let salida;
   try {
+    comprobarClave_(clave);
     if (!Object.prototype.hasOwnProperty.call(API_, fn)) throw new Error('Acción no válida.');
     salida = { ok: true, r: API_[fn](Array.isArray(args) ? args : []) };
   } catch (err) {
     salida = { ok: false, error: String((err && err.message) || err) };
   }
   return ContentService.createTextOutput(JSON.stringify(salida)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * v4.17: la clave de la familia (MESA_CONFIG, CLAVE). Vacía, no se pide. Da igual mayúsculas y acentos.
+ * Se guarda 5 minutos en la caché para no abrir el Excel en cada petición (si se cambia, tarda eso en valer).
+ */
+function comprobarClave_(clave) {
+  const cache = CacheService.getScriptCache();
+  let buena = cache.get('clave_familia');
+  if (buena === null) {
+    buena = leerConfigSin_(SpreadsheetApp.openById(SPREADSHEET_ID)).clave;
+    try { cache.put('clave_familia', buena, 300); } catch (e) { /* sin caché, se lee cada vez */ }
+  }
+  const n = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
+  if (buena && n(clave) !== n(buena)) throw new Error('CLAVE: hace falta la clave de la familia.');
 }
 
 /* ---------- Lectura ---------- */
@@ -178,6 +196,7 @@ function leerConfigSin_(ss) {
     horaDormir: aHora_(mapa.HORA_DORMIR, '22:30'),
     avisoHoras: Number(mapa.AVISO_HORAS) || 4,
     urlCompartir: String(mapa.URL_COMPARTIR || '').trim(),
+    clave: String(mapa.CLAVE || '').trim(),
   };
 }
 
@@ -203,6 +222,7 @@ function aPersona_(f) {
     hijoDe: String(f[COL_HIJO_DE - 1] || '').trim(),
     nombre: String(f[COL_NOMBRE - 1] || '').trim(),
     casados: CASADOS.indexOf(String(f[COL_CASADOS - 1] || '').trim()) !== -1 ? String(f[COL_CASADOS - 1]).trim() : '',
+    fallecio: aFechaParcial_(f[COL_FALLECIO - 1], 1850),
   };
 }
 
@@ -438,7 +458,7 @@ function guardarPersona(personaId, cambios, quien, vista) {
 
     if (cambios.cumple !== undefined) {
       const cumple = aCumple_(cambios.cumple);
-      if (String(cambios.cumple || '').trim() && !cumple) throw new Error('El cumpleaños tiene que ser un día y un mes que existan (y, si se pone, un año de 1900 a hoy).');
+      if (String(cambios.cumple || '').trim() && !cumple) throw new Error('El cumpleaños tiene que ser un día y un mes que existan (y, si se pone, un año de 1900 a hoy), o el mes y el año, o solo el año.');
       escribirEnPersonas_(ss, personaId, COL_CUMPLE, cumple, true);
       if (cumple !== p.cumple) registro.push('Cumpleaños de ' + p.apodo + ': ' + (cumple || 'borrado'));
     }
@@ -883,7 +903,13 @@ function asegurarColumnaBaja_(ss) { asegurarColumnas_(ss, COL_BAJA); }
 function ponerNucleo_(ss, p, cambios, registro, todos) {
   const nombre = function (id) { const x = todos.filter(function (t) { return t.id === id; })[0]; return x ? x.apodo : id; };
   const existe = function (id) { return todos.some(function (t) { return t.id === id; }); };
-  asegurarColumnas_(ss, COL_CASADOS);
+  asegurarColumnas_(ss, COL_FALLECIO);
+  if (cambios.fallecio !== undefined) {
+    const texto = String(cambios.fallecio || '').trim();
+    const fallecio = aFechaParcial_(texto, 1850);
+    if (texto && !fallecio) throw new Error('La fecha de fallecimiento tiene que ser un día, mes y año que existan (o mes y año, o solo el año), y no de después de hoy.');
+    if (fallecio !== (p.fallecio || '')) { escribirEnPersonas_(ss, p.id, COL_FALLECIO, fallecio, true); registro.push(p.apodo + (fallecio ? ': falleció (' + fallecio + ')' : ': sin fecha de fallecimiento')); }
+  }
   if (cambios.nombre !== undefined) {
     const nombreReal = limpiar_(cambios.nombre, 40, 'El nombre', true);
     if (nombreReal !== p.nombre) { escribirEnPersonas_(ss, p.id, COL_NOMBRE, nombreReal, true); registro.push('Nombre de ' + p.apodo + ': ' + (nombreReal || 'borrado')); }
@@ -953,7 +979,7 @@ function nucleoDeNueva_(ss, id, nueva, registro) {
   const config = leerConfig_(ss);
   const todos = leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir));
   const p = todos.filter(function (t) { return t.id === id; })[0];
-  if (p) ponerNucleo_(ss, p, { nombre: nueva.nombre || '', apellido: nueva.apellido || '', sexo: nueva.sexo || '', pareja: nueva.pareja || '', hijoDe: nueva.hijoDe || '', casados: nueva.casados || '' }, registro, todos);
+  if (p) ponerNucleo_(ss, p, { nombre: nueva.nombre || '', apellido: nueva.apellido || '', sexo: nueva.sexo || '', pareja: nueva.pareja || '', hijoDe: nueva.hijoDe || '', casados: nueva.casados || '', fallecio: nueva.fallecio || '' }, registro, todos);
 }
 
 function filaDePersona_(ss, personaId) {
@@ -1098,16 +1124,30 @@ function limpiar_(v, max, que, esCeldaTexto) {
 /** Cumpleaños: dd/mm o, con el año (v4.13), dd/mm/aaaa. Una fecha escrita a mano en el Excel se queda sin año (el Excel le pone el de hoy). */
 function aCumple_(v) {
   if (v instanceof Date) return Utilities.formatDate(v, TZ, 'dd/MM');
-  const m = String(v || '').trim().match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{4}))?$/);
-  if (!m) return '';
+  const t = String(v || '').trim();
+  const m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})$/);
+  if (!m) return aFechaParcial_(t, 1900);  // con el año (v4.13), o solo mes y año, o solo el año (v4.16)
   const d = Number(m[1]), mes = Number(m[2]);
   const max = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1];
   if (!max || d < 1 || d > max) return '';
-  const dm = ('0' + d).slice(-2) + '/' + ('0' + mes).slice(-2);
-  if (!m[3]) return dm;
-  const ano = Number(m[3]);
-  if (ano < 1900 || ano > Number(hoy_().slice(0, 4))) return '';
-  return dm + '/' + ano;
+  return ('0' + d).slice(-2) + '/' + ('0' + mes).slice(-2);
+}
+
+/**
+ * v4.16: una fecha como se sepa: dd/mm/aaaa, mm/aaaa o aaaa. Se guarda siempre dd/mm/aaaa, con 00 en lo que no se sabe
+ * («00/01/2008» es enero de 2008; «00/00/1928», 1928). Entre el año «desde» y hoy. Una celda de fecha del Excel, entera.
+ */
+function aFechaParcial_(v, desde) {
+  if (v instanceof Date) return Utilities.formatDate(v, TZ, 'dd/MM/yyyy');
+  const t = String(v || '').trim();
+  let m, d = 0, mes = 0, ano = 0;
+  if ((m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/))) { d = Number(m[1]); mes = Number(m[2]); ano = Number(m[3]); }
+  else if ((m = t.match(/^(\d{1,2})[\/\-.](\d{4})$/))) { mes = Number(m[1]); ano = Number(m[2]); }
+  else if ((m = t.match(/^(\d{4})$/))) { ano = Number(m[1]); }
+  else return '';
+  if (ano < (desde || 1850) || ano > Number(hoy_().slice(0, 4)) || mes > 12 || (!mes && d)) return '';
+  if (d && d > [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1]) return '';
+  return ('0' + d).slice(-2) + '/' + ('0' + mes).slice(-2) + '/' + ano;
 }
 
 function aFecha_(v) {
