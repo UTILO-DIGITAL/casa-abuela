@@ -489,7 +489,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.13.1</footer>
+  <footer>Hecho con cariño por Utilo · v4.13.2</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1074,9 +1074,18 @@
     const f = falta(p).map(function (x) { return CORTO[x] || x; });
     return f.length > 2 ? 'faltan varias cosas' : 'falta: ' + lista(f);
   }
+  /* v4.13: la edad, si se sabe el año del cumpleaños (y según si ya los ha cumplido este año) */
+  function edad(p) {
+    const c = p.cumple || '';
+    if (c.length < 10) return null;
+    const h = hoy();
+    const n = Number(h.slice(0, 4)) - Number(c.slice(6, 10)) - (h.slice(5, 7) + h.slice(8, 10) < c.slice(3, 5) + c.slice(0, 2) ? 1 : 0);
+    return n >= 0 ? n : null;
+  }
   function filaCaja(p) {
     const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
-    const come = comeTexto(p);
+    const e = edad(p);
+    const come = [e === null ? '' : (e === 1 ? '1 año' : e + ' años'), comeTexto(p)].filter(Boolean).join(' · ');
     // v4.12.5: un circulito a quien entró en la familia por su pareja (los «+1»: no son de sangre)
     const deFuera = esDeFuera(p) && !esServicio(p) && p.familia !== 'Otros';
     return '<li><button type="button" class="fila-persona fila-caja" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' +
