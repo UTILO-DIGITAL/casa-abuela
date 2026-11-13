@@ -295,7 +295,7 @@
   button.filtro { min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--color-linea); background: #fff; color: var(--color-texto); font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
   button.filtro[aria-pressed="true"] { background: var(--color-principal-oscuro); border-color: var(--color-principal-oscuro); color: #fff; }
   .personas-cab > .accion { justify-self: start; }
-  .abuela-ficha { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; margin: 0 0 20px; border-radius: var(--radio); background: var(--color-principal-claro); }
+  .abuela-ficha { display: block; width: 100%; padding: 12px 16px; margin: 0 0 20px; border: 0; border-radius: var(--radio); background: var(--color-principal-claro); color: var(--color-texto); font: inherit; text-align: left; cursor: pointer; }
   .abuela-ficha h2 { margin: 0; font-family: var(--letra-titulos); font-weight: 600; font-size: 20px; }
   .abuela-ficha p { margin: 2px 0 0; font-weight: 700; }
   .per-familia { font-size: 16px; font-weight: 800; margin: 20px 0 6px; }
@@ -471,7 +471,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.12.5</footer>
+  <footer>Hecho con cariño por Utilo · v4.12.6</footer>
 </div>
 
 <div id="impresion"></div>
@@ -923,11 +923,10 @@
     const conFalta = datos.personas.filter(function (p) { return falta(p).length; });
     $('per-falta').textContent = 'Les falta algo (' + conFalta.length + ')';
     document.querySelectorAll('[data-filtro]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.filtro === filtroPersonas)); });
-    // La abuela, arriba: lo que come, para todos
+    // La abuela, arriba: lo que come, para todos. v4.12.6: sin botón de cambiar (se abre al tocarla, sin invitar a hacerlo)
     $('per-abuela').innerHTML = abuelas().map(function (a) {
-      const come = [a.menu ? 'menú ' + etiquetaMenu(a.menu).toLowerCase() : '', a.alergias].filter(Boolean).join(' · ') || 'Sin anotar';
-      return '<div class="abuela-ficha"><div><h2>' + esc(a.apodo) + '</h2><p>' + esc(come) + '</p></div>' +
-        '<button type="button" class="accion" data-comida-abuela>Cambiar lo que come</button></div>';
+      const come = comeTexto(a) || 'sin anotar lo que come';
+      return '<button type="button" class="abuela-ficha" data-comida-abuela aria-label="' + esc(a.apodo) + ': ' + esc(come) + '"><h2>' + esc(a.apodo) + '</h2><p>' + esc(come) + '</p></button>';
     }).join('');
     const q = sinAcentos($('per-q').value.trim());
     let lista = filtroPersonas === 'falta' ? conFalta : datos.personas;
