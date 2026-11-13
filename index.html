@@ -317,19 +317,22 @@
   .arbol-barra { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
   .arbol-barra span { flex: 1; font-family: var(--letra-titulos); font-weight: 600; font-size: 20px; }
   .arbol-barra button.icono { font-size: 22px; font-weight: 800; }
-  .arbol-lienzo { overflow: auto; max-height: 72vh; border: 1px solid var(--color-linea); border-radius: var(--radio); background: var(--color-fondo); -webkit-overflow-scrolling: touch; }
+  .arbol-lienzo { overflow: auto; max-height: 74vh; border: 1px solid var(--color-linea); border-radius: var(--radio); background: var(--color-fondo); -webkit-overflow-scrolling: touch; }
   .arbol-lienzo svg { display: block; }
-  .arbol-lineas path { fill: none; stroke: var(--color-principal); stroke-width: 2; }
-  .arbol-caja { fill: #fff; stroke: var(--color-principal); stroke-width: 1.5; }
-  .arbol-caja.muerto { fill: #F4F1EC; stroke: var(--color-linea); }
-  .arbol-caja.grupo { stroke-dasharray: 5 4; }
+  .arbol-lineas path { fill: none; stroke: #CDBFAD; stroke-width: 2; stroke-linejoin: round; }
+  .arbol-caja { fill: #fff; stroke: #E3D6C5; stroke-width: 1.5; filter: drop-shadow(0 1px 2px rgba(28, 43, 38, .10)); }
+  .arbol-caja.raiz { fill: var(--color-principal-claro); stroke: var(--color-principal); }
+  .arbol-caja.muerto { fill: #F3EFE9; }
+  .arbol-raya { stroke: #EADFD2; stroke-width: 1.5; }
+  .arbol-anillo rect { fill: #fff; stroke: #E3D6C5; }
+  .arbol-anillo circle, .arbol-anillo path { fill: none; stroke: var(--color-principal-oscuro); stroke-width: 2.2; stroke-linejoin: round; }
   .arbol-zona { fill: transparent; }
   .arbol-persona[data-persona], .arbol-persona[data-comida-abuela] { cursor: pointer; }
+  .arbol-persona[data-persona]:hover .arbol-zona, .arbol-persona[data-comida-abuela]:hover .arbol-zona { fill: rgba(14, 138, 122, .06); }
   .arbol-persona.soy-yo .arbol-zona { stroke: var(--color-accion); stroke-width: 2.5; }
-  .arbol-nombre { font-family: var(--letra-texto); font-weight: 800; font-size: 14px; fill: var(--color-texto); }
-  .arbol-dato { font-family: var(--letra-texto); font-weight: 600; font-size: 12px; fill: var(--color-texto-suave); }
+  .arbol-nombre { font-family: var(--letra-texto); font-weight: 800; font-size: 15px; fill: var(--color-texto); }
+  .arbol-dato { font-family: var(--letra-texto); font-weight: 600; font-size: 12.5px; fill: var(--color-texto-suave); }
   .arbol-persona.muerto .arbol-nombre { fill: var(--color-texto-suave); }
-  .arbol-corazon { font-size: 13px; fill: var(--color-accion); }
   /* v4.14: pestaña Huecos */
   .huecos-resumen { margin: 0 0 16px; font-size: 18px; font-weight: 800; }
   .huecos-dia { margin: 0 0 12px; padding: 10px 14px; background: #fff; border: 1px solid var(--color-linea); border-radius: var(--radio); }
@@ -511,7 +514,7 @@
 
   <section id="vista-personas" hidden>
     <div class="personas-cab">
-      <label class="buscar" for="per-q"><span class="oculto">Buscar</span><input id="per-q" type="search" autocomplete="off" placeholder="Buscar por nombre o familia"></label>
+      <label class="buscar" for="per-q"><span class="oculto">Buscar</span><input id="per-q" type="search" autocomplete="off" placeholder="Buscar"></label>
       <button type="button" class="accion" id="per-filtros-btn" aria-expanded="false" aria-controls="per-filtros">Filtros</button>
       <button type="button" class="accion" id="per-arbol-btn" aria-pressed="false">Árbol</button>
       <button type="button" class="accion" data-nueva-persona>Añadir</button>
@@ -1202,80 +1205,94 @@
     const hijosDe = {};
     todos.forEach(function (p) { if (p.hijoDe) (hijosDe[p.hijoDe] = hijosDe[p.hijoDe] || []).push(p); });
     const usados = {};
+    /* Cada pareja (o persona con hijos) es una caja; sus hijos con pareja o hijos, cajas debajo, una al lado de otra;
+       los hijos sin pareja ni hijos, cada uno en su caja, uno debajo de otro (así el árbol no se hace tan ancho). */
     const nodo = function (p, nivel) {
       usados[p.id] = true;
       const pa = parejaDeP(p);
       if (pa) usados[pa.id] = true;
       const cabezas = pa ? ordenPareja(p, pa) : [p];
-      const hijos = cabezas.reduce(function (l, c) { return l.concat(hijosDe[c.id] || []); }, []);
-      const n = { cabezas: cabezas, hijos: [], nivel: nivel };
-      // Los hijos sin pareja ni hijos, juntos en una caja (uno debajo de otro): así el árbol no se hace tan ancho
+      const n = { cabezas: cabezas, hijos: [], nivel: nivel, raiz: nivel === 0, casados: !!pa && (p.casados === 'Sí' || pa.casados === 'Sí') };
       const sueltos = [];
-      hijos.forEach(function (h) {
+      cabezas.reduce(function (l, c) { return l.concat(hijosDe[c.id] || []); }, []).forEach(function (h) {
         if (usados[h.id] || nivel >= 8) return;
         if (parejaDeP(h) || (hijosDe[h.id] || []).length) n.hijos.push(nodo(h, nivel + 1));
         else { usados[h.id] = true; sueltos.push(h); }
       });
-      if (sueltos.length) n.hijos.push({ cabezas: sueltos, hijos: [], nivel: nivel + 1, grupo: true });
+      if (sueltos.length) n.hijos.push({ columna: sueltos, hijos: [], nivel: nivel + 1 });
       return n;
     };
     const arbol = nodo(raiz, 0);
-    const BW = 176, PH = 42, CORAZON = 16, GX = 18, GY = 48;
-    const alto = function (n) { return 12 + n.cabezas.length * PH + (n.cabezas.length > 1 && !n.grupo ? CORAZON : 0); };
-    let fila = 0;
-    const filaAlto = {};
-    (function med(n) { filaAlto[n.nivel] = Math.max(filaAlto[n.nivel] || 0, alto(n)); fila = Math.max(fila, n.nivel); n.hijos.forEach(med); })(arbol);
-    const y0 = {};
-    let acum = 16;
-    for (let i = 0; i <= fila; i++) { y0[i] = acum; acum += filaAlto[i] + GY; }
+    const BW = 196, PH = 58, GX = 22, GY = 56, HUECO = 12;
+    const alto = function (n) { return n.columna ? n.columna.length * PH + (n.columna.length - 1) * HUECO : n.cabezas.length * PH; };
     const ancho = function (n) { return n.w || (n.w = Math.max(BW, n.hijos.reduce(function (t, h) { return t + ancho(h); }, 0) + GX * Math.max(0, n.hijos.length - 1))); };
-    const situa = function (n, x) {
+    // Cada rama baja solo lo que necesita: los hijos, justo debajo de sus padres
+    let H = 0;
+    const situa = function (n, x, y) {
       n.x = x + ancho(n) / 2;
+      n.y = y;
+      H = Math.max(H, y + alto(n) + 20);
       let cx = n.x - (n.hijos.reduce(function (t, h) { return t + ancho(h); }, 0) + GX * Math.max(0, n.hijos.length - 1)) / 2;
-      n.hijos.forEach(function (h) { situa(h, cx); cx += ancho(h) + GX; });
+      n.hijos.forEach(function (h) { situa(h, cx, y + alto(n) + GY); cx += ancho(h) + GX; });
     };
-    situa(arbol, 16);
-    const W = ancho(arbol) + 32, H = acum;
+    situa(arbol, 20, 20);
+    const W = ancho(arbol) + 40;
     const corta = function (t, n) { return t.length > n ? t.slice(0, n - 1) + '…' : t; };
     const nombreDe = function (p) { return p.nombre ? p.nombre + (p.apellido ? ' ' + p.apellido : '') : p.apodo; };
     const datoDe = function (p) {
       if (esFallecido(p)) {
         const n = p.cumple && p.cumple.length >= 10 ? p.cumple.slice(6, 10) : '';
         const f = p.fallecio.slice(6, 10);
-        return '† ' + (n && n !== f ? n + '–' + f : f);
+        return '† ' + (n && n !== f ? n + ' – ' + f : f);
       }
       const e = edad(p);
       return e === null ? '' : (e === 1 ? '1 año' : e + ' años');
     };
+    const persona_ = function (p, py) {
+      const clic = editor(p.id) ? (p.fallecio ? '' : ' data-comida-abuela') : ' data-persona="' + esc(p.id) + '"';
+      const dato = datoDe(p);
+      return '<g class="arbol-persona' + (esFallecido(p) ? ' muerto' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic + '>' +
+        '<rect x="3" y="' + (py + 3) + '" width="' + (BW - 6) + '" height="' + (PH - 6) + '" rx="10" class="arbol-zona"/>' +
+        '<text x="16" y="' + (py + (dato ? 25 : 34)) + '" class="arbol-nombre">' + esc(corta(nombreDe(p), 21)) + '</text>' +
+        (dato ? '<text x="16" y="' + (py + 44) + '" class="arbol-dato">' + esc(dato) + '</text>' : '') + '</g>';
+    };
+    const caja = function (x, y, h, clase, dentro) {
+      return '<g transform="translate(' + x + ',' + y + ')"><rect class="arbol-caja ' + clase + '" width="' + BW + '" height="' + h + '" rx="14"/>' + dentro + '</g>';
+    };
     let lineas = '', cajas = '';
     (function dibuja(n) {
-      const y = y0[n.nivel], h = alto(n), x = n.x - BW / 2;
-      const muertos = n.cabezas.every(esFallecido);
-      cajas += '<g transform="translate(' + x + ',' + y + ')"><rect class="arbol-caja' + (muertos ? ' muerto' : '') + (n.grupo ? ' grupo' : '') + '" width="' + BW + '" height="' + h + '" rx="10"/>';
-      n.cabezas.forEach(function (p, i) {
-        const py = 6 + i * (PH + (n.grupo ? 0 : CORAZON));
-        const clic = editor(p.id) ? (p.fallecio ? '' : ' data-comida-abuela') : ' data-persona="' + esc(p.id) + '"';
-        cajas += '<g class="arbol-persona' + (esFallecido(p) ? ' muerto' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic + '>' +
-          '<rect x="4" y="' + (py - 2) + '" width="' + (BW - 8) + '" height="' + (PH - 2) + '" rx="8" class="arbol-zona"/>' +
-          '<text x="12" y="' + (py + 17) + '" class="arbol-nombre">' + esc(corta(nombreDe(p), 22)) + '</text>' +
-          '<text x="12" y="' + (py + 33) + '" class="arbol-dato">' + esc(datoDe(p)) + '</text></g>';
-        if (i === 0 && n.cabezas.length > 1 && !n.grupo) cajas += '<text x="' + (BW / 2) + '" y="' + (6 + PH + 11) + '" class="arbol-corazon" text-anchor="middle">♥</text>';
-      });
-      cajas += '</g>';
+      const y = n.y, x = n.x - BW / 2;
+      if (n.columna) {
+        n.columna.forEach(function (p, k) {
+          const yy = y + k * (PH + HUECO);
+          if (k) lineas += '<path d="M' + n.x + ' ' + (yy - HUECO) + 'V' + yy + '"/>';
+          cajas += caja(x, yy, PH, esFallecido(p) ? 'muerto' : '', persona_(p, 0));
+        });
+        return;
+      }
+      const h = alto(n);
+      let dentro = n.cabezas.map(function (p, k) { return persona_(p, k * PH); }).join('');
+      if (n.cabezas.length > 1) {
+        dentro += '<path class="arbol-raya" d="M16 ' + PH + 'H' + (BW - 16) + '"/>';
+        if (n.casados) dentro += '<g class="arbol-anillo" transform="translate(' + (BW / 2 - 11) + ',' + (PH - 11) + ')"><rect width="22" height="22" rx="11"/>' +
+          '<g transform="translate(3,3) scale(0.67)"><circle cx="12" cy="15" r="6"/><path d="M12 3.5l2.5 2.5L12 8.5 9.5 6z"/></g><title>Casados</title></g>';
+      }
+      cajas += caja(x, y, h, (n.raiz ? 'raiz' : '') + (n.cabezas.every(esFallecido) ? ' muerto' : ''), dentro);
       if (n.hijos.length) {
-        const yb = y + h, ym = y0[n.nivel] + filaAlto[n.nivel] + GY / 2;
-        lineas += '<path d="M' + n.x + ' ' + yb + 'V' + ym + '"/>';
+        const ym = y + h + GY / 2;
+        lineas += '<path d="M' + n.x + ' ' + (y + h) + 'V' + ym + '"/>';
         if (n.hijos.length > 1) lineas += '<path d="M' + n.hijos[0].x + ' ' + ym + 'H' + n.hijos[n.hijos.length - 1].x + '"/>';
-        n.hijos.forEach(function (c) { lineas += '<path d="M' + c.x + ' ' + ym + 'V' + y0[c.nivel] + '"/>'; dibuja(c); });
+        n.hijos.forEach(function (c) { lineas += '<path d="M' + c.x + ' ' + ym + 'V' + c.y + '"/>'; dibuja(c); });
       }
     })(arbol);
     $('per-lista').innerHTML = '<div class="arbol-barra"><span>Árbol de la familia</span><button type="button" class="icono" data-zoom="-1" aria-label="Alejar">−</button><button type="button" class="icono" data-zoom="1" aria-label="Acercar">+</button></div>' +
       '<div class="arbol-lienzo"><svg width="' + Math.round(W * arbolZoom) + '" height="' + Math.round(H * arbolZoom) + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Árbol genealógico de la familia">' +
       '<g class="arbol-lineas">' + lineas + '</g>' + cajas + '</svg></div>' +
-      '<p class="ayuda">Desliza para moverte. Toca a alguien para ver su ficha. † = fallecido.</p>';
+      '<p class="ayuda">Desliza para moverte y toca a alguien para ver su ficha. El anillo, casados; †, fallecido.</p>';
     const lienzo = document.querySelector('.arbol-lienzo');
     lienzo.scrollLeft = (centroX !== undefined ? centroX : arbol.x) * arbolZoom - lienzo.clientWidth / 2;
   }
+
   $('per-filtros').addEventListener('click', function (e) {
     const b = e.target.closest('[data-fk]');
     if (!b) return;
