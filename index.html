@@ -288,9 +288,6 @@
   .nota-dia.cumple { background: var(--color-destacado); }
   .nota-dia.fuera { background: var(--color-linea); }
   .fuera-turnos { display: flex; flex-wrap: wrap; gap: 0 16px; }
-  small.firma { display: block; font-size: 12px; font-weight: 600; color: var(--color-texto-suave); }
-  .notas small.firma, .sin-turno small.firma { display: inline; margin-left: 4px; }
-  .notas small.firma::before, .sin-turno small.firma::before { content: '· '; }
   .comida.no-hace-falta h4 { color: var(--color-texto-suave); }
   .dia.sin .dia-cab { background: var(--color-linea); }
   button.mini { min-height: 32px; padding: 2px 10px; margin-left: auto; border: 1px solid currentColor; border-radius: calc(var(--radio) / 2); background: transparent; color: inherit; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
@@ -496,7 +493,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.13.6</footer>
+  <footer>Hecho con cariño por Utilo · v4.13.7</footer>
 </div>
 
 <div id="impresion"></div>
@@ -662,21 +659,7 @@
     return '';
   }
   /* «Marta, hoy a las 10:42»: quién puso algo y cuándo */
-  function firma(por, en) {
-    if (!por) return '';
-    let cuando = '';
-    if (en && en.length >= 16) {
-      const d = en.slice(0, 10), h = en.slice(11, 16);
-      cuando = d === hoy() ? 'hoy a las ' + h : (d === sumar(hoy(), -1) ? 'ayer a las ' + h : 'el ' + ddmm(d) + ' a las ' + h);
-    }
-    return '<small class="firma">' + esc(por) + (cuando ? ', ' + cuando : '') + '</small>';
-  }
-  function firmaTurno(nd, turno) {
-    if (!nd) return '';
-    if (turno === 'CENA') return firma(nd.cenaPor, nd.cenaEn);
-    if (turno === 'DORMIR') return firma(nd.dormirPor, nd.dormirEn);
-    return firma(nd.comidaPor, nd.comidaEn);
-  }
+  /* v4.13.7: las notas ya no dicen quién ni cuándo (se guarda en el Excel, pero en pantalla era ruido) */
   /* La abuela fuera: por comida, cena o noche */
   const CAMPO_FUERA = { COMIDA: 'fueraComida', CENA: 'fueraCena', DORMIR: 'fueraDormir' };
   function fueraTurno(fecha, turno) { const nd = notaDia(fecha); return !!(nd && nd[CAMPO_FUERA[turno]]); }
@@ -848,9 +831,9 @@
     const cumples = textoCumples(fecha);
     if (cumples.length) html += '<p class="nota-dia cumple">' + cumples.map(esc).join('<br>') + '</p>';
     const fu = fuera(fecha);
-    if (fu) html += '<p class="nota-dia fuera">' + esc(textoFuera(fecha)) + (fu.motivoFuera ? ': ' + esc(fu.motivoFuera) : '') + firma(fu.fueraPor, fu.fueraEn) + '</p>';
-    if (nd && nd.nota) html += '<p class="nota-dia">' + esc(nd.nota) + firma(nd.notaPor, nd.notaEn) + '</p>';
-    if (nd && nd.notaServicio) html += '<p class="nota-servicio"><span>Para el servicio: </span>' + esc(nd.notaServicio) + firma(nd.servicioPor, nd.servicioEn) + '</p>';
+    if (fu) html += '<p class="nota-dia fuera">' + esc(textoFuera(fecha)) + (fu.motivoFuera ? ': ' + esc(fu.motivoFuera) : '') + '</p>';
+    if (nd && nd.nota) html += '<p class="nota-dia">' + esc(nd.nota) + '</p>';
+    if (nd && nd.notaServicio) html += '<p class="nota-servicio"><span>Para el servicio: </span>' + esc(nd.notaServicio) + '</p>';
     TURNOS.forEach(function (t) {
       const ids = idsDe(fecha, t.id);
       const ft = fueraTurno(fecha, t.id);
@@ -874,14 +857,14 @@
         html += '<span class="cuantos">' + cuenta(ids, t.id) + '</span>';
       }
       if (ft) html += '<p class="sin-turno">La abuela no está' + (ids.length ? ': avisad a quien va.' : '.') + '</p>';
-      else if (motivo !== null) html += '<p class="sin-turno">No hace falta que vaya nadie' + (motivo ? ': ' + esc(motivo) : '.') + firmaTurno(nd, t.id) + '</p>';
+      else if (motivo !== null) html += '<p class="sin-turno">No hace falta que vaya nadie' + (motivo ? ': ' + esc(motivo) : '.') + '</p>';
       if (comp.length) html += '<div class="gente">' + comp.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
       else if (motivo === null && grande) html += '<div><span class="nadie suave">Aún sin nadie</span></div>';
       if (serv.length) html += '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
       const al = t.id === 'DORMIR' ? [] : ids.map(persona).filter(function (p) { return p && p.alergias; });
       if (al.length) html += '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>';
       const notas = ids.map(function (id) { return apunte(fecha, t.id, id); }).filter(function (a) { return a && a.nota; });
-      if (notas.length) html += '<ul class="notas">' + notas.map(function (a) { return '<li><b>' + esc((persona(a.persona) || {}).apodo || a.persona) + ':</b> ' + esc(a.nota) + firma(a.notaPor, a.notaEn) + '</li>'; }).join('') + '</ul>';
+      if (notas.length) html += '<ul class="notas">' + notas.map(function (a) { return '<li><b>' + esc((persona(a.persona) || {}).apodo || a.persona) + ':</b> ' + esc(a.nota) + '</li>'; }).join('') + '</ul>';
       html += '</div>';
     });
     return html + '</article>';
