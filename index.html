@@ -1207,26 +1207,36 @@
     const usados = {};
     /* Cada pareja (o persona con hijos) es una caja; sus hijos con pareja o hijos, cajas debajo, una al lado de otra;
        los hijos sin pareja ni hijos, cada uno en su caja, uno debajo de otro (así el árbol no se hace tan ancho). */
+    // Cada pareja (o persona) es una caja, y todos sus hijos van debajo, al mismo nivel, cada uno en su caja
     const nodo = function (p, nivel) {
       usados[p.id] = true;
       const pa = parejaDeP(p);
       if (pa) usados[pa.id] = true;
       const cabezas = pa ? ordenPareja(p, pa) : [p];
       const n = { cabezas: cabezas, hijos: [], nivel: nivel, raiz: nivel === 0, casados: !!pa && (p.casados === 'Sí' || pa.casados === 'Sí') };
-      const sueltos = [];
       cabezas.reduce(function (l, c) { return l.concat(hijosDe[c.id] || []); }, []).forEach(function (h) {
-        if (usados[h.id] || nivel >= 8) return;
-        if (parejaDeP(h) || (hijosDe[h.id] || []).length) n.hijos.push(nodo(h, nivel + 1));
-        else { usados[h.id] = true; sueltos.push(h); }
+        if (!usados[h.id] && nivel < 8) n.hijos.push(nodo(h, nivel + 1));
       });
-      if (sueltos.length) n.hijos.push({ columna: sueltos, hijos: [], nivel: nivel + 1 });
       return n;
     };
     const arbol = nodo(raiz, 0);
-    const BW = 196, PH = 58, GX = 22, GY = 56, HUECO = 12;
-    const alto = function (n) { return n.columna ? n.columna.length * PH + (n.columna.length - 1) * HUECO : n.cabezas.length * PH; };
-    const ancho = function (n) { return n.w || (n.w = Math.max(BW, n.hijos.reduce(function (t, h) { return t + ancho(h); }, 0) + GX * Math.max(0, n.hijos.length - 1))); };
-    // Cada rama baja solo lo que necesita: los hijos, justo debajo de sus padres
+    const corta = function (t, k) { return t.length > k ? t.slice(0, k - 1) + '…' : t; };
+    const nombreDe = function (p) { return corta(p.nombre ? p.nombre + (p.apellido ? ' ' + p.apellido : '') : p.apodo, 22); };
+    const datoDe = function (p) {
+      if (esFallecido(p)) {
+        const n = p.cumple && p.cumple.length >= 10 ? p.cumple.slice(6, 10) : '';
+        const f = p.fallecio.slice(6, 10);
+        return '† ' + (n && n !== f ? n + ' – ' + f : f);
+      }
+      const e = edad(p);
+      return e === null ? '' : (e === 1 ? '1 año' : e + ' años');
+    };
+    // Medidas ajustadas al contenido: el ancho, por lo largo del nombre; el alto, con o sin la línea de la edad
+    const PAD = 12, GX = 14, GY = 44;
+    const altoP = function (p) { return datoDe(p) ? 44 : 28; };
+    const anchoCaja = function (n) { return n.bw || (n.bw = Math.max(96, Math.round(n.cabezas.reduce(function (m, p) { return Math.max(m, nombreDe(p).length * 8.4, datoDe(p).length * 6.8); }, 0)) + 2 * PAD)); };
+    const alto = function (n) { return n.cabezas.length > 1 ? 6 + altoP(n.cabezas[0]) + 12 + altoP(n.cabezas[1]) + 6 : 6 + altoP(n.cabezas[0]) + 6; };
+    const ancho = function (n) { return n.w || (n.w = Math.max(anchoCaja(n), n.hijos.reduce(function (t, h) { return t + ancho(h); }, 0) + GX * Math.max(0, n.hijos.length - 1))); };
     let H = 0;
     const situa = function (n, x, y) {
       n.x = x + ancho(n) / 2;
@@ -1237,47 +1247,26 @@
     };
     situa(arbol, 20, 20);
     const W = ancho(arbol) + 40;
-    const corta = function (t, n) { return t.length > n ? t.slice(0, n - 1) + '…' : t; };
-    const nombreDe = function (p) { return p.nombre ? p.nombre + (p.apellido ? ' ' + p.apellido : '') : p.apodo; };
-    const datoDe = function (p) {
-      if (esFallecido(p)) {
-        const n = p.cumple && p.cumple.length >= 10 ? p.cumple.slice(6, 10) : '';
-        const f = p.fallecio.slice(6, 10);
-        return '† ' + (n && n !== f ? n + ' – ' + f : f);
-      }
-      const e = edad(p);
-      return e === null ? '' : (e === 1 ? '1 año' : e + ' años');
-    };
-    const persona_ = function (p, py) {
+    const persona_ = function (p, py, bw) {
       const clic = editor(p.id) ? (p.fallecio ? '' : ' data-comida-abuela') : ' data-persona="' + esc(p.id) + '"';
       const dato = datoDe(p);
       return '<g class="arbol-persona' + (esFallecido(p) ? ' muerto' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic + '>' +
-        '<rect x="3" y="' + (py + 3) + '" width="' + (BW - 6) + '" height="' + (PH - 6) + '" rx="10" class="arbol-zona"/>' +
-        '<text x="16" y="' + (py + (dato ? 25 : 34)) + '" class="arbol-nombre">' + esc(corta(nombreDe(p), 21)) + '</text>' +
-        (dato ? '<text x="16" y="' + (py + 44) + '" class="arbol-dato">' + esc(dato) + '</text>' : '') + '</g>';
-    };
-    const caja = function (x, y, h, clase, dentro) {
-      return '<g transform="translate(' + x + ',' + y + ')"><rect class="arbol-caja ' + clase + '" width="' + BW + '" height="' + h + '" rx="14"/>' + dentro + '</g>';
+        '<rect x="3" y="' + (py - 3) + '" width="' + (bw - 6) + '" height="' + (altoP(p) + 6) + '" rx="9" class="arbol-zona"/>' +
+        '<text x="' + PAD + '" y="' + (py + 19) + '" class="arbol-nombre">' + esc(nombreDe(p)) + '</text>' +
+        (dato ? '<text x="' + PAD + '" y="' + (py + 37) + '" class="arbol-dato">' + esc(dato) + '</text>' : '') + '</g>';
     };
     let lineas = '', cajas = '';
     (function dibuja(n) {
-      const y = n.y, x = n.x - BW / 2;
-      if (n.columna) {
-        n.columna.forEach(function (p, k) {
-          const yy = y + k * (PH + HUECO);
-          if (k) lineas += '<path d="M' + n.x + ' ' + (yy - HUECO) + 'V' + yy + '"/>';
-          cajas += caja(x, yy, PH, esFallecido(p) ? 'muerto' : '', persona_(p, 0));
-        });
-        return;
-      }
-      const h = alto(n);
-      let dentro = n.cabezas.map(function (p, k) { return persona_(p, k * PH); }).join('');
+      const bw = anchoCaja(n), h = alto(n), x = n.x - bw / 2, y = n.y;
+      let dentro = persona_(n.cabezas[0], 6, bw);
       if (n.cabezas.length > 1) {
-        dentro += '<path class="arbol-raya" d="M16 ' + PH + 'H' + (BW - 16) + '"/>';
-        if (n.casados) dentro += '<g class="arbol-anillo" transform="translate(' + (BW / 2 - 11) + ',' + (PH - 11) + ')"><rect width="22" height="22" rx="11"/>' +
-          '<g transform="translate(3,3) scale(0.67)"><circle cx="12" cy="15" r="6"/><path d="M12 3.5l2.5 2.5L12 8.5 9.5 6z"/></g><title>Casados</title></g>';
+        const yr = 6 + altoP(n.cabezas[0]) + 6;
+        dentro += '<path class="arbol-raya" d="M' + PAD + ' ' + yr + 'H' + (bw - PAD) + '"/>';
+        if (n.casados) dentro += '<g class="arbol-anillo" transform="translate(' + (bw / 2 - 10) + ',' + (yr - 10) + ')"><rect width="20" height="20" rx="10"/>' +
+          '<g transform="translate(2.5,2.5) scale(0.62)"><circle cx="12" cy="15" r="6"/><path d="M12 3.5l2.5 2.5L12 8.5 9.5 6z"/></g><title>Casados</title></g>';
+        dentro += persona_(n.cabezas[1], yr + 6, bw);
       }
-      cajas += caja(x, y, h, (n.raiz ? 'raiz' : '') + (n.cabezas.every(esFallecido) ? ' muerto' : ''), dentro);
+      cajas += '<g transform="translate(' + x + ',' + y + ')"><rect class="arbol-caja ' + (n.raiz ? 'raiz' : '') + (n.cabezas.every(esFallecido) ? ' muerto' : '') + '" width="' + bw + '" height="' + h + '" rx="12"/>' + dentro + '</g>';
       if (n.hijos.length) {
         const ym = y + h + GY / 2;
         lineas += '<path d="M' + n.x + ' ' + (y + h) + 'V' + ym + '"/>';
