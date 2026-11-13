@@ -447,7 +447,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.10.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.10.1</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1044,6 +1044,14 @@
     if (v.hijoDe !== (p ? p.hijoDe || '' : '')) c.hijoDe = v.hijoDe;
     return c;
   }
+  /* v4.10.1: el círculo se avisa en la misma ficha, antes de guardar (el servidor lo vuelve a comprobar) */
+  function errorNucleo(p, c) {
+    if (!p || !c.hijoDe) return '';
+    for (let x = c.hijoDe, i = 0; x && i < 50; x = (quienEs(x) || {}).hijoDe, i++) {
+      if (x === p.id) return (quienEs(c.hijoDe) || {}).apodo + ' no puede ser padre o madre de ' + p.apodo + ': ya desciende de él o de ella.';
+    }
+    return '';
+  }
   function aplicarNucleoLocal(p, c) {
     if (c.apellido !== undefined) p.apellido = c.apellido;
     if (c.sexo !== undefined) p.sexo = c.sexo;
@@ -1434,7 +1442,9 @@
       if (apodo !== p.apodo) cambios.apodo = apodo;
       if (jer && jer !== p.jerarquia) cambios.jerarquia = jer;
       if (fam && fam !== p.familia) cambios.familia = fam;
-      Object.assign(cambios, leerNucleo(p));
+      const nucleo = leerNucleo(p), errorN = errorNucleo(p, nucleo);
+      if (errorN) { errorDialogo(errorN); return; }
+      Object.assign(cambios, nucleo);
       if (alergias !== p.alergias) cambios.alergias = alergias;
       const cdia = $('dlg-cdia').value, cmes = $('dlg-cmes').value;
       if ((cdia && !cmes) || (!cdia && cmes)) { errorDialogo('Para el cumpleaños, elige el día y el mes, o deja los dos vacíos.'); return; }
