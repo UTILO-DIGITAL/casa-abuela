@@ -9,6 +9,7 @@
  *                 Núcleos (J-M, v4.10): Apellido, Sexo (Hombre o Mujer), Pareja (Id, en los dos sentidos) e Hijo de (Id).
  *                 Los Ids siguen a MESA_ALIAS. La web arma con ellos el árbol de núcleos de cada familia.
  *                 Nombre (N, v4.11): el nombre de verdad; el Apodo (B) es como le llaman en casa y no se repite.
+ *                 Casados (O, v4.12): Sí o No, en los dos de la pareja; se borra si cambia la pareja.
  *   MESA_APUNTES  ID_APUNTE | FECHA | TURNO | PERSONA_ID | CREADO_EN | NOTA | ESTADO ('' va · 'NO' no va ese día aunque sea fijo) | NOTA_POR | NOTA_EN
  *   MESA_FIJOS    ID_FIJO | PERSONA_ID | DIA_SEMANA (0 domingo … 6 sábado) | TURNO | DESDE | HASTA | NOTA | CREADO_POR | CREADO_EN
  *   MESA_DIAS     FECHA | NOTA | SIN_TURNO | CAMBIADO_POR | CAMBIADO_EN | SIN_COMIDA | MOTIVO_COMIDA | SIN_CENA | MOTIVO_CENA | NOTA_SERVICIO | SIN_DORMIR | MOTIVO_DORMIR
@@ -27,7 +28,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.11.0
+ * Versión 4.12.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -50,8 +51,10 @@ const COL_SEXO = 11;     // K: Hombre o Mujer
 const COL_PAREJA = 12;   // L: Id de su pareja
 const COL_HIJO_DE = 13;  // M: Id de su padre o su madre
 const COL_NOMBRE = 14;   // N: nombre de verdad (v4.11)
-const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de', 14: 'Nombre' };
-const CAMPOS_NUCLEO = ['nombre', 'apellido', 'sexo', 'pareja', 'hijoDe'];
+const COL_CASADOS = 15;  // O: Sí o No (v4.12)
+const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de', 14: 'Nombre', 15: 'Casados' };
+const CAMPOS_NUCLEO = ['nombre', 'apellido', 'sexo', 'pareja', 'hijoDe', 'casados'];
+const CASADOS = ['Sí', 'No'];
 const SEXOS = ['Hombre', 'Mujer'];
 const COLS_APUNTES = 9;
 const COLS_FIJOS = 9;
@@ -196,6 +199,7 @@ function aPersona_(f) {
     pareja: String(f[COL_PAREJA - 1] || '').trim(),
     hijoDe: String(f[COL_HIJO_DE - 1] || '').trim(),
     nombre: String(f[COL_NOMBRE - 1] || '').trim(),
+    casados: CASADOS.indexOf(String(f[COL_CASADOS - 1] || '').trim()) !== -1 ? String(f[COL_CASADOS - 1]).trim() : '',
   };
 }
 
@@ -850,7 +854,7 @@ function asegurarColumnaBaja_(ss) { asegurarColumnas_(ss, COL_BAJA); }
 function ponerNucleo_(ss, p, cambios, registro, todos) {
   const nombre = function (id) { const x = todos.filter(function (t) { return t.id === id; })[0]; return x ? x.apodo : id; };
   const existe = function (id) { return todos.some(function (t) { return t.id === id; }); };
-  asegurarColumnas_(ss, COL_NOMBRE);
+  asegurarColumnas_(ss, COL_CASADOS);
   if (cambios.nombre !== undefined) {
     const nombreReal = limpiar_(cambios.nombre, 40, 'El nombre', true);
     if (nombreReal !== p.nombre) { escribirEnPersonas_(ss, p.id, COL_NOMBRE, nombreReal, true); registro.push('Nombre de ' + p.apodo + ': ' + (nombreReal || 'borrado')); }
@@ -884,14 +888,29 @@ function ponerNucleo_(ss, p, cambios, registro, todos) {
     if (nueva !== p.pareja) {
       const parejaDe = {};
       todos.forEach(function (t) { parejaDe[t.id] = t.pareja; });
-      if (p.pareja && parejaDe[p.pareja] === p.id) escribirEnPersonas_(ss, p.pareja, COL_PAREJA, '', true);
+      // Al cambiar de pareja, «Casados» se borra en las dos parejas que se deshacen y en la nueva (v4.12)
+      if (p.pareja && parejaDe[p.pareja] === p.id) { escribirEnPersonas_(ss, p.pareja, COL_PAREJA, '', true); escribirEnPersonas_(ss, p.pareja, COL_CASADOS, '', true); }
       if (nueva) {
         const anterior = parejaDe[nueva];
-        if (anterior && anterior !== p.id && parejaDe[anterior] === nueva) escribirEnPersonas_(ss, anterior, COL_PAREJA, '', true);
+        if (anterior && anterior !== p.id && parejaDe[anterior] === nueva) { escribirEnPersonas_(ss, anterior, COL_PAREJA, '', true); escribirEnPersonas_(ss, anterior, COL_CASADOS, '', true); }
         escribirEnPersonas_(ss, nueva, COL_PAREJA, p.id, true);
+        escribirEnPersonas_(ss, nueva, COL_CASADOS, '', true);
       }
       escribirEnPersonas_(ss, p.id, COL_PAREJA, nueva, true);
+      escribirEnPersonas_(ss, p.id, COL_CASADOS, '', true);
+      p.casados = '';
       registro.push(nueva ? p.apodo + ' y ' + nombre(nueva) + ' son pareja' : p.apodo + ' ya no tiene pareja');
+    }
+  }
+  if (cambios.casados !== undefined) {
+    const casados = String(cambios.casados || '').trim();
+    if (casados && CASADOS.indexOf(casados) === -1) throw new Error('Elige si están casados: sí o no.');
+    const pareja = cambios.pareja !== undefined ? String(cambios.pareja || '').trim() : p.pareja;
+    if (casados && !pareja) throw new Error('Para decir si están casados, elige primero su pareja.');
+    if (casados !== p.casados) {
+      escribirEnPersonas_(ss, p.id, COL_CASADOS, casados, true);
+      if (pareja) escribirEnPersonas_(ss, pareja, COL_CASADOS, casados, true);
+      if (pareja) registro.push(p.apodo + ' y ' + nombre(pareja) + (casados === 'Sí' ? ': casados' : casados === 'No' ? ': no casados' : ': sin decir si están casados'));
     }
   }
   olvidar_('personas');
@@ -905,7 +924,7 @@ function nucleoDeNueva_(ss, id, nueva, registro) {
   const config = leerConfig_(ss);
   const todos = leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir));
   const p = todos.filter(function (t) { return t.id === id; })[0];
-  if (p) ponerNucleo_(ss, p, { nombre: nueva.nombre || '', apellido: nueva.apellido || '', sexo: nueva.sexo || '', pareja: nueva.pareja || '', hijoDe: nueva.hijoDe || '' }, registro, todos);
+  if (p) ponerNucleo_(ss, p, { nombre: nueva.nombre || '', apellido: nueva.apellido || '', sexo: nueva.sexo || '', pareja: nueva.pareja || '', hijoDe: nueva.hijoDe || '', casados: nueva.casados || '' }, registro, todos);
 }
 
 function filaDePersona_(ss, personaId) {

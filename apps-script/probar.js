@@ -128,3 +128,15 @@ err = ''; try { R.crearPersona({ apodo: 'Amiga M', jerarquia: 'Nietos', familia:
 ver('el apodo de alguien de baja tampoco se reutiliza con otro parentesco', /no se puede repetir/.test(err));
 d = R.crearPersona({ apodo: 'Amiga M', jerarquia: 'Otros', familia: 'Otros', nombre: 'Ana' }, M_, V);
 ver('pero se recupera con el mismo parentesco, con su nombre', !!d.personas.find(p => p.id === '(O) - Amiga M' && p.nombre === 'Ana'));
+
+// ---------- v4.12: casados ----------
+d = R.guardarPersona(M_, { casados: 'Sí' }, M_, V);
+ver('Mercedes y Jordi P, casados (en los dos)', quien(M_).casados === 'Sí' && quien('(T+1) - Jordi P').casados === 'Sí' && hojas.PERSONAS.filas[0][14] === 'Casados');
+err = ''; try { R.guardarPersona('(N) - Laura', { pareja: '', casados: 'Sí' }, M_, V); } catch (e) { err = e.message; }
+ver('sin pareja no se puede estar casado', /elige primero su pareja/.test(err));
+err = ''; try { R.guardarPersona(M_, { casados: 'Quizá' }, M_, V); } catch (e) { err = e.message; }
+ver('casados solo Sí o No', /sí o no/.test(err));
+d = R.guardarPersona(M_, { pareja: '(N) - Lucía'.replace('Lucía', 'Laura') }, M_, V);
+ver('al cambiar de pareja, «casados» se borra en los tres', !quien(M_).casados && !quien('(T+1) - Jordi P').casados && !quien('(N) - Laura').casados && quien(M_).pareja === '(N) - Laura');
+d = R.guardarPersona(M_, { pareja: '(T+1) - Jordi P', casados: 'No' }, M_, V);
+ver('pareja y «no casados» en el mismo guardado', quien(M_).pareja === '(T+1) - Jordi P' && quien(M_).casados === 'No' && quien('(T+1) - Jordi P').casados === 'No');
