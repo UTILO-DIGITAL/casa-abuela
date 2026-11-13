@@ -1505,7 +1505,7 @@
           return '<td><label><input type="checkbox" data-fijo="' + k + '" aria-label="Va siempre a la ' + t.nombre.toLowerCase() + ' de los ' + DIAS[d].toLowerCase() + '"' + (fijosAntes.indexOf(k) !== -1 ? ' checked' : '') + '></label></td>';
         }).join('') + '</tr>';
       }).join('') + '</tbody></table><p class="ayuda">Lo que marques cuenta de hoy en adelante; los días pasados no cambian. Si quitas un día concreto, la web te pregunta si es solo ese o también los siguientes.</p></fieldset>';
-    html += '<fieldset><legend>Quitar de la lista</legend><p class="ayuda">Si se añadió por error o ya no va a venir (por ejemplo, porque ha fallecido).</p>' +
+    html += '<fieldset><legend>Quitar de la lista</legend><p class="ayuda">Si se añadió por error o ya no va a venir.</p>' +
       '<button type="button" class="accion quitar" id="dlg-baja">Quitar a ' + esc(p.apodo) + ' de la lista</button></fieldset></div>' + pie('Guardar cambios');
     abrirDialogo(html);
     $('dlg-baja').addEventListener('click', function () { confirmarBaja(p); });
