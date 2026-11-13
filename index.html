@@ -263,6 +263,28 @@
   /* v2: quién eres */
   .quien-soy { margin: 24px 0 0; font-size: 15px; color: var(--color-texto-suave); }
   .actualizando { margin: -8px 0 8px; text-align: center; font-size: 13px; color: var(--color-texto-suave); }
+  /* Pestaña Personas */
+  .personas-cab { display: grid; gap: 12px; margin: 0 0 16px; }
+  .personas-cab input { font: inherit; min-height: 44px; padding: 8px 12px; border-radius: calc(var(--radio) / 2); border: 1px solid var(--color-principal-oscuro); background: #fff; color: var(--color-texto); }
+  .per-filtros { display: flex; gap: 8px; flex-wrap: wrap; }
+  button.filtro { min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--color-linea); background: #fff; color: var(--color-texto); font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
+  button.filtro[aria-pressed="true"] { background: var(--color-principal-oscuro); border-color: var(--color-principal-oscuro); color: #fff; }
+  .personas-cab > .accion { justify-self: start; }
+  .abuela-ficha { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; margin: 0 0 20px; border-radius: var(--radio); background: var(--color-principal-claro); }
+  .abuela-ficha h2 { margin: 0; font-family: var(--letra-titulos); font-weight: 600; font-size: 20px; }
+  .abuela-ficha p { margin: 2px 0 0; font-weight: 700; }
+  .per-familia { font-size: 16px; font-weight: 800; margin: 20px 0 6px; }
+  .per-familia span { color: var(--color-texto-suave); font-weight: 700; }
+  .per-filas { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--color-linea); }
+  .per-filas li { border-bottom: 1px solid var(--color-linea); }
+  button.fila-persona { width: 100%; display: grid; gap: 2px; padding: 10px 4px; border: 0; background: none; font: inherit; color: var(--color-texto); text-align: left; cursor: pointer; min-height: 44px; }
+  button.fila-persona:hover { background: #fff; }
+  .fp-nombre { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+  .fp-nombre b { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; }
+  .fp-nombre small { font-size: 13px; color: var(--color-texto-suave); font-weight: 600; }
+  .fp-datos { font-size: 14px; color: var(--color-texto-suave); }
+  .fp-falta { font-size: 14px; font-weight: 800; color: var(--color-error); }
+  @media (min-width: 760px) { .personas-cab { grid-template-columns: minmax(240px, 380px) auto auto; align-items: end; } .personas-cab > .accion { justify-self: end; } }
   .huerfanos { margin: 16px 0 0; padding: 10px 14px; border-radius: var(--radio); background: var(--color-destacado-claro); font-size: 14px; }
   .acciones-yo { display: inline-flex; flex-wrap: wrap; gap: 0 16px; margin-left: 6px; }
   .acciones-yo button.enlace { margin-left: 0; }
@@ -351,6 +373,7 @@
     <nav class="vistas" aria-label="Vistas">
       <a href="#semana" data-vista="semana">Semana</a>
       <a href="#cocina" data-vista="cocina">Hoy y mañana</a>
+      <a href="#personas" data-vista="personas">Personas</a>
     </nav>
   </div>
 </header>
@@ -363,6 +386,19 @@
 
   <section id="vista-semana">
     <div id="semana-grande"><p class="vacio">Cargando la semana…</p></div>
+  </section>
+
+  <section id="vista-personas" hidden>
+    <div class="personas-cab">
+      <label class="campo" for="per-q">Buscar<input id="per-q" type="search" autocomplete="off" placeholder="Nombre, familia o parentesco"></label>
+      <div class="per-filtros" role="group" aria-label="Qué personas ver">
+        <button type="button" class="filtro" data-filtro="todos" aria-pressed="true">Todos</button>
+        <button type="button" class="filtro" data-filtro="falta" aria-pressed="false" id="per-falta">Les falta algo</button>
+      </div>
+      <button type="button" class="accion" data-nueva-persona>Añadir persona</button>
+    </div>
+    <div id="per-abuela"></div>
+    <div id="per-lista"></div>
   </section>
 
   <section id="vista-cocina" hidden>
@@ -385,7 +421,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.0.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.1.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -408,6 +444,7 @@
     { clave: 'Nietos', clase: 'g-nietos', nombre: 'nietos' },
     { clave: 'Nietos +1', clase: 'g-parejas', nombre: 'parejas de nietos' },
     { clave: 'Biznietos', clase: 'g-bisnietos', nombre: 'bisnietos' },
+    { clave: 'Biznietos +1', clase: 'g-bisnietos', nombre: 'parejas de bisnietos' },
     { clave: 'Otros', clase: 'g-otros', nombre: 'otros' },
   ];
   const SVG = function (d) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
@@ -653,6 +690,7 @@
     pintarQuienSoy();
     pintarMisProximas();
     pintarHuerfanos();
+    pintarPersonas();
   }
 
   /* Apuntes de alguien que ya no está en PERSONAS (seguramente le han cambiado el apodo) */
@@ -667,7 +705,7 @@
 
   function pintarNavegador() {
     const $n = $('navegador'), $h = $('herramientas');
-    if (vista === 'cocina') { $n.hidden = true; $h.hidden = true; return; }
+    if (vista !== 'semana') { $n.hidden = true; $h.hidden = true; return; }
     $n.hidden = false; $h.hidden = false;
     const lh = lunesDe(hoy());
     const dias = semana(lunesSel);
@@ -754,7 +792,7 @@
     const p = yo && persona(yo);
     const ed = !p && yo && editor(yo);
     $q.hidden = vista === 'cocina';
-    const comidaAbuela = abuelas().length ? '<button type="button" class="enlace" data-comida-abuela>Lo que come la abuela</button>' : '';
+    const comidaAbuela = '';
     $q.innerHTML = ed
       ? 'Los cambios se guardan a nombre de <b>' + esc(ed.apodo) + '</b>.<span class="acciones-yo">' + comidaAbuela + '<button type="button" class="enlace" data-cambiar-yo>No soy yo</button></span>'
       : p
@@ -768,7 +806,7 @@
   function pintarMisProximas() {
     const $m = $('mis-proximas');
     const p = yo && persona(yo);
-    $m.hidden = vista === 'cocina' || !p;
+    $m.hidden = vista !== 'semana' || !p;
     if ($m.hidden) return;
     const l = datos.misProximas || [];
     const h = hoy(), manana = siguienteLaborable(h);
@@ -778,6 +816,101 @@
           return '<button type="button" class="cita' + (a.fecha === h ? ' hoy-cita' : '') + '" data-ir="' + a.fecha + '"><b>' + cuando(a.fecha) + '</b><small>' + etiquetaTurno(a.turno) + '</small></button>';
         }).join('') + (l.length > 2 ? '<button type="button" class="enlace" data-mis-comidas>Ver las ' + l.length + '</button>' : '') + '</div>'
       : '<p>No tienes nada apuntado a partir de hoy. Toca el icono de la persona con el más en la comida o la cena que quieras.</p>');
+  }
+
+  /* ---------- Pestaña Personas ---------- */
+  let filtroPersonas = 'todos';
+  function falta(p) {
+    const f = [];
+    if (!p.menu) f.push('menú');
+    if (!p.cumple) f.push('cumpleaños');
+    return f;
+  }
+  function resumenPersona(p) {
+    const partes = [];
+    const m = etiquetaMenu(p.menu);
+    partes.push(p.menu ? (m === 'Entero' ? 'menú entero' : (m === 'Nada' ? 'sin menú' : 'menú ' + m.toLowerCase())) : '');
+    partes.push(p.alergias ? 'alergias: ' + p.alergias : 'sin alergias');
+    if (p.cumple) partes.push('cumple ' + p.cumple);
+    const fij = fijosDe(p.id);
+    if (fij.length) partes.push('va siempre: ' + fij.map(function (f) { return DIAS[f.dow].slice(0, 3).toLowerCase() + ' ' + etiquetaTurno(f.turno).toLowerCase(); }).join(', '));
+    return partes.filter(Boolean).join(' · ');
+  }
+  function pintarPersonas() {
+    if (vista !== 'personas') return;
+    const conFalta = datos.personas.filter(function (p) { return falta(p).length; });
+    $('per-falta').textContent = 'Les falta algo (' + conFalta.length + ')';
+    document.querySelectorAll('[data-filtro]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.filtro === filtroPersonas)); });
+    // La abuela, arriba: lo que come, para todos
+    $('per-abuela').innerHTML = abuelas().map(function (a) {
+      const come = [a.menu ? 'menú ' + etiquetaMenu(a.menu).toLowerCase() : '', a.alergias].filter(Boolean).join(' · ') || 'Sin anotar';
+      return '<div class="abuela-ficha"><div><h2>' + esc(a.apodo) + '</h2><p>' + esc(come) + '</p></div>' +
+        '<button type="button" class="accion" data-comida-abuela>Cambiar lo que come</button></div>';
+    }).join('');
+    const q = sinAcentos($('per-q').value.trim());
+    let lista = filtroPersonas === 'falta' ? conFalta : datos.personas;
+    if (q) lista = lista.filter(function (p) { return sinAcentos(p.apodo + ' ' + p.familia + ' ' + deQuien(p)).indexOf(q) !== -1; });
+    if (!lista.length) {
+      $('per-lista').innerHTML = '<p class="vacio">' + (filtroPersonas === 'falta' && !q ? 'A nadie le falta nada por definir.' : 'No hay nadie con ese nombre en la lista. Puedes añadirlo con «Añadir persona».') + '</p>';
+      return;
+    }
+    const porFamilia = {};
+    const orden = [];
+    lista.forEach(function (p) { const f = esServicio(p) ? 'Servicio' : (p.familia || 'Otros'); if (!porFamilia[f]) { porFamilia[f] = []; orden.push(f); } porFamilia[f].push(p); });
+    $('per-lista').innerHTML = orden.map(function (f) {
+      return '<h3 class="per-familia">' + (f === 'Servicio' || f === 'Otros' ? esc(f) : 'Familia ' + esc(f)) + ' <span>' + porFamilia[f].length + '</span></h3><ul class="per-filas">' +
+        porFamilia[f].map(function (p) {
+          const fl = falta(p);
+          return '<li><button type="button" class="fila-persona" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' + esc(p.apodo) + marcaMenu(p) + '</b><small>' + esc(deQuien(p)) + '</small></span>' +
+            '<span class="fp-datos">' + esc(resumenPersona(p)) + '</span>' +
+            (fl.length ? '<span class="fp-falta">Falta: ' + esc(lista_(fl)) + '</span>' : '') + '</button></li>';
+        }).join('') + '</ul>';
+    }).join('');
+  }
+  function lista_(a) { return lista(a); }
+  $('per-q').addEventListener('input', function () { pintarPersonas(); });
+  document.querySelectorAll('[data-filtro]').forEach(function (b) {
+    b.addEventListener('click', function () { filtroPersonas = b.dataset.filtro; pintarPersonas(); });
+  });
+
+  function opcionesLista(valores, sel, nombre) {
+    return valores.map(function (v) { return '<option value="' + esc(v) + '"' + (v === sel ? ' selected' : '') + '>' + esc(nombre ? nombre(v) : v) + '</option>'; }).join('');
+  }
+  function nombreJerarquia(j) { const g = GENERACIONES.find(function (x) { return x.clave === j; }); return g ? g.nombre.charAt(0).toUpperCase() + g.nombre.slice(1) : j; }
+  function camposFicha(p) {
+    const l = datos.listas || { jerarquias: [], familias: [] };
+    return '<fieldset><legend>Nombre y familia</legend>' +
+      '<label class="campo" for="dlg-apodo">Nombre (como lo conoce la familia)<input id="dlg-apodo" type="text" maxlength="40" autocomplete="off" value="' + esc(p ? p.apodo : '') + '"></label>' +
+      '<div class="dos dos-iguales"><label class="campo" for="dlg-jerarquia">Parentesco con la abuela<select id="dlg-jerarquia">' + (p ? '' : '<option value="">Elige</option>') + opcionesLista(l.jerarquias, p ? p.jerarquia : '', nombreJerarquia) + '</select></label>' +
+      '<label class="campo" for="dlg-familia">Familia<select id="dlg-familia">' + (p ? '' : '<option value="">Elige</option>') + opcionesLista(l.familias, p ? p.familia : '') + '</select></label></div>' +
+      (p ? '<p class="ayuda">Si le cambias el nombre o el parentesco, sus comidas apuntadas siguen siendo suyas.</p>' : '') + '</fieldset>';
+  }
+
+  function abrirNuevaPersona() {
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Añadir persona</h2></div><div class="dlg-cuerpo">' + camposFicha(null) +
+      '<fieldset><legend>Para la cocina</legend><label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + opcionesMenu((datos.menus || [])[0]) + '</select></label>' +
+      '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna"></label></fieldset>' +
+      '<fieldset><legend>Cumpleaños</legend><div class="dos"><label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
+      Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' + MESES.map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select></label></div></fieldset></div>' +
+      pie('Añadir a la lista'));
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $('dlg-guardar').addEventListener('click', function () {
+      const apodo = $('dlg-apodo').value.trim(), jer = $('dlg-jerarquia').value, fam = $('dlg-familia').value;
+      if (!apodo) { errorDialogo('Pon el nombre.'); return; }
+      if (!jer || !fam) { errorDialogo('Elige el parentesco y la familia.'); return; }
+      const id = '(' + jer.charAt(0) + (jer.indexOf('+1') !== -1 ? '+1' : '') + ') - ' + apodo;
+      if (quienEs(id)) { errorDialogo('Ya hay alguien llamado ' + apodo + ' con ese parentesco. Ponle un apodo distinto, por ejemplo con la inicial del apellido.'); return; }
+      const cdia = $('dlg-cdia').value, cmes = $('dlg-cmes').value;
+      if ((cdia && !cmes) || (!cdia && cmes)) { errorDialogo('Para el cumpleaños, elige el día y el mes, o deja los dos vacíos.'); return; }
+      const nueva = { apodo: apodo, jerarquia: jer, familia: fam, menu: $('dlg-menu').value, alergias: $('dlg-alergias').value.trim(),
+        cumple: cdia ? ('0' + cdia).slice(-2) + '/' + ('0' + cmes).slice(-2) : '' };
+      conQuien(function () {
+        enSegundoPlano('crearPersona', [nueva, yo, rango()], apodo + ' ya está en la lista.', function () {
+          datos.personas.push({ id: id, apodo: apodo, jerarquia: jer, familia: fam, menu: nueva.menu, alergias: nueva.alergias, cumple: nueva.cumple });
+        });
+      });
+    });
   }
 
   /* ---------- Buscador de nombres ---------- */
@@ -876,6 +1009,7 @@
     aviso('Guardando…', 0);
     return llamar(fn, args).then(function (d) {
       pendientes--;
+      if (d && d.renombrado && yo === d.renombrado.antes) { yo = d.renombrado.despues; guardarYo(yo); }
       if (pendientes === 0) { datos = d; guardarLocal(); pintar(); aviso(mensaje); }
     }).catch(function (err) {
       pendientes--;
@@ -1005,7 +1139,7 @@
         '<label class="campo" for="dlg-nota">Nota para ese día<input id="dlg-nota" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: llega tarde" value="' + esc(a ? a.nota : '') + '"></label></fieldset>';
     }
     html += '<fieldset><legend>Sus datos para la cocina</legend>' +
-      '<label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + opcionesMenu(p.menu) + '</select></label>' +
+      '<label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + (p.menu ? '' : '<option value="">Sin definir</option>') + opcionesMenu(p.menu) + '</select></label>' +
       '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna" value="' + esc(p.alergias) + '"></label></fieldset>';
     const cd = p.cumple ? Number(p.cumple.slice(0, 2)) : 0, cm = p.cumple ? Number(p.cumple.slice(3, 5)) : 0;
     html += '<fieldset><legend>Cumpleaños</legend><div class="dos">' +
@@ -1026,7 +1160,7 @@
         return '<td><label><input type="checkbox" data-k="' + f + '|' + t.id + '" aria-label="' + t.nombre + ' del ' + diaLargo(f).toLowerCase() + '"' + (apunte(f, t.id, id) ? ' checked' : '') + '></label></td>';
       }).join('') + '</tr>';
     });
-    html += '</tbody></table></fieldset></div>' + pie('Guardar cambios');
+    html += '</tbody></table></fieldset>' + camposFicha(p) + '</div>' + pie('Guardar cambios');
     abrirDialogo(html);
 
     $dlg.querySelectorAll('input[data-k]').forEach(function (c) {
@@ -1050,7 +1184,12 @@
         }
       });
       const menu = $('dlg-menu').value, alergias = $('dlg-alergias').value.trim();
-      if (menu !== p.menu) cambios.menu = menu;
+      if (menu && menu !== p.menu) cambios.menu = menu;
+      const apodo = $('dlg-apodo').value.trim(), jer = $('dlg-jerarquia').value, fam = $('dlg-familia').value;
+      if (!apodo) { errorDialogo('El nombre no puede quedar vacío.'); return; }
+      if (apodo !== p.apodo) cambios.apodo = apodo;
+      if (jer && jer !== p.jerarquia) cambios.jerarquia = jer;
+      if (fam && fam !== p.familia) cambios.familia = fam;
       if (alergias !== p.alergias) cambios.alergias = alergias;
       const cdia = $('dlg-cdia').value, cmes = $('dlg-cmes').value;
       if ((cdia && !cmes) || (!cdia && cmes)) { errorDialogo('Para el cumpleaños, elige el día y el mes, o deja los dos vacíos.'); return; }
@@ -1335,7 +1474,7 @@
 
   /* ---------- Clics ---------- */
   document.addEventListener('click', function (e) {
-    const el = e.target.closest('[data-persona], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-cambiar-yo], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-imprimir], [data-comida-abuela]');
+    const el = e.target.closest('[data-persona], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-cambiar-yo], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
     if (el.hasAttribute('data-semana')) {
       const paso = Number(el.dataset.semana);
@@ -1353,6 +1492,7 @@
     } else if (el.hasAttribute('data-compartir')) { abrirCompartir();
     } else if (el.hasAttribute('data-imprimir')) { imprimir();
     } else if (el.hasAttribute('data-comida-abuela')) { abrirComidaAbuela();
+    } else if (el.hasAttribute('data-nueva-persona')) { conQuien(abrirNuevaPersona);
     } else if (el.hasAttribute('data-ir')) {
       const fecha = el.dataset.ir, lunes = lunesDe(fecha);
       const ir = function () {
@@ -1365,10 +1505,10 @@
   });
 
   /* ---------- Vistas ---------- */
-  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', cocina: 'Quién viene hoy y mañana' };
+  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', cocina: 'Quién viene hoy y mañana', personas: 'La familia y lo que come cada uno' };
   function ponerVista(v) {
     vista = SUBTITULOS[v] ? v : 'semana';
-    ['semana', 'cocina'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
+    ['semana', 'cocina', 'personas'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
     $('subtitulo').textContent = SUBTITULOS[vista];
     document.querySelectorAll('nav.vistas a').forEach(function (a) {
       if (a.dataset.vista === vista) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
