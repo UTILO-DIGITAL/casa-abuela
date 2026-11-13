@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Casa Abuela</title>
 <meta name="apple-mobile-web-app-title" content="Casa Abuela">
 <meta name="theme-color" content="#0B6E61">
@@ -41,6 +41,8 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--color-fondo); color: var(--color-texto); }
+  /* v4.3: tamaño fijo en el móvil, sin pellizcar ni doble toque (en el ordenador queda el zoom del navegador) */
+  html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body { font-family: var(--letra-texto); font-size: 17px; line-height: 1.4; padding-bottom: env(safe-area-inset-bottom, 0px); }
   [hidden] { display: none !important; }
   button, select, input { font: inherit; }
@@ -423,7 +425,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.2.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.4.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -819,11 +821,11 @@
     $q.hidden = vista === 'cocina';
     const comidaAbuela = '';
     $q.innerHTML = ed
-      ? 'Los cambios se guardan a nombre de <b>' + esc(ed.apodo) + '</b>.<span class="acciones-yo">' + comidaAbuela + '<button type="button" class="enlace" data-cambiar-yo>No soy yo</button></span>'
+      ? 'Los cambios se guardan a nombre de <b>' + esc(ed.apodo) + '</b>.<span class="acciones-yo">' + comidaAbuela + '<button type="button" class="enlace" data-no-soy>No soy yo</button></span>'
       : p
       ? 'Los cambios se guardan a nombre de <b>' + esc(p.apodo) + '</b> (' + esc(deQuien(p)) + ').' +
         '<span class="acciones-yo"><button type="button" class="enlace" data-mis-datos>Mis datos</button>' + comidaAbuela +
-        '<button type="button" class="enlace" data-cambiar-yo>No soy yo</button></span>'
+        '<button type="button" class="enlace" data-no-soy>No soy yo</button></span>'
       : 'Para apuntarte, toca el icono de la persona con el más en la comida o la cena que quieras. La web te preguntará quién eres.' +
         '<span class="acciones-yo"><button type="button" class="enlace" data-cambiar-yo>Decir quién soy</button>' + comidaAbuela + '</span>';
   }
@@ -975,6 +977,13 @@
   }
 
   /* ---------- Quién eres ---------- */
+  /* v4.3: «No soy yo» deja de guardar a esa persona en este móvil; se ve todo igual y, al cambiar algo, pregunta quién eres */
+  function olvidarYo() {
+    const antes = quienEs(yo);
+    yo = ''; guardarYo('');
+    pintar();
+    aviso((antes ? 'Los cambios ya no se guardan a nombre de ' + antes.apodo + '. ' : '') + 'Al apuntarte o cambiar algo, te preguntaremos quién eres.', 6000);
+  }
   function conQuien(siguiente) { if (quienEs(yo)) siguiente(); else preguntarQuien(siguiente); }
   function preguntarQuien(siguiente) {
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Quién eres?</h2></div>' +
@@ -1497,9 +1506,12 @@
     if (ms !== 0) temporizador = setTimeout(function () { $t.hidden = true; }, ms || 3500);
   }
 
+  /* v4.3: Safari del iPhone no hace caso a user-scalable=no; así tampoco se pellizca */
+  ['gesturestart', 'gesturechange'].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false }); });
+
   /* ---------- Clics ---------- */
   document.addEventListener('click', function (e) {
-    const el = e.target.closest('[data-persona], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
+    const el = e.target.closest('[data-persona], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
     if (el.hasAttribute('data-semana')) {
       const paso = Number(el.dataset.semana);
@@ -1512,6 +1524,7 @@
       pintarSemana();
     } else if (el.hasAttribute('data-dia')) { abrirDia(el.dataset.dia);
     } else if (el.hasAttribute('data-cambiar-yo')) { preguntarQuien(null);
+    } else if (el.hasAttribute('data-no-soy')) { olvidarYo();
     } else if (el.hasAttribute('data-mis-datos')) { conQuien(function () { abrirPersona(yo); });
     } else if (el.hasAttribute('data-mis-comidas')) { abrirMisComidas();
     } else if (el.hasAttribute('data-compartir')) { abrirCompartir();
