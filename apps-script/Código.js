@@ -19,7 +19,7 @@
  *                 (la abuela no está en esa comida, cena o noche; FUERA = las tres, de versiones anteriores)
  *   MESA_CAMBIOS  CUANDO | QUIEN_ID | QUIEN | CAMBIO   (registro de quién cambia qué)
  *   MESA_ALIAS    ID_ANTIGUO | ID_NUEVO | NOTA   (si a alguien se le cambia el apodo o la jerarquía en PERSONAS)
- *   MESA_CONFIG   FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
+ *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
  *                 (EXCLUIR_IDS: no salen para apuntarse, pero pueden hacer cambios, como la abuela)
  * Turnos: COMIDA, CENA y DORMIR (quién pasa la noche en casa).
  * El servicio son las personas de PERSONAS con Familia = «Servicio»: cuentan para cocinar y no como compañía en comida y cena; para dormir, sí.
@@ -29,7 +29,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.16.0
+ * Versión 4.17.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -69,7 +69,7 @@ const MAX_NOTA = 140;
 const MAX_DIAS_RANGO = 400;
 
 function doGet(e) {
-  if (e && e.parameter && e.parameter.fn) return api_(e.parameter.fn, JSON.parse(e.parameter.args || '[]'));
+  if (e && e.parameter && e.parameter.fn) return api_(e.parameter.fn, JSON.parse(e.parameter.args || '[]'), e.parameter.clave);
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('Casa Abuela')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
@@ -82,7 +82,7 @@ function doGet(e) {
 function doPost(e) {
   let peticion = {};
   try { peticion = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) { peticion = {}; }
-  return api_(peticion.fn, peticion.args || []);
+  return api_(peticion.fn, peticion.args || [], peticion.clave);
 }
 
 const API_ = {
@@ -94,15 +94,31 @@ const API_ = {
   darDeBaja: function (a) { return darDeBaja(a[0], a[1], a[2]); },
 };
 
-function api_(fn, args) {
+function api_(fn, args, clave) {
   let salida;
   try {
+    comprobarClave_(clave);
     if (!Object.prototype.hasOwnProperty.call(API_, fn)) throw new Error('Acción no válida.');
     salida = { ok: true, r: API_[fn](Array.isArray(args) ? args : []) };
   } catch (err) {
     salida = { ok: false, error: String((err && err.message) || err) };
   }
   return ContentService.createTextOutput(JSON.stringify(salida)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * v4.17: la clave de la familia (MESA_CONFIG, CLAVE). Vacía, no se pide. Da igual mayúsculas y acentos.
+ * Se guarda 5 minutos en la caché para no abrir el Excel en cada petición (si se cambia, tarda eso en valer).
+ */
+function comprobarClave_(clave) {
+  const cache = CacheService.getScriptCache();
+  let buena = cache.get('clave_familia');
+  if (buena === null) {
+    buena = leerConfigSin_(SpreadsheetApp.openById(SPREADSHEET_ID)).clave;
+    try { cache.put('clave_familia', buena, 300); } catch (e) { /* sin caché, se lee cada vez */ }
+  }
+  const n = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
+  if (buena && n(clave) !== n(buena)) throw new Error('CLAVE: hace falta la clave de la familia.');
 }
 
 /* ---------- Lectura ---------- */
@@ -180,6 +196,7 @@ function leerConfigSin_(ss) {
     horaDormir: aHora_(mapa.HORA_DORMIR, '22:30'),
     avisoHoras: Number(mapa.AVISO_HORAS) || 4,
     urlCompartir: String(mapa.URL_COMPARTIR || '').trim(),
+    clave: String(mapa.CLAVE || '').trim(),
   };
 }
 
