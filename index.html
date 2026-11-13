@@ -251,7 +251,13 @@
   }
 
   /* v2: navegador de semanas, en una sola línea */
-  .navegador { display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; gap: 8px; margin: 0 0 16px; }
+  .navegador { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 0 16px; }
+  .nav-centro { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .navegador.con-pasos { justify-content: space-between; }
+  .nav-herr { display: inline-flex; gap: 4px; margin-left: 4px; }
+  button.icono { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--color-linea); border-radius: 50%; background: #fff; color: var(--color-texto); cursor: pointer; }
+  button.icono svg { width: 18px; height: 18px; }
+  @media (max-width: 759px) { .titulo-nav h2 { font-size: 19px; white-space: nowrap; } .navegador button.icono { width: 36px; height: 36px; } .nav-herr { margin-left: 0; } }
   .titulo-nav { text-align: center; }
   .titulo-nav h2 { font-family: var(--letra-titulos); font-weight: 600; font-size: 22px; line-height: 1.2; margin: 0; }
   .titulo-nav .enlace { margin: 0; padding: 4px 0; min-height: 0; font-size: 15px; }
@@ -384,7 +390,7 @@
   details.instalar ol { margin: 4px 0 0; padding-left: 20px; }
 
   @media (min-width: 760px) {
-    .navegador { max-width: 560px; margin: 0 auto 20px; }
+    .navegador { margin: 0 0 16px; }
     .cocina { grid-template-columns: 1fr 1fr; align-items: start; }
   }
 
@@ -480,7 +486,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.12.8</footer>
+  <footer>Hecho con cariño por Utilo · v4.12.9</footer>
 </div>
 
 <div id="impresion"></div>
@@ -794,17 +800,23 @@
   function pintarNavegador() {
     const $n = $('navegador'), $h = $('herramientas');
     if (vista !== 'semana') { $n.hidden = true; $h.hidden = true; return; }
-    $n.hidden = false; $h.hidden = false;
+    // v4.12.9: todo en una fila (en ordenador, con Día anterior y Día siguiente a los lados); Compartir e Imprimir, iconos
+    $n.hidden = false; $h.hidden = true;
     const lh = lunesDe(hoy());
     const dias = semana(lunesSel);
     const actual = lunesSel === lh || lh < lunesInicio();
+    const tres = enEscritorio();
+    $n.classList.toggle('con-pasos', tres);
     $n.innerHTML =
+      (tres ? '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaFoco <= minFoco() ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Día anterior</button>' : '') +
+      '<div class="nav-centro">' +
       '<button type="button" class="flecha" data-semana="-1" aria-label="Semana anterior"' + (lunesSel <= lunesInicio() ? ' disabled' : '') + '>' + FLECHA_IZQ + '</button>' +
       '<div class="titulo-nav"><h2>Del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '</h2>' +
       (actual ? '' : '<button type="button" class="enlace" data-semana="0">Volver a esta semana</button>') + '</div>' +
-      '<button type="button" class="flecha" data-semana="1" aria-label="Semana siguiente">' + FLECHA_DER + '</button>';
-    $h.innerHTML = '<button type="button" data-compartir>' + ICONO_COMPARTIR + 'Compartir</button>' +
-      '<button type="button" data-imprimir>' + ICONO_IMPRIMIR + 'Imprimir</button>';
+      '<button type="button" class="flecha" data-semana="1" aria-label="Semana siguiente">' + FLECHA_DER + '</button>' +
+      '<span class="nav-herr"><button type="button" class="icono" data-compartir aria-label="Compartir" title="Compartir">' + ICONO_COMPARTIR + '</button>' +
+      '<button type="button" class="icono" data-imprimir aria-label="Imprimir" title="Imprimir">' + ICONO_IMPRIMIR + '</button></span></div>' +
+      (tres ? '<button type="button" class="accion paso" data-paso-dia="1">Día siguiente' + FLECHA_DER + '</button>' : '');
   }
 
   function bloqueDia(fecha, opciones) {
@@ -865,9 +877,6 @@
     let html = '';
     if (hoy() < datos.config.inicio && lunesSel === lunesInicio()) html += '<p class="aviso">El calendario empieza el ' + diaLargo(datos.config.inicio).toLowerCase() + '.</p>';
     const tres = enEscritorio();
-    if (tres) html += '<div class="pasos-dia">' +
-      '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaFoco <= minFoco() ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Día anterior</button>' +
-      '<button type="button" class="accion paso" data-paso-dia="1">Día siguiente' + FLECHA_DER + '</button></div>';
     html += '<div class="dias-semana">' + (tres ? ventana() : semana(lunesSel)).map(function (f) { return bloqueDia(f, {}); }).join('') + '</div>';
     $('semana-grande').innerHTML = html;
   }
@@ -899,9 +908,10 @@
   function pintarMisProximas() {
     const $m = $('mis-proximas');
     const p = yo && persona(yo);
-    $m.hidden = vista !== 'semana' || !p;
-    if ($m.hidden) return;
     const l = datos.misProximas || [];
+    // v4.12.9: solo si tiene algo apuntado (si no, ya lo dice abajo «Para apuntarte…»)
+    $m.hidden = vista !== 'semana' || !p || !l.length;
+    if ($m.hidden) return;
     const h = hoy(), manana = siguienteLaborable(h);
     const cuando = function (f) { return f === h ? 'Hoy' : (f === manana ? 'Mañana' : DIAS[dow(f)].slice(0, 3) + ' ' + ddmm(f)); };
     $m.innerHTML = '<h2>Tus próximas comidas y cenas</h2>' + (l.length
