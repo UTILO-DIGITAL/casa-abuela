@@ -6,6 +6,8 @@
  *                 el Id (A) es una fórmula. Al cambiar apodo o jerarquía, la web añade el alias en MESA_ALIAS.
  *                 Baja (I, v4.9): fecha en que se quitó de la lista (por error o porque ha fallecido). Su fila se queda;
  *                 deja de salir para apuntarse y sus comidas pasadas siguen saliendo con su nombre.
+ *                 Núcleos (J-M, v4.10): Apellido, Sexo (Hombre o Mujer), Pareja (Id, en los dos sentidos) e Hijo de (Id).
+ *                 Los Ids siguen a MESA_ALIAS. La web arma con ellos el árbol de núcleos de cada familia.
  *   MESA_APUNTES  ID_APUNTE | FECHA | TURNO | PERSONA_ID | CREADO_EN | NOTA | ESTADO ('' va · 'NO' no va ese día aunque sea fijo) | NOTA_POR | NOTA_EN
  *   MESA_FIJOS    ID_FIJO | PERSONA_ID | DIA_SEMANA (0 domingo … 6 sábado) | TURNO | DESDE | HASTA | NOTA | CREADO_POR | CREADO_EN
  *   MESA_DIAS     FECHA | NOTA | SIN_TURNO | CAMBIADO_POR | CAMBIADO_EN | SIN_COMIDA | MOTIVO_COMIDA | SIN_CENA | MOTIVO_CENA | NOTA_SERVICIO | SIN_DORMIR | MOTIVO_DORMIR
@@ -24,7 +26,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.9.0
+ * Versión 4.10.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -42,6 +44,12 @@ const COL_MENU = 6;      // F en PERSONAS
 const COL_ALERGIAS = 7;  // G en PERSONAS
 const COL_CUMPLE = 8;    // H en PERSONAS, texto dd/mm
 const COL_BAJA = 9;      // I en PERSONAS, texto aaaa-mm-dd (v4.7)
+const COL_APELLIDO = 10; // J (v4.10)
+const COL_SEXO = 11;     // K: Hombre o Mujer
+const COL_PAREJA = 12;   // L: Id de su pareja
+const COL_HIJO_DE = 13;  // M: Id de su padre o su madre
+const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de' };
+const SEXOS = ['Hombre', 'Mujer'];
 const COLS_APUNTES = 9;
 const COLS_FIJOS = 9;
 const COLS_DIAS = 29;
@@ -180,12 +188,26 @@ function aPersona_(f) {
     alergias: String(f[COL_ALERGIAS - 1] || '').trim(),
     cumple: aCumple_(f[COL_CUMPLE - 1]),
     baja: aFecha_(f[COL_BAJA - 1]),
+    apellido: String(f[COL_APELLIDO - 1] || '').trim(),
+    sexo: SEXOS.indexOf(String(f[COL_SEXO - 1] || '').trim()) !== -1 ? String(f[COL_SEXO - 1]).trim() : '',
+    pareja: String(f[COL_PAREJA - 1] || '').trim(),
+    hijoDe: String(f[COL_HIJO_DE - 1] || '').trim(),
+  };
+}
+
+/** v4.10: Pareja e Hijo de, con el Id de ahora si a alguien se le cambió el nombre (MESA_ALIAS). */
+function conAlias_(ss) {
+  const alias = resolverAlias_(ss);
+  return function (p) {
+    if (p.pareja) p.pareja = alias(p.pareja);
+    if (p.hijoDe) p.hijoDe = alias(p.hijoDe);
+    return p;
   };
 }
 
 function leerPersonas_(ss, excluir) {
   return filasPersonas_(ss).filter(function (f) { return excluir.indexOf(String(f[0]).trim()) === -1; }).map(aPersona_)
-    .filter(function (p) { return !p.baja; });
+    .filter(function (p) { return !p.baja; }).map(conAlias_(ss));
 }
 
 /** v4.7: quienes se han quitado de la lista (columna Baja). Solo para que sus comidas pasadas salgan con su nombre. */
@@ -197,7 +219,7 @@ function leerBajas_(ss) {
 function leerEditores_(ss, excluir) {
   if (!excluir.length) return [];
   return filasPersonas_(ss).filter(function (f) { return excluir.indexOf(String(f[0]).trim()) !== -1; }).map(aPersona_)
-    .filter(function (p) { return !p.baja; });
+    .filter(function (p) { return !p.baja; }).map(conAlias_(ss));
 }
 
 function opcionesMenu_(personas) {
@@ -413,6 +435,10 @@ function guardarPersona(personaId, cambios, quien, vista) {
         escribirEnPersonas_(ss, personaId, COL_ALERGIAS, texto, false);
         registro.push((esEditor ? 'Comida de ' : 'Alergias de ') + p.apodo + ': ' + (texto.replace(/^'/, '') || 'nada'));
       }
+    }
+
+    if (['apellido', 'sexo', 'pareja', 'hijoDe'].some(function (k) { return cambios[k] !== undefined; })) {
+      ponerNucleo_(ss, p, cambios, registro, personas.concat(editores));
     }
 
     const cierres = [];
@@ -723,7 +749,9 @@ function crearPersona(nueva, quien, vista) {
     celdaCumple.setNumberFormat('@');
     celdaCumple.setValue(cumple);
     olvidar_('personas', 'listas');
-    registrar_(ss, autor, ['Añade a ' + apodo + ' (' + jerarquia + ' · ' + familia + ')']);
+    const registro = ['Añade a ' + apodo + ' (' + jerarquia + ' · ' + familia + ')'];
+    nucleoDeNueva_(ss, id, nueva, registro);
+    registrar_(ss, autor, registro);
     const d = datos_(ss, vista || {});
     d.creado = id;
     return d;
@@ -742,7 +770,9 @@ function recuperarPersona_(ss, b, familia, nueva, personas, autor, vista) {
   if (cumple) { const c = hoja.getRange(fila, COL_CUMPLE); c.setNumberFormat('@'); c.setValue(cumple); }
   hoja.getRange(fila, COL_BAJA).setValue('');
   olvidar_('personas', 'listas');
-  registrar_(ss, autor, ['Vuelve a la lista ' + b.apodo + ' (' + b.jerarquia + ' · ' + familia + ')']);
+  const registro = ['Vuelve a la lista ' + b.apodo + ' (' + b.jerarquia + ' · ' + familia + ')'];
+  nucleoDeNueva_(ss, b.id, nueva, registro);
+  registrar_(ss, autor, registro);
   const d = datos_(ss, vista || {});
   d.creado = b.id;
   return d;
@@ -790,12 +820,76 @@ function darDeBaja(personaId, quien, vista) {
   });
 }
 
-/** La columna Baja (I) de PERSONAS, con su título, si aún no está. */
-function asegurarColumnaBaja_(ss) {
+/** Las columnas nuevas de PERSONAS (I Baja; J-M, núcleos), con su título, hasta la que hace falta. */
+function asegurarColumnas_(ss, hasta) {
   const hoja = ss.getSheetByName(HOJA_PERSONAS);
-  if (hoja.getMaxColumns() < COL_BAJA) hoja.insertColumnsAfter(hoja.getMaxColumns(), COL_BAJA - hoja.getMaxColumns());
-  const titulo = hoja.getRange(1, COL_BAJA);
-  if (!String(titulo.getValue()).trim()) titulo.setValue('Baja');
+  if (hoja.getMaxColumns() < hasta) hoja.insertColumnsAfter(hoja.getMaxColumns(), hasta - hoja.getMaxColumns());
+  for (let c = COL_BAJA; c <= hasta; c++) {
+    const titulo = hoja.getRange(1, c);
+    if (!String(titulo.getValue()).trim()) titulo.setValue(TITULOS_EXTRA[c]);
+  }
+}
+function asegurarColumnaBaja_(ss) { asegurarColumnas_(ss, COL_BAJA); }
+
+/**
+ * v4.10: apellido, Hombre o Mujer, pareja e hijo de. La pareja va en los dos sentidos: si alguien tenía otra, se le quita.
+ * Hijo de no puede ser uno mismo ni alguien que desciende de él (sería un círculo).
+ */
+function ponerNucleo_(ss, p, cambios, registro, todos) {
+  const nombre = function (id) { const x = todos.filter(function (t) { return t.id === id; })[0]; return x ? x.apodo : id; };
+  const existe = function (id) { return todos.some(function (t) { return t.id === id; }); };
+  asegurarColumnas_(ss, COL_HIJO_DE);
+  if (cambios.apellido !== undefined) {
+    const apellido = limpiar_(cambios.apellido, 40, 'El apellido', true);
+    if (apellido !== p.apellido) { escribirEnPersonas_(ss, p.id, COL_APELLIDO, apellido, true); registro.push('Apellido de ' + p.apodo + ': ' + (apellido || 'borrado')); }
+  }
+  if (cambios.sexo !== undefined) {
+    const sexo = String(cambios.sexo || '').trim();
+    if (sexo && SEXOS.indexOf(sexo) === -1) throw new Error('Elige hombre o mujer.');
+    if (sexo !== p.sexo) { escribirEnPersonas_(ss, p.id, COL_SEXO, sexo, true); registro.push(p.apodo + ': ' + (sexo ? sexo.toLowerCase() : 'sin decir si es hombre o mujer')); }
+  }
+  if (cambios.hijoDe !== undefined) {
+    const padre = String(cambios.hijoDe || '').trim();
+    if (padre) {
+      if (padre === p.id) throw new Error(p.apodo + ' no puede ser hijo de sí mismo.');
+      if (!existe(padre)) throw new Error('No encontramos a su padre o su madre en la lista.');
+      const padreDe = {};
+      todos.forEach(function (t) { padreDe[t.id] = t.hijoDe; });
+      for (let x = padre, i = 0; x && i < 50; x = padreDe[x], i++) {
+        if (x === p.id) throw new Error(nombre(padre) + ' no puede ser padre o madre de ' + p.apodo + ': ya desciende de él o de ella.');
+      }
+    }
+    if (padre !== p.hijoDe) { escribirEnPersonas_(ss, p.id, COL_HIJO_DE, padre, true); registro.push(p.apodo + (padre ? ' es hijo o hija de ' + nombre(padre) : ' ya no tiene padre o madre apuntado')); }
+  }
+  if (cambios.pareja !== undefined) {
+    const nueva = String(cambios.pareja || '').trim();
+    if (nueva === p.id) throw new Error(p.apodo + ' no puede ser su propia pareja.');
+    if (nueva && !existe(nueva)) throw new Error('No encontramos a su pareja en la lista.');
+    if (nueva !== p.pareja) {
+      const parejaDe = {};
+      todos.forEach(function (t) { parejaDe[t.id] = t.pareja; });
+      if (p.pareja && parejaDe[p.pareja] === p.id) escribirEnPersonas_(ss, p.pareja, COL_PAREJA, '', true);
+      if (nueva) {
+        const anterior = parejaDe[nueva];
+        if (anterior && anterior !== p.id && parejaDe[anterior] === nueva) escribirEnPersonas_(ss, anterior, COL_PAREJA, '', true);
+        escribirEnPersonas_(ss, nueva, COL_PAREJA, p.id, true);
+      }
+      escribirEnPersonas_(ss, p.id, COL_PAREJA, nueva, true);
+      registro.push(nueva ? p.apodo + ' y ' + nombre(nueva) + ' son pareja' : p.apodo + ' ya no tiene pareja');
+    }
+  }
+  olvidar_('personas');
+}
+
+/** El núcleo de alguien que se acaba de añadir (o recuperar). */
+function nucleoDeNueva_(ss, id, nueva, registro) {
+  if (!['apellido', 'sexo', 'pareja', 'hijoDe'].some(function (k) { return nueva[k]; })) return;
+  SpreadsheetApp.flush();
+  olvidar_('personas');
+  const config = leerConfig_(ss);
+  const todos = leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir));
+  const p = todos.filter(function (t) { return t.id === id; })[0];
+  if (p) ponerNucleo_(ss, p, { apellido: nueva.apellido || '', sexo: nueva.sexo || '', pareja: nueva.pareja || '', hijoDe: nueva.hijoDe || '' }, registro, todos);
 }
 
 function filaDePersona_(ss, personaId) {

@@ -13,8 +13,8 @@ function hoja(nombre, filas) {
   h.getDataRange = () => h.getRange(1, 1, h.getLastRow(), h.getMaxColumns());
   h.getRange = (r, c, nr = 1, nc = 1) => ({
     getValues: () => { const o = []; for (let i = 0; i < nr; i++) { const f = []; for (let j = 0; j < nc; j++) f.push(((h.filas[r - 1 + i] || [])[c - 1 + j]) ?? ''); o.push(f); } return o; },
-    setValues: v => v.forEach((f, i) => f.forEach((x, j) => { celda(r + i, c + j)[c - 1 + j] = x; })),
-    setValue: x => { celda(r, c)[c - 1] = x; },
+    setValues: v => { v.forEach((f, i) => f.forEach((x, j) => { celda(r + i, c + j)[c - 1 + j] = x; })); h.formula && h.formula(); },
+    setValue: x => { celda(r, c)[c - 1] = x; h.formula && h.formula(); },
     getValue: () => ((h.filas[r - 1] || [])[c - 1]) ?? '',
     setNumberFormat: () => {}, getDataValidation: () => null,
     copyTo: () => {},
@@ -39,10 +39,13 @@ const hojas = {
   MESA_CONFIG: hoja('MESA_CONFIG', [['CLAVE', 'VALOR'], ['FECHA_INICIO', '2026-10-01'], ['EXCLUIR_IDS', '(A) - Abuela']]),
   MESA_DIAS: hoja('MESA_DIAS', [['FECHA']]), MESA_CAMBIOS: hoja('MESA_CAMBIOS', [['CUANDO', 'QUIEN_ID', 'QUIEN', 'CAMBIO']]), MESA_ALIAS: hoja('MESA_ALIAS', [['ID_ANTIGUO', 'ID_NUEVO', 'NOTA']]),
 };
+// La columna A de PERSONAS es una fórmula: «(» + inicial de la jerarquía + «+1» si la lleva + «) - » + apodo
+hojas.PERSONAS.formula = () => hojas.PERSONAS.filas.slice(1).forEach(f => { if (f[1]) f[0] = '(' + String(f[2]).charAt(0) + (String(f[2]).indexOf('+1') !== -1 ? '+1' : '') + ') - ' + f[1]; });
+hojas.PERSONAS.filas.push(['(T+1) - Jordi', 'Jordi', 'Tios +1', 'Canela', '', '🌕 Entero', '', '']);
 const ss = { getSheetByName: n => hojas[n] || null, insertSheet: n => (hojas[n] = hoja(n, [])) };
 const pad = n => String(n).padStart(2, '0');
 const ctx = {
-  SpreadsheetApp: { openById: () => ss, DataValidationCriteria: { VALUE_IN_LIST: 'L' } },
+  SpreadsheetApp: { openById: () => ss, flush: () => {}, DataValidationCriteria: { VALUE_IN_LIST: 'L' } },
   LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
   CacheService: { getScriptCache: () => ({ get: () => null, put: () => {} }) },
   ScriptApp: { getService: () => ({ getUrl: () => '' }) },
@@ -51,7 +54,7 @@ const ctx = {
   ContentService: {}, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -78,3 +81,33 @@ const filas = hojas.PERSONAS.filas.length;
 d = R.crearPersona({ apodo: 'Jan', jerarquia: 'Nietos', familia: 'Canela', menu: '🌕 Entero', alergias: 'Nueces', cumple: '05/06' }, '(T) - Mercedes', V);
 ver('volver a añadir a Jan recupera su fila', hojas.PERSONAS.filas.length === filas && d.personas.some(p => p.id === '(N) - Jan' && p.alergias === 'Nueces' && p.cumple === '05/06') && !d.bajas.length && d.creado === '(N) - Jan');
 ver('su comida pasada sigue siendo suya', d.apuntes.some(a => a.persona === '(N) - Jan' && a.fecha === '2026-11-10'));
+
+// ---------- v4.10: núcleos familiares ----------
+const M_ = '(T) - Mercedes', J_ = '(T+1) - Jordi', N_ = '(N) - Jan';
+const quien = id => d.personas.concat(d.editores).find(p => p.id === id) || {};
+const col = (id, c) => (hojas.PERSONAS.filas.find(f => f[0] === id) || [])[c - 1];
+d = R.guardarPersona(M_, { apellido: 'Canela', sexo: 'Mujer', pareja: J_ }, M_, V);
+ver('apellido y mujer de Mercedes', quien(M_).apellido === 'Canela' && quien(M_).sexo === 'Mujer');
+ver('pareja en los dos sentidos', quien(M_).pareja === J_ && quien(J_).pareja === M_);
+ver('títulos J-M', ['Apellido', 'Sexo', 'Pareja', 'Hijo de'].every((t, i) => hojas.PERSONAS.filas[0][9 + i] === t));
+d = R.guardarPersona(N_, { hijoDe: M_ }, M_, V);
+ver('Jan es hijo de Mercedes', quien(N_).hijoDe === M_);
+err = ''; try { R.guardarPersona(M_, { hijoDe: N_ }, M_, V); } catch (e) { err = e.message; }
+ver('Mercedes no puede ser hija de Jan (círculo)', /ya desciende/.test(err));
+err = ''; try { R.guardarPersona(M_, { pareja: M_ }, M_, V); } catch (e) { err = e.message; }
+ver('nadie es su propia pareja', /propia pareja/.test(err));
+err = ''; try { R.guardarPersona(M_, { sexo: 'Otro' }, M_, V); } catch (e) { err = e.message; }
+ver('sexo solo Hombre o Mujer', /hombre o mujer/.test(err));
+d = R.guardarPersona('(O) - Amiga', { pareja: J_ }, M_, V);
+ver('si Jordi pasa a tener otra pareja, Mercedes se queda sin', quien(J_).pareja === '(O) - Amiga' && !quien(M_).pareja && quien('(O) - Amiga').pareja === J_);
+d = R.guardarPersona(J_, { pareja: M_ }, M_, V);
+ver('y al volver, la Amiga se queda sin pareja', quien(J_).pareja === M_ && quien(M_).pareja === J_ && !quien('(O) - Amiga').pareja);
+d = R.guardarPersona('(A) - Abuela', { apellido: 'Canela' }, M_, V);
+ver('la abuela también puede tener apellido', quien('(A) - Abuela').apellido === 'Canela');
+d = R.guardarPersona(M_, { hijoDe: '(A) - Abuela' }, M_, V);
+ver('Mercedes, hija de la abuela', quien(M_).hijoDe === '(A) - Abuela');
+d = R.crearPersona({ apodo: 'Laura', jerarquia: 'Nietos', familia: 'Canela', apellido: 'López', sexo: 'Mujer', pareja: N_ }, M_, V);
+ver('persona nueva con apellido y pareja', quien('(N) - Laura').apellido === 'López' && quien('(N) - Laura').pareja === N_ && quien(N_).pareja === '(N) - Laura');
+d = R.guardarPersona(J_, { apodo: 'Jordi P' }, M_, V);
+ver('si Jordi cambia de nombre, su pareja y sus referencias le siguen', quien(M_).pareja === '(T+1) - Jordi P' && quien('(T+1) - Jordi P').pareja === M_);
+ver('queda en el registro', hojas.MESA_CAMBIOS.filas.some(f => /son pareja/.test(f[3])) && hojas.MESA_CAMBIOS.filas.some(f => /es hijo o hija de/.test(f[3])));
