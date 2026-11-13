@@ -1108,10 +1108,12 @@
     return [a, b];
   }
   /* Con los dos apellidos, «Familia Puig Canela»; si falta alguno, los nombres («Mercedes y Jordi») hasta que se rellene */
+  /* v4.13: una pareja sin casar, o sin los dos apellidos, se llama por sus nombres («Javier y Paola») */
   function nombreNucleo(a, b) {
     if (!b) return a.apellido ? 'Familia ' + a.apellido : 'Familia de ' + a.apodo;
     const xy = ordenPareja(a, b);
-    if (!a.apellido || !b.apellido) return xy[0].apodo + ' y ' + xy[1].apodo;
+    const pila = function (x) { return x.nombre || x.apodo; };
+    if (!a.apellido || !b.apellido || a.casados === 'No' || b.casados === 'No') return pila(xy[0]) + ' y ' + pila(xy[1]);
     return 'Familia ' + xy[0].apellido + ' ' + xy[1].apellido;
   }
   function parejaDe(p) { const x = p.pareja && quienEs(p.pareja); return x && x.pareja === p.id ? x : null; }
