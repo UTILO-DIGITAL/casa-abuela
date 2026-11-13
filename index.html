@@ -220,9 +220,16 @@
     .cabecera-dentro { padding: 0 32px; }
     .cabecera h1 { font-size: 38px; }
     .pagina { padding: 28px 32px 64px; }
-    /* v4.2: en ordenador y tablet, tres días a la vez */
+    /* v4.2: en tablet, tres días a la vez; v4.5: en ordenador, cinco */
     .dias-semana { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 16px; }
     .dias-semana .dia-cab h3 { font-size: 26px; }
+  }
+  @media (min-width: 1200px) {
+    .dias-semana { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+    .dias-semana .dia-cab { padding: 10px 12px; gap: 6px; flex-wrap: nowrap; }
+    .dias-semana .dia-cab h3 { font-size: 20px; }
+    .dias-semana .dia-cab span { font-size: 15px; }
+    .dias-semana .comida { padding: 12px; }
   }
   @media (min-width: 1280px) {
     .fila-dia { grid-template-columns: 150px 1fr 1fr; align-items: start; gap: 20px; }
@@ -471,9 +478,10 @@
   let yo = leerYo();
   let vista = 'semana';
   let lunesSel = null;
-  let diaSel = null;        // v4.2: primer día de los tres que se ven en ordenador; la semana es la suya
+  let diaSel = null;        // v4.2: primer día de los que se ven en tablet y ordenador; la semana es la suya
   let rangoCargado = null;  // las fechas que cubren los datos que hay en memoria
   const ESCRITORIO = window.matchMedia('(min-width: 760px)');
+  const CINCO = window.matchMedia('(min-width: 1200px)');  // v4.5: en ordenador, cinco días
   let cargando = false;
   const abiertos = new Set();
 
@@ -523,17 +531,25 @@
   function siguienteLaborable(iso) { return sumar(iso, 1); }
   function primerLaborable(iso) { return iso; }
   function lunesInicio() { return datos ? lunesDe(datos.config.inicio) : null; }
-  /* v4.2: la ventana de tres días (ordenador y tablet) y la semana van juntas */
+  /* v4.2: la ventana de días (tablet: tres; ordenador, v4.5: cinco) y la semana van juntas */
   function enEscritorio() { return ESCRITORIO.matches; }
-  function ventana() { return [0, 1, 2].map(function (i) { return sumar(diaSel, i); }); }
-  function diaInicial() { const h = hoy(); return datos && h < datos.config.inicio ? datos.config.inicio : h; }
+  function cuantosDias() { return CINCO.matches ? 5 : 3; }
+  function ventana() { const n = cuantosDias(), v = []; for (let i = 0; i < n; i++) v.push(sumar(diaSel, i)); return v; }
+  /* Tres días: desde hoy. Cinco: de lunes a viernes; en sábado o domingo, de miércoles a domingo */
+  function diaInicial() {
+    const h = hoy();
+    if (datos && h < datos.config.inicio) return datos.config.inicio;
+    if (cuantosDias() === 3) return h;
+    const d = dow(h);
+    return sumar(lunesDe(h), d === 6 || d === 0 ? 2 : 0);
+  }
   function irADia(dia) {
     if (datos && dia < datos.config.inicio) dia = datos.config.inicio;
     diaSel = dia;
     lunesSel = lunesDe(dia);
   }
   function necesita() {
-    const finSemana = sumar(lunesSel, 6), finVentana = sumar(lunesDe(sumar(diaSel, 2)), 6);  // la semana entera del último día que se ve
+    const finSemana = sumar(lunesSel, 6), finVentana = sumar(lunesDe(sumar(diaSel, cuantosDias() - 1)), 6);  // la semana entera del último día que se ve
     return { desde: lunesSel, hasta: finVentana > finSemana ? finVentana : finSemana };
   }
   function cubierto() { const n = necesita(); return !!rangoCargado && rangoCargado.desde <= n.desde && rangoCargado.hasta >= n.hasta; }
@@ -1577,8 +1593,10 @@
     pasoDia(e.key === 'ArrowLeft' ? -1 : 1);
   });
   /* Al pasar de móvil a ordenador (o al girar la tablet), se repinta con su forma */
-  if (ESCRITORIO.addEventListener) ESCRITORIO.addEventListener('change', function () { if (datos) pintar(); });
-  else if (ESCRITORIO.addListener) ESCRITORIO.addListener(function () { if (datos) pintar(); });
+  [ESCRITORIO, CINCO].forEach(function (m) {
+    const repintar = function () { if (!datos) return; if (cubierto()) pintar(); else cargar(true); };
+    if (m.addEventListener) m.addEventListener('change', repintar); else if (m.addListener) m.addListener(repintar);
+  });
 
   /* ---------- Vistas ---------- */
   const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', cocina: 'Quién viene hoy y mañana', personas: 'La familia y lo que come cada uno' };
@@ -1614,7 +1632,7 @@
     }).catch(function () {});
   }
 
-  irADia(hoy());
+  irADia(diaInicial());
   const local = leerLocal();
   if (local && local.r) {
     rangoCargado = local.r;
