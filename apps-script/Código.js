@@ -8,6 +8,7 @@
  *                 deja de salir para apuntarse y sus comidas pasadas siguen saliendo con su nombre.
  *                 Núcleos (J-M, v4.10): Apellido, Sexo (Hombre o Mujer), Pareja (Id, en los dos sentidos) e Hijo de (Id).
  *                 Los Ids siguen a MESA_ALIAS. La web arma con ellos el árbol de núcleos de cada familia.
+ *                 Nombre (N, v4.11): el nombre de verdad; el Apodo (B) es como le llaman en casa y no se repite.
  *   MESA_APUNTES  ID_APUNTE | FECHA | TURNO | PERSONA_ID | CREADO_EN | NOTA | ESTADO ('' va · 'NO' no va ese día aunque sea fijo) | NOTA_POR | NOTA_EN
  *   MESA_FIJOS    ID_FIJO | PERSONA_ID | DIA_SEMANA (0 domingo … 6 sábado) | TURNO | DESDE | HASTA | NOTA | CREADO_POR | CREADO_EN
  *   MESA_DIAS     FECHA | NOTA | SIN_TURNO | CAMBIADO_POR | CAMBIADO_EN | SIN_COMIDA | MOTIVO_COMIDA | SIN_CENA | MOTIVO_CENA | NOTA_SERVICIO | SIN_DORMIR | MOTIVO_DORMIR
@@ -26,7 +27,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.10.0
+ * Versión 4.11.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -48,7 +49,9 @@ const COL_APELLIDO = 10; // J (v4.10)
 const COL_SEXO = 11;     // K: Hombre o Mujer
 const COL_PAREJA = 12;   // L: Id de su pareja
 const COL_HIJO_DE = 13;  // M: Id de su padre o su madre
-const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de' };
+const COL_NOMBRE = 14;   // N: nombre de verdad (v4.11)
+const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de', 14: 'Nombre' };
+const CAMPOS_NUCLEO = ['nombre', 'apellido', 'sexo', 'pareja', 'hijoDe'];
 const SEXOS = ['Hombre', 'Mujer'];
 const COLS_APUNTES = 9;
 const COLS_FIJOS = 9;
@@ -192,6 +195,7 @@ function aPersona_(f) {
     sexo: SEXOS.indexOf(String(f[COL_SEXO - 1] || '').trim()) !== -1 ? String(f[COL_SEXO - 1]).trim() : '',
     pareja: String(f[COL_PAREJA - 1] || '').trim(),
     hijoDe: String(f[COL_HIJO_DE - 1] || '').trim(),
+    nombre: String(f[COL_NOMBRE - 1] || '').trim(),
   };
 }
 
@@ -437,7 +441,7 @@ function guardarPersona(personaId, cambios, quien, vista) {
       }
     }
 
-    if (['apellido', 'sexo', 'pareja', 'hijoDe'].some(function (k) { return cambios[k] !== undefined; })) {
+    if (CAMPOS_NUCLEO.some(function (k) { return cambios[k] !== undefined; })) {
       ponerNucleo_(ss, p, cambios, registro, personas.concat(editores));
     }
 
@@ -696,6 +700,13 @@ function listas_(ss, personas) {
   });
 }
 
+/** v4.11: el apodo es como le llaman en casa y no se puede repetir (da igual mayúsculas y acentos). salvo: Ids que no cuentan. */
+function apodoLibre_(ss, apodo, salvo) {
+  const n = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
+  const otro = filasPersonas_(ss).filter(function (f) { return salvo.indexOf(String(f[0]).trim()) === -1 && n(f[1]) === n(apodo); })[0];
+  if (otro) throw new Error('Ya hay alguien que se llama «' + String(otro[1]).trim() + '» en la lista. El apodo no se puede repetir: añade una inicial o como le llamáis en casa (por ejemplo, «' + apodo + ' M»).');
+}
+
 /** El Id de PERSONAS lo calcula una fórmula: «(» + inicial de la jerarquía + «+1» si la lleva + «) - » + apodo. */
 function idDe_(apodo, jerarquia) {
   return '(' + String(jerarquia || '').charAt(0) + (String(jerarquia || '').indexOf('+1') !== -1 ? '+1' : '') + ') - ' + apodo;
@@ -727,6 +738,7 @@ function crearPersona(nueva, quien, vista) {
     const id = idDe_(apodo, jerarquia);
     const deBaja = leerBajas_(ss).filter(function (b) { return b.id === id; })[0];
     if (deBaja) return recuperarPersona_(ss, deBaja, familia, nueva, personas, autor, vista);
+    apodoLibre_(ss, apodo, []);
     if (filasPersonas_(ss).some(function (f) { return String(f[0]).trim() === id; })) throw new Error('Ya hay alguien llamado ' + apodo + ' con ese parentesco. Ponle un apodo distinto (por ejemplo, con la inicial del apellido).');
     const menu = nueva.menu && opcionesMenu_(personas).indexOf(nueva.menu) !== -1 ? nueva.menu : MENUS_BASE[0];
     const alergias = limpiar_(nueva.alergias, MAX_ALERGIAS, 'Las alergias');
@@ -838,7 +850,11 @@ function asegurarColumnaBaja_(ss) { asegurarColumnas_(ss, COL_BAJA); }
 function ponerNucleo_(ss, p, cambios, registro, todos) {
   const nombre = function (id) { const x = todos.filter(function (t) { return t.id === id; })[0]; return x ? x.apodo : id; };
   const existe = function (id) { return todos.some(function (t) { return t.id === id; }); };
-  asegurarColumnas_(ss, COL_HIJO_DE);
+  asegurarColumnas_(ss, COL_NOMBRE);
+  if (cambios.nombre !== undefined) {
+    const nombreReal = limpiar_(cambios.nombre, 40, 'El nombre', true);
+    if (nombreReal !== p.nombre) { escribirEnPersonas_(ss, p.id, COL_NOMBRE, nombreReal, true); registro.push('Nombre de ' + p.apodo + ': ' + (nombreReal || 'borrado')); }
+  }
   if (cambios.apellido !== undefined) {
     const apellido = limpiar_(cambios.apellido, 40, 'El apellido', true);
     if (apellido !== p.apellido) { escribirEnPersonas_(ss, p.id, COL_APELLIDO, apellido, true); registro.push('Apellido de ' + p.apodo + ': ' + (apellido || 'borrado')); }
@@ -883,13 +899,13 @@ function ponerNucleo_(ss, p, cambios, registro, todos) {
 
 /** El núcleo de alguien que se acaba de añadir (o recuperar). */
 function nucleoDeNueva_(ss, id, nueva, registro) {
-  if (!['apellido', 'sexo', 'pareja', 'hijoDe'].some(function (k) { return nueva[k]; })) return;
+  if (!CAMPOS_NUCLEO.some(function (k) { return nueva[k]; })) return;
   SpreadsheetApp.flush();
   olvidar_('personas');
   const config = leerConfig_(ss);
   const todos = leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir));
   const p = todos.filter(function (t) { return t.id === id; })[0];
-  if (p) ponerNucleo_(ss, p, { apellido: nueva.apellido || '', sexo: nueva.sexo || '', pareja: nueva.pareja || '', hijoDe: nueva.hijoDe || '' }, registro, todos);
+  if (p) ponerNucleo_(ss, p, { nombre: nueva.nombre || '', apellido: nueva.apellido || '', sexo: nueva.sexo || '', pareja: nueva.pareja || '', hijoDe: nueva.hijoDe || '' }, registro, todos);
 }
 
 function filaDePersona_(ss, personaId) {
@@ -908,6 +924,7 @@ function renombrarPersona_(ss, p, cambios, registro) {
   const familia = cambios.familia !== undefined ? String(cambios.familia).trim() : p.familia;
   if (apodo === p.apodo && jerarquia === p.jerarquia && familia === p.familia) return null;
   validarFicha_(ss, personas, apodo, jerarquia, familia);
+  if (apodo !== p.apodo) apodoLibre_(ss, apodo, [p.id]);
   const nuevoId = idDe_(apodo, jerarquia);
   if (nuevoId !== p.id && filasPersonas_(ss).some(function (f) { return String(f[0]).trim() === nuevoId; })) {
     throw new Error('Ya hay alguien llamado ' + apodo + ' con ese parentesco.');
