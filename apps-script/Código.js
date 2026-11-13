@@ -28,7 +28,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.13.0
+ * Versión 4.15.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -56,9 +56,12 @@ const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13:
 const CAMPOS_NUCLEO = ['nombre', 'apellido', 'sexo', 'pareja', 'hijoDe', 'casados'];
 const CASADOS = ['Sí', 'No'];
 const SEXOS = ['Hombre', 'Mujer'];
-const COLS_APUNTES = 9;
+const COLS_APUNTES = 10;  // v4.15: J ACOMPANANTES (cuántos vienen con esa persona sin estar en la lista)
 const COLS_FIJOS = 9;
-const COLS_DIAS = 29;
+const COLS_DIAS = 32;     // v4.15: AD EVENTO, AE EVENTO_TURNO, AF EVENTO_TEXTO
+const TITULOS_DIAS_V415 = ['EVENTO', 'EVENTO_TURNO', 'EVENTO_TEXTO'];
+const MAX_ACOMPANANTES = 20;
+const MAX_EVENTO = 60, MAX_EVENTO_TEXTO = 500;
 const MAX_ALERGIAS = 100;
 const MAX_NOTA = 140;
 const MAX_DIAS_RANGO = 400;
@@ -240,7 +243,8 @@ function aFilaApunte_(f) {
   return [String(f[0]), aFecha_(f[1]), String(f[2]), String(f[3]),
     f[4] instanceof Date ? Utilities.formatDate(f[4], TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(f[4] || ''),
     String(f[5] || ''), String(f[6] || '').toUpperCase(), String(f[7] || ''),
-    f[8] instanceof Date ? Utilities.formatDate(f[8], TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(f[8] || '')];
+    f[8] instanceof Date ? Utilities.formatDate(f[8], TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(f[8] || ''),
+    String(Number(f[9]) > 0 ? Math.floor(Number(f[9])) : '')];
 }
 
 function leerApuntes_(ss) { return memo_('apuntes', function () { return leerApuntesSin_(ss); }); }
@@ -248,7 +252,7 @@ function leerApuntesSin_(ss) {
   const alias = resolverAlias_(ss);
   return abrirTabla_(ss.getSheetByName(HOJA_APUNTES), COLS_APUNTES, aFilaApunte_).vivas().map(function (x) {
     const f = x.v;
-    return { id: f[0], fecha: f[1], turno: f[2], persona: alias(f[3]), nota: f[5], no: f[6] === 'NO', notaPor: f[7], notaEn: f[8] };
+    return { id: f[0], fecha: f[1], turno: f[2], persona: alias(f[3]), nota: f[5], no: f[6] === 'NO', notaPor: f[7], notaEn: f[8], acompanantes: Number(f[9]) || 0 };
   });
 }
 
@@ -369,7 +373,7 @@ function efectivos_(crudos, fijos, desde, hasta) {
       (porDia[d + '|' + t] || []).forEach(function (a) {
         if (a.no) { delete mapa[a.persona]; return; }
         if (!mapa[a.persona]) orden.push(a.persona);
-        mapa[a.persona] = { fecha: d, turno: t, persona: a.persona, nota: a.nota, notaPor: a.nota ? a.notaPor : '', notaEn: a.nota ? a.notaEn : '', fijo: !!(mapa[a.persona] && mapa[a.persona].fijo) };
+        mapa[a.persona] = { fecha: d, turno: t, persona: a.persona, nota: a.nota, notaPor: a.nota ? a.notaPor : '', notaEn: a.nota ? a.notaEn : '', fijo: !!(mapa[a.persona] && mapa[a.persona].fijo), acompanantes: a.acompanantes || 0 };
       });
       orden.forEach(function (id) { if (mapa[id]) { out.push(mapa[id]); delete mapa[id]; } });
     });
@@ -399,6 +403,7 @@ function leerDiasSin_(ss) {
         dormirPor: String(f[20] || f[3] || ''), dormirEn: texto_(f[21] || f[4]),
         fueraComida: esSi_(f[22]) || esSi_(f[26]), fueraCena: esSi_(f[22]) || esSi_(f[27]), fueraDormir: esSi_(f[22]) || esSi_(f[28]),
         motivoFuera: String(f[23] || ''), fueraPor: String(f[24] || ''), fueraEn: texto_(f[25]),
+        evento: String(f[29] || ''), eventoTurno: String(f[30] || ''), eventoTexto: String(f[31] || ''),
       };
     });
 }
@@ -467,16 +472,27 @@ function guardarPersona(personaId, cambios, quien, vista) {
         const iba = fila ? fila[6] !== 'NO' : esFijo;
         const notaAntes = fila ? fila[5] : '';
         const nota = t.nota !== undefined ? limpiar_(t.nota, MAX_NOTA, 'La nota', true) : null;
+        // v4.15: acompañantes (gente que viene con esta persona y no está en la lista)
+        let acomp = null;
+        if (t.acompanantes !== undefined) {
+          acomp = Math.floor(Number(t.acompanantes) || 0);
+          if (acomp < 0 || acomp > MAX_ACOMPANANTES) throw new Error('Los acompañantes van de 0 a ' + MAX_ACOMPANANTES + '.');
+        }
+        const acompAntes = fila ? Number(fila[9]) || 0 : 0;
         if (t.apuntado) {
           if (!fila) {
-            if (!esFijo || nota) tabla.nueva([Utilities.getUuid(), t.fecha, t.turno, personaId, ahora_(), nota || '', '', nota ? autor.apodo : '', nota ? ahora_() : '']);
+            if (!esFijo || nota || acomp) tabla.nueva([Utilities.getUuid(), t.fecha, t.turno, personaId, ahora_(), nota || '', '', nota ? autor.apodo : '', nota ? ahora_() : '', acomp ? String(acomp) : '']);
           } else {
             if (fila[6] !== '') { fila[6] = ''; x.cambiada = true; }
             if (nota !== null && nota !== fila[5]) { fila[5] = nota; fila[7] = nota ? autor.apodo : ''; fila[8] = nota ? ahora_() : ''; x.cambiada = true; }
-            if (esFijo && !fila[5]) x.borrada = true;
+            if (acomp !== null && acomp !== acompAntes) { fila[9] = acomp ? String(acomp) : ''; x.cambiada = true; }
+            if (esFijo && !fila[5] && !(Number(fila[9]) > 0)) x.borrada = true;
           }
-          if (!iba) registro.push('Apunta a ' + p.apodo + ' a la ' + cuando + (nota ? ' (nota: ' + nota + ')' : ''));
-          else if (nota !== null && nota !== notaAntes) registro.push('Nota de ' + p.apodo + ' en la ' + cuando + ': ' + (nota || 'borrada'));
+          if (!iba) registro.push('Apunta a ' + p.apodo + ' a la ' + cuando + (acomp ? ' (con ' + acomp + ' más)' : '') + (nota ? ' (nota: ' + nota + ')' : ''));
+          else {
+            if (nota !== null && nota !== notaAntes) registro.push('Nota de ' + p.apodo + ' en la ' + cuando + ': ' + (nota || 'borrada'));
+            if (acomp !== null && acomp !== acompAntes) registro.push(p.apodo + ' va a la ' + cuando + (acomp ? ' con ' + acomp + ' más' : ' sin acompañantes'));
+          }
         } else {
           if (esFijo && t.desdeAqui) {
             if (x) x.borrada = true;
@@ -490,6 +506,8 @@ function guardarPersona(personaId, cambios, quien, vista) {
         }
       });
       tabla.guardar();
+      const hojaA = ss.getSheetByName(HOJA_APUNTES);
+      if (!String(hojaA.getRange(1, 10).getValue()).trim()) hojaA.getRange(1, 10).setValue('ACOMPANANTES');
       olvidar_('apuntes');
     }
 
@@ -577,6 +595,10 @@ function guardarDia(fecha, dia, quien, vista) {
     const fueraC = !!dia.fueraComida, fueraX = !!dia.fueraCena, fueraD = !!dia.fueraDormir;
     const fuera = fueraC || fueraX || fueraD;
     const motivoFuera = fuera ? limpiar_(dia.motivoFuera, MAX_NOTA, 'El motivo', true) : '';
+    // v4.15: un evento puntual (la castañada…) con su turno y su descripción
+    const evento = limpiar_(dia.evento, MAX_EVENTO, 'El nombre del evento', true);
+    const eventoTurno = evento ? (TURNOS.indexOf(dia.eventoTurno) !== -1 ? dia.eventoTurno : 'COMIDA') : '';
+    const eventoTexto = evento ? limpiar_(dia.eventoTexto, MAX_EVENTO_TEXTO, 'La descripción del evento', true) : '';
     const hoja = hojaDias_(ss);
     if (hoja.getMaxColumns() < COLS_DIAS) hoja.insertColumnsAfter(hoja.getMaxColumns(), COLS_DIAS - hoja.getMaxColumns());
     const n = Math.max(0, hoja.getLastRow() - 1);
@@ -596,7 +618,8 @@ function guardarDia(fecha, dia, quien, vista) {
     const aCena = autoria(!sinCena, antes && antes.sinCena && antes.motivoCena === motivoCena, antes && antes.cenaPor, antes && antes.cenaEn);
     const aDormir = autoria(!sinDormir, antes && antes.sinDormir && antes.motivoDormir === motivoDormir, antes && antes.dormirPor, antes && antes.dormirEn);
     const aFuera = autoria(!fuera, antes && antes.fueraComida === fueraC && antes.fueraCena === fueraX && antes.fueraDormir === fueraD && antes.motivoFuera === motivoFuera, antes && antes.fueraPor, antes && antes.fueraEn);
-    if (!nota && !notaServicio && !sinComida && !sinCena && !sinDormir && !fuera) {
+    if (!String(hoja.getRange(1, 30).getValue()).trim()) hoja.getRange(1, 30, 1, 3).setValues([TITULOS_DIAS_V415]);
+    if (!nota && !notaServicio && !sinComida && !sinCena && !sinDormir && !fuera && !evento) {
       if (i !== -1) hoja.deleteRow(i + 2);
       registrar_(ss, autor, ['Borra lo anotado el ' + ddmm_(fecha)]);
     } else {
@@ -606,8 +629,9 @@ function guardarDia(fecha, dia, quien, vista) {
       rango.setValues([[fecha, nota, sinComida && sinCena ? 'TRUE' : 'FALSE', autor.apodo, ahora,
         sinComida ? 'TRUE' : 'FALSE', motivoComida, sinCena ? 'TRUE' : 'FALSE', motivoCena, notaServicio,
         sinDormir ? 'TRUE' : 'FALSE', motivoDormir].concat(aNota, aServ, aComida, aCena, aDormir, ['FALSE', motivoFuera], aFuera,
-        [fueraC ? 'TRUE' : 'FALSE', fueraX ? 'TRUE' : 'FALSE', fueraD ? 'TRUE' : 'FALSE'])]);
+        [fueraC ? 'TRUE' : 'FALSE', fueraX ? 'TRUE' : 'FALSE', fueraD ? 'TRUE' : 'FALSE'], [evento, eventoTurno, eventoTexto])]);
       const partes = [];
+      if (evento) partes.push('evento: ' + evento + ' (' + nombreTurno_(eventoTurno) + ')');
       if (nota) partes.push(nota);
       if (notaServicio) partes.push('para el servicio: ' + notaServicio);
       if (sinComida) partes.push('comida sin nadie' + (motivoComida ? ' (' + motivoComida + ')' : ''));

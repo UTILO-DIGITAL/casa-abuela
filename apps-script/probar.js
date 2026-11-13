@@ -150,3 +150,23 @@ err = ''; try { R.guardarPersona(M_, { cumple: '07/03/1850' }, M_, V); } catch (
 ver('un año imposible no se guarda', /de 1900 a hoy/.test(err));
 err = ''; try { R.guardarPersona(M_, { cumple: '07/03/2099' }, M_, V); } catch (e) { err = e.message; }
 ver('ni uno del futuro', /de 1900 a hoy/.test(err));
+
+// ---------- v4.15: acompañantes y eventos ----------
+vm.runInContext('this.__.guardarDia = guardarDia;', ctx);
+const V2 = { desde: '2026-11-16', hasta: '2026-11-29', yo: M_ };
+const ap = (f, t, id) => d.apuntes.find(a => a.fecha === f && a.turno === t && a.persona === id);
+d = R.guardarPersona(M_, { turnos: [{ fecha: '2026-11-21', turno: 'CENA', apuntado: true, acompanantes: 2 }] }, M_, V2);
+ver('apuntarse con 2 acompañantes', (ap('2026-11-21', 'CENA', M_) || {}).acompanantes === 2);
+ver('título de la columna J de MESA_APUNTES', hojas.MESA_APUNTES.filas[0][9] === 'ACOMPANANTES');
+d = R.guardarPersona(M_, { turnos: [{ fecha: '2026-11-21', turno: 'CENA', apuntado: true, acompanantes: 0 }] }, M_, V2);
+ver('volver a 0 acompañantes', (ap('2026-11-21', 'CENA', M_) || {}).acompanantes === 0);
+err = ''; try { R.guardarPersona(M_, { turnos: [{ fecha: '2026-11-21', turno: 'CENA', apuntado: true, acompanantes: 50 }] }, M_, V2); } catch (e) { err = e.message; }
+ver('acompañantes como mucho 20', /de 0 a 20/.test(err));
+d = R.guardarDia('2026-11-21', { evento: 'Castañada', eventoTurno: 'CENA', eventoTexto: 'Traed castañas y boniatos' }, M_, V2);
+const ev = d.dias.find(x => x.fecha === '2026-11-21') || {};
+ver('evento guardado con su turno y su descripción', ev.evento === 'Castañada' && ev.eventoTurno === 'CENA' && ev.eventoTexto === 'Traed castañas y boniatos');
+ver('títulos de los eventos en MESA_DIAS', hojas.MESA_DIAS.filas[0][29] === 'EVENTO');
+d = R.guardarDia('2026-11-22', { evento: 'Santo de la abuela' }, M_, V2);
+ver('sin turno, el evento es a la comida', (d.dias.find(x => x.fecha === '2026-11-22') || {}).eventoTurno === 'COMIDA');
+d = R.guardarDia('2026-11-22', {}, M_, V2);
+ver('borrar el día quita el evento', !d.dias.some(x => x.fecha === '2026-11-22'));
