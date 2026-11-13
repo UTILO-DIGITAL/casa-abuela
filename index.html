@@ -315,6 +315,9 @@
   .nucleo-card .per-filas { border-top: 0; }
   .nucleo-card .per-filas li:last-child { border-bottom: 0; }
   button.fila-persona.fila-caja { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 2px; }
+  .fila-caja .fp-nombre { flex: 1; min-width: 0; }
+  .fp-come { flex-basis: 100%; font-size: 14px; color: var(--color-texto-suave); }
+  .fp-come.con-alergia { color: var(--color-error); }
   .et-hijos { margin: 8px 0 0; padding-top: 6px; border-top: 1px solid var(--color-linea); font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
   .punto-falta { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--color-error); flex: none; }
   .leyenda-falta { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; color: var(--color-texto-suave); }
@@ -465,7 +468,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.12.1</footer>
+  <footer>Hecho con cariño por Utilo · v4.12.2</footer>
 </div>
 
 <div id="impresion"></div>
@@ -957,10 +960,18 @@
       (fl.length ? '<span class="fp-falta">Falta: ' + esc(lista_(fl)) + '</span>' : '') + '</button></li>';
   }
   /* v4.12.1: dentro de cada caja, una lista: el apodo, su nombre completo en pequeño y un punto rojo si le falta algo */
+  /* v4.12.2: lo básico para la cocina, en palabras: «come entero», «come la mitad» o «no come», y lo que no come */
+  function comeTexto(p) {
+    const m = p.menu ? etiquetaMenu(p.menu) : '';
+    const come = m === 'Entero' ? 'come entero' : (m === 'Medio' ? 'come la mitad' : (m === 'Nada' ? 'no come' : (m ? 'menú ' + m.toLowerCase() : '')));
+    return [come, p.alergias ? 'no come: ' + p.alergias : ''].filter(Boolean).join(' · ');
+  }
   function filaCaja(p) {
     const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
+    const come = comeTexto(p);
     return '<li><button type="button" class="fila-persona fila-caja" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' + esc(p.apodo) + '</b>' +
-      (completo && completo !== p.apodo ? '<small>' + esc(completo) + '</small>' : '') + '</span>' +
+      (completo && completo !== p.apodo ? '<small>' + esc(completo) + '</small>' : '') +
+      (come ? '<span class="fp-come' + (p.alergias ? ' con-alergia' : '') + '">' + esc(come) + '</span>' : '') + '</span>' +
       (falta(p).length ? '<span class="punto-falta" role="img" aria-label="faltan datos" title="Faltan datos"></span>' : '') + '</button></li>';
   }
   function tarjeta(titulo, estado, cabezas, hijos, dentro) {
@@ -1041,6 +1052,16 @@
       if (kp) nucleos[kp].hijos.push(x); else sueltos.push(x);
       colocado[x.id] = true;
     });
+    // v4.12.2: si alguno de los hijos tiene su propia caja, todos la tienen (aunque no tengan pareja ni hijos), en el orden de la lista
+    const posicion = {};
+    gente.forEach(function (x, i) { posicion[x.id] = i; });
+    ordenN.slice().forEach(function (k) {
+      const n = nucleos[k];
+      if (!n.dentro.length || !n.hijos.length) return;
+      n.hijos.forEach(function (h) { nucleos[h.id] = { cabezas: [h], hijos: [], dentro: [], solo: true }; n.dentro.push(h.id); });
+      n.hijos = [];
+      n.dentro.sort(function (a, b) { return posicion[nucleos[a].cabezas[0].id] - posicion[nucleos[b].cabezas[0].id]; });
+    });
     const estado = function (n) {
       if (!n.cabezas[1]) return '';
       const c = n.cabezas[0].casados || n.cabezas[1].casados;
@@ -1048,7 +1069,7 @@
     };
     const pinta = function (k) {
       const n = nucleos[k];
-      return tarjeta(nombreNucleo(n.cabezas[0], n.cabezas[1]), estado(n), n.cabezas, n.hijos, n.dentro.map(pinta).join(''));
+      return tarjeta(n.solo ? n.cabezas[0].apodo : nombreNucleo(n.cabezas[0], n.cabezas[1]), estado(n), n.cabezas, n.hijos, n.dentro.map(pinta).join(''));
     };
     // Con un solo núcleo arriba y los dos apellidos, la familia toma su nombre y la caja de arriba lleva los nombres de la pareja
     let nombre = '';
