@@ -114,6 +114,10 @@
   button.mas svg { width: 20px; height: 20px; }
   button.mas:hover { background: var(--color-principal-claro); }
   .comida-cab { align-items: center !important; }
+  /* v4.6: «Falta alguien» con el icono, en la línea del turno */
+  .comida-cab { flex-wrap: wrap; }  /* en columnas estrechas, el botón baja debajo del título */
+  .comida-cab .nadie.con-icono { margin-left: auto; gap: 6px; min-height: 36px; padding: 4px 10px; white-space: nowrap; }
+  .comida-cab .nadie.con-icono svg { width: 18px; height: 18px; flex: none; }
   .cuantos { font-size: 14px; font-weight: 700; color: var(--color-texto-suave); font-variant-numeric: tabular-nums; }
   .gente { display: flex; flex-wrap: wrap; gap: 6px; }
   .notas { margin: 0; padding: 0; list-style: none; font-size: 15px; font-weight: 600; color: var(--color-texto-suave); }
@@ -217,9 +221,18 @@
     .cabecera-dentro { padding: 0 32px; }
     .cabecera h1 { font-size: 38px; }
     .pagina { padding: 28px 32px 64px; }
-    /* v4.2: en ordenador y tablet, tres días a la vez */
+    /* v4.2: en tablet, tres días a la vez; v4.5: en ordenador, cinco */
     .dias-semana { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 16px; }
     .dias-semana .dia-cab h3 { font-size: 26px; }
+  }
+  @media (min-width: 1200px) {
+    .dias-semana { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+    .dias-semana .dia-cab { padding: 10px 12px; gap: 6px; flex-wrap: nowrap; }
+    .dias-semana .dia-cab h3 { font-size: 20px; }
+    .dias-semana .dia-cab span { font-size: 15px; }
+    .dias-semana .comida-cab .nadie.con-icono { font-size: 14px; padding: 3px 7px; gap: 4px; }
+    .dias-semana .comida-cab .nadie.con-icono svg { width: 16px; height: 16px; }
+    .dias-semana .comida { padding: 12px; }
   }
   @media (min-width: 1280px) {
     .fila-dia { grid-template-columns: 150px 1fr 1fr; align-items: start; gap: 20px; }
@@ -358,6 +371,7 @@
   .resultados { display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow: auto; }
   .resultados .p[aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--color-accion); }
   .elegido { margin: 0; font-weight: 800; }
+  button.enlace.alta-nueva { justify-self: start; margin: 0; padding: 8px 0; text-align: left; }
   #impresion { display: none; }
   @media print {
     body { background: #fff; }
@@ -426,7 +440,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.7.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.9.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -467,9 +481,10 @@
   let yo = leerYo();
   let vista = 'semana';
   let lunesSel = null;
-  let diaSel = null;        // v4.2: primer día de los tres que se ven en ordenador; la semana es la suya
+  let diaFoco = null;       // v4.8: el día del centro en tablet y ordenador (hoy, al entrar); la semana es la suya
   let rangoCargado = null;  // las fechas que cubren los datos que hay en memoria
   const ESCRITORIO = window.matchMedia('(min-width: 760px)');
+  const CINCO = window.matchMedia('(min-width: 1200px)');  // v4.5: en ordenador, cinco días
   let cargando = false;
   const abiertos = new Set();
 
@@ -519,18 +534,25 @@
   function siguienteLaborable(iso) { return sumar(iso, 1); }
   function primerLaborable(iso) { return iso; }
   function lunesInicio() { return datos ? lunesDe(datos.config.inicio) : null; }
-  /* v4.2: la ventana de tres días (ordenador y tablet) y la semana van juntas */
+  /* v4.2: la ventana de días (tablet: tres; ordenador, v4.5: cinco) y la semana van juntas */
   function enEscritorio() { return ESCRITORIO.matches; }
-  function ventana() { return [0, 1, 2].map(function (i) { return sumar(diaSel, i); }); }
-  function diaInicial() { const h = hoy(); return datos && h < datos.config.inicio ? datos.config.inicio : h; }
+  function cuantosDias() { return CINCO.matches ? 5 : 3; }
+  /* v4.8: hoy (o el día elegido) en el centro: en ordenador, dos días a cada lado; en tablet, uno; en el móvil, la semana */
+  function lado() { return enEscritorio() ? (cuantosDias() - 1) / 2 : 0; }
+  function primerDia() { return sumar(diaFoco, -lado()); }
+  function ventana() { const n = cuantosDias(), v = []; for (let i = 0; i < n; i++) v.push(sumar(primerDia(), i)); return v; }
+  function diaInicial() { return hoy(); }
+  /* No se ven días anteriores al inicio del calendario: el centro se corre lo que haga falta */
+  function minFoco() { return datos ? sumar(datos.config.inicio, lado()) : null; }
   function irADia(dia) {
-    if (datos && dia < datos.config.inicio) dia = datos.config.inicio;
-    diaSel = dia;
+    const m = minFoco();
+    if (m && dia < m) dia = m;
+    diaFoco = dia;
     lunesSel = lunesDe(dia);
   }
   function necesita() {
-    const finSemana = sumar(lunesSel, 6), finVentana = sumar(lunesDe(sumar(diaSel, 2)), 6);  // la semana entera del último día que se ve
-    return { desde: lunesSel, hasta: finVentana > finSemana ? finVentana : finSemana };
+    const ini = lunesDe(primerDia()), fin = sumar(lunesDe(sumar(diaFoco, lado())), 6);  // las semanas enteras del primer y el último día que se ven
+    return { desde: ini < lunesSel ? ini : lunesSel, hasta: fin };
   }
   function cubierto() { const n = necesita(); return !!rangoCargado && rangoCargado.desde <= n.desde && rangoCargado.hasta >= n.hasta; }
   function etiquetaTurno(turno) { return turno === 'CENA' ? 'Cena' : (turno === 'DORMIR' ? 'Dormir' : 'Comida'); }
@@ -662,8 +684,9 @@
   /* ---------- Carga ---------- */
   function rango() {
     const lh = lunesDe(hoy());
-    const desde = lunesSel < lh ? lunesSel : lh;
-    const hastaSel = necesita().hasta, hastaHoy = sumar(lh, 13);
+    const n = necesita();
+    const desde = n.desde < lh ? n.desde : lh;
+    const hastaSel = n.hasta, hastaHoy = sumar(lh, 13);
     return { desde: desde, hasta: hastaSel > hastaHoy ? hastaSel : hastaHoy, yo: yo };
   }
   /* Lo último que se vio en este móvil, para enseñarlo al momento mientras llega lo nuevo */
@@ -695,7 +718,7 @@
       if (pendientes > 0) return;
       datos = d;
       rangoCargado = r;
-      if (diaSel < datos.config.inicio) { irADia(datos.config.inicio); if (!cubierto()) return cargar(); }
+      if (diaFoco < minFoco()) { irADia(diaFoco); if (!cubierto()) return cargar(); }
       guardarLocal();
       pintar();
     }).catch(function () {
@@ -769,8 +792,11 @@
       const comp = compania(ids, t.id), serv = servicioDe(ids, t.id);
       const motivo = sinTurno(fecha, t.id);
       const datosTurno = ' data-anadir data-fecha="' + fecha + '" data-turno="' + t.id + '"';
+      // v4.6: sin nadie, un solo botón «Falta alguien» con el icono, en la línea del turno
+      const faltaAlguien = motivo === null && !grande && !comp.length;
       html += '<div class="comida' + (motivo !== null ? ' no-hace-falta' : '') + '"><div class="comida-cab"><h4>' + t.nombre + '</h4>' +
-        (motivo === null ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div>';
+        (faltaAlguien ? '<button type="button" class="nadie con-icono"' + datosTurno + ' aria-label="Falta alguien. Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '">' + ICONO_MAS + 'Falta alguien</button>'
+          : motivo === null ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div>';
       if (grande && t.id !== 'DORMIR' && !(ft && !ids.length)) {
         const r = raciones(ids, fecha, t.id);
         html += '<p class="cocinar">Cocinar para ' + r.total + '<small>' + esc(r.detalle) + '</small></p>';
@@ -784,9 +810,7 @@
       if (ft) html += '<p class="sin-turno">La abuela no está' + (ids.length ? ': avisad a quien va.' : '.') + '</p>';
       else if (motivo !== null) html += '<p class="sin-turno">No hace falta que vaya nadie' + (motivo ? ': ' + esc(motivo) : '.') + firmaTurno(nd, t.id) + '</p>';
       if (comp.length) html += '<div class="gente">' + comp.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
-      else if (motivo === null) html += grande
-        ? '<div><span class="nadie suave">Aún sin nadie</span></div>'
-        : '<div><button type="button" class="nadie"' + datosTurno + ' aria-label="Falta alguien. Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '">Falta alguien</button></div>';
+      else if (motivo === null && grande) html += '<div><span class="nadie suave">Aún sin nadie</span></div>';
       if (serv.length) html += '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
       const al = t.id === 'DORMIR' ? [] : ids.map(persona).filter(function (p) { return p && p.alergias; });
       if (al.length) html += '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>';
@@ -802,7 +826,7 @@
     if (hoy() < datos.config.inicio && lunesSel === lunesInicio()) html += '<p class="aviso">El calendario empieza el ' + diaLargo(datos.config.inicio).toLowerCase() + '.</p>';
     const tres = enEscritorio();
     if (tres) html += '<div class="pasos-dia">' +
-      '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaSel <= datos.config.inicio ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Día anterior</button>' +
+      '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaFoco <= minFoco() ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Día anterior</button>' +
       '<button type="button" class="accion paso" data-paso-dia="1">Día siguiente' + FLECHA_DER + '</button></div>';
     html += '<div class="dias-semana">' + (tres ? ventana() : semana(lunesSel)).map(function (f) { return bloqueDia(f, {}); }).join('') + '</div>';
     $('semana-grande').innerHTML = html;
@@ -915,7 +939,7 @@
       (p ? '<p class="ayuda">Si le cambias el nombre o el parentesco, sus comidas apuntadas siguen siendo suyas.</p>' : '') + '</fieldset>';
   }
 
-  function abrirNuevaPersona() {
+  function abrirNuevaPersona(nombre) {
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Añadir persona</h2></div><div class="dlg-cuerpo">' + camposFicha(null) +
       '<fieldset><legend>Para la cocina</legend><label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + opcionesMenu((datos.menus || [])[0]) + '</select></label>' +
       '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna"></label></fieldset>' +
@@ -923,6 +947,7 @@
       Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' + MESES.map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select></label></div></fieldset></div>' +
       pie('Añadir a la lista'));
+    if (nombre) $('dlg-apodo').value = nombre;
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
       const apodo = $('dlg-apodo').value.trim(), jer = $('dlg-jerarquia').value, fam = $('dlg-familia').value;
@@ -975,7 +1000,8 @@
   let elegidoBuscador = '';
   function buscadorHtml(etiqueta) {
     return '<div class="buscador"><label class="campo" for="bus-q">' + etiqueta + '<input id="bus-q" type="search" autocomplete="off" placeholder="Escribe un nombre"></label>' +
-      '<p class="elegido" id="bus-elegido" aria-live="polite"></p><p class="titulo-lista" id="bus-titulo"></p><div class="resultados" id="bus-res"></div></div>';
+      '<p class="elegido" id="bus-elegido" aria-live="polite"></p><p class="titulo-lista" id="bus-titulo"></p><div class="resultados" id="bus-res"></div>' +
+      '<button type="button" class="enlace alta-nueva" id="bus-alta" hidden></button></div>';
   }
   function montarBuscador(opciones) {
     elegidoBuscador = opciones.seleccion || '';
@@ -996,7 +1022,15 @@
       }).join('');
       const e = quienEs(elegidoBuscador);
       $('bus-elegido').textContent = e ? 'Elegido: ' + e.apodo : '';
+      // v4.6: si no está en la lista (o es otra persona con el mismo nombre), se puede dar de alta
+      const texto = $('bus-q').value.trim();
+      $('bus-alta').hidden = !(opciones.alta && texto);
+      if (opciones.alta && texto) $('bus-alta').textContent = '¿No está? Añadir a «' + texto + '» a la lista';
     }
+    if (opciones.alta) $('bus-alta').addEventListener('click', function () {
+      const nombre = $('bus-q').value.trim();
+      conQuien(function () { abrirNuevaPersona(nombre); });
+    });
     $('bus-q').addEventListener('input', pintarRes);
     $('bus-res').addEventListener('click', function (ev) {
       const b = ev.target.closest('[data-elegir]');
@@ -1306,7 +1340,7 @@
       '<div class="dlg-cuerpo">' + buscadorHtml('Quién viene') +
       '<label class="campo" for="dlg-nota">Nota para ese día (si hace falta)<input id="dlg-nota" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: llega a las 21:30"></label></div>' +
       pie('Apuntar a esta persona'));
-    montarBuscador({ excluir: ya, seleccion: ya.indexOf(yo) === -1 && persona(yo) ? yo : '' });
+    montarBuscador({ excluir: ya, seleccion: ya.indexOf(yo) === -1 && persona(yo) ? yo : '', alta: true });
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
       const id = elegidoBuscador;
@@ -1549,7 +1583,7 @@
     if (!el || !datos || $dlg.contains(el) || cargando) return;
     if (el.hasAttribute('data-semana')) {
       const paso = Number(el.dataset.semana);
-      irADia(paso === 0 ? diaInicial() : sumar(diaSel, paso * 7));
+      irADia(paso === 0 ? diaInicial() : sumar(diaFoco, paso * 7));
       cargar();
     } else if (el.hasAttribute('data-paso-dia')) { pasoDia(Number(el.dataset.pasoDia));
     } else if (el.hasAttribute('data-plegar')) {
@@ -1581,9 +1615,9 @@
   /* v4.2: un día a izquierda o derecha; si entra un día que no está cargado (otra semana), se carga como con las flechas de semana */
   function pasoDia(n) {
     if (!datos || cargando || vista !== 'semana') return;
-    const antes = diaSel;
-    irADia(sumar(diaSel, n));
-    if (diaSel === antes) return;
+    const antes = diaFoco;
+    irADia(sumar(diaFoco, n));
+    if (diaFoco === antes) return;
     if (cubierto()) pintar(); else cargar();
   }
   /* Con el teclado, las flechas izquierda y derecha también mueven los días */
@@ -1595,8 +1629,10 @@
     pasoDia(e.key === 'ArrowLeft' ? -1 : 1);
   });
   /* Al pasar de móvil a ordenador (o al girar la tablet), se repinta con su forma */
-  if (ESCRITORIO.addEventListener) ESCRITORIO.addEventListener('change', function () { if (datos) pintar(); });
-  else if (ESCRITORIO.addListener) ESCRITORIO.addListener(function () { if (datos) pintar(); });
+  [ESCRITORIO, CINCO].forEach(function (m) {
+    const repintar = function () { if (!datos) return; irADia(diaFoco); if (cubierto()) pintar(); else cargar(true); };
+    if (m.addEventListener) m.addEventListener('change', repintar); else if (m.addListener) m.addListener(repintar);
+  });
 
   /* ---------- Vistas ---------- */
   const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', cocina: 'Quién viene hoy y mañana', personas: 'La familia y lo que come cada uno' };
@@ -1632,7 +1668,7 @@
     }).catch(function () {});
   }
 
-  irADia(hoy());
+  irADia(diaInicial());
   const local = leerLocal();
   if (local && local.r) {
     rangoCargado = local.r;

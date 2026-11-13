@@ -4,7 +4,7 @@
  * Almacén: Sheet «Cuadrante Caldetas 2026».
  *   PERSONAS      lista de la familia (tabla). La web escribe Apodo, Jerarquia, Familia (B-D), Menu, Alergias y Cumple (F-H);
  *                 el Id (A) es una fórmula. Al cambiar apodo o jerarquía, la web añade el alias en MESA_ALIAS.
- *                 Baja (I, v4.7): fecha en que se quitó de la lista (por error o porque ha fallecido). Su fila se queda;
+ *                 Baja (I, v4.9): fecha en que se quitó de la lista (por error o porque ha fallecido). Su fila se queda;
  *                 deja de salir para apuntarse y sus comidas pasadas siguen saliendo con su nombre.
  *   MESA_APUNTES  ID_APUNTE | FECHA | TURNO | PERSONA_ID | CREADO_EN | NOTA | ESTADO ('' va · 'NO' no va ese día aunque sea fijo) | NOTA_POR | NOTA_EN
  *   MESA_FIJOS    ID_FIJO | PERSONA_ID | DIA_SEMANA (0 domingo … 6 sábado) | TURNO | DESDE | HASTA | NOTA | CREADO_POR | CREADO_EN
@@ -24,7 +24,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.7.0
+ * Versión 4.9.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
