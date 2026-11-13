@@ -937,7 +937,6 @@
   /* Un núcleo es una pareja (o alguien sin pareja que tiene hijos apuntados) con sus hijos. Quien forma pareja sigue
      dentro del núcleo de sus padres: el suyo sale dentro. Se llama «Familia <apellido de él> <apellido de ella>». */
   function hayNucleos() { return !!(datos.personas.length && 'sexo' in datos.personas[0]); }
-  function apellidoDe(p) { return p.apellido || p.apodo; }
   function esDeFuera(p) { return String(p.jerarquia || '').indexOf('+1') !== -1; }
   /* Primero él y luego ella; con dos hombres o dos mujeres (o sin decir), primero quien es de la familia (no «+1») */
   function ordenPareja(a, b) {
@@ -945,11 +944,12 @@
     if (!(a.sexo === 'Hombre' && b.sexo === 'Mujer') && esDeFuera(a) && !esDeFuera(b)) return [b, a];
     return [a, b];
   }
+  /* Con los dos apellidos, «Familia Puig Canela»; si falta alguno, los nombres («Mercedes y Jordi») hasta que se rellene */
   function nombreNucleo(a, b) {
-    if (!b) return 'Familia ' + apellidoDe(a);
+    if (!b) return a.apellido ? 'Familia ' + a.apellido : 'Familia de ' + a.apodo;
     const xy = ordenPareja(a, b);
-    if (!a.apellido && !b.apellido) return xy[0].apodo + ' y ' + xy[1].apodo;
-    return 'Familia ' + apellidoDe(xy[0]) + ' ' + apellidoDe(xy[1]);
+    if (!a.apellido || !b.apellido) return xy[0].apodo + ' y ' + xy[1].apodo;
+    return 'Familia ' + xy[0].apellido + ' ' + xy[1].apellido;
   }
   function parejaDe(p) { const x = p.pareja && quienEs(p.pareja); return x && x.pareja === p.id ? x : null; }
   function arbolFamilia(gente) {
