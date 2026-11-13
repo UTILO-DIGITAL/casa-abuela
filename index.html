@@ -223,15 +223,18 @@
     .pagina { padding: 28px 32px 64px; }
     /* v4.2: en tablet, tres días a la vez; v4.5: en ordenador, cinco */
     .dias-semana { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 16px; }
-    .dias-semana .dia-cab h3 { font-size: 26px; }
+    /* v4.10.2: el título del día (día, fecha y «Nota») siempre en una línea; la letra se ajusta al ancho */
+    .dias-semana .dia-cab { padding: 10px 12px; gap: 6px; flex-wrap: nowrap; }
+    .dias-semana .dia-cab h3 { font-size: clamp(18px, 2.4vw, 26px); }
+    .dias-semana .dia-cab span { font-size: 15px; white-space: nowrap; }
+    .dias-semana .comida-cab .nadie.con-icono { font-size: 14px; padding: 3px 7px; gap: 4px; }
+    .dias-semana .comida-cab .nadie.con-icono svg { width: 16px; height: 16px; }
   }
   @media (min-width: 1200px) {
     .dias-semana { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
     .dias-semana .dia-cab { padding: 10px 12px; gap: 6px; flex-wrap: nowrap; }
     .dias-semana .dia-cab h3 { font-size: 20px; }
     .dias-semana .dia-cab span { font-size: 15px; }
-    .dias-semana .comida-cab .nadie.con-icono { font-size: 14px; padding: 3px 7px; gap: 4px; }
-    .dias-semana .comida-cab .nadie.con-icono svg { width: 16px; height: 16px; }
     .dias-semana .comida { padding: 12px; }
   }
   @media (min-width: 1280px) {
@@ -447,7 +450,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.11.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.11.1</footer>
 </div>
 
 <div id="impresion"></div>
