@@ -496,7 +496,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.13.5</footer>
+  <footer>Hecho con cariño por Utilo · v4.13.6</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1648,11 +1648,10 @@
     /* v4.12: desde Semana y Hoy y mañana, solo ese turno; sus datos se cambian en Personas */
     if (fecha) {
       // v4.13: lo básico para no confundir a nadie (solo se lee; se cambia en su ficha)
-      const e = edad(p), completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
+      const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
       const m = p.menu ? etiquetaMenu(p.menu) : '';
       const basico = [
         completo ? ['Nombre', completo] : null,
-        e !== null ? ['Edad', e === 1 ? '1 año' : e + ' años'] : null,
         ['Come', m === 'Entero' ? 'Entero' : (m === 'Medio' ? 'La mitad' : (m === 'Nada' ? 'No come' : (m || 'Sin anotar')))],
         p.alergias ? ['No come', p.alergias] : null,
       ].filter(Boolean);
