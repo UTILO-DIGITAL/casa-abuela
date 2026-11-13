@@ -489,7 +489,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.13.2</footer>
+  <footer>Hecho con cariño por Utilo · v4.13.3</footer>
 </div>
 
 <div id="impresion"></div>
@@ -965,7 +965,7 @@
     pintarFiltros();
     // La abuela, arriba: lo que come, para todos. v4.12.6: sin botón de cambiar (se abre al tocarla, sin invitar a hacerlo)
     $('per-abuela').innerHTML = abuelas().map(function (a) {
-      const come = comeTexto(a) || 'sin anotar lo que come';
+      const come = comeTexto(a, true) || 'sin anotar lo que come';
       return '<button type="button" class="abuela-ficha" data-comida-abuela aria-label="' + esc(a.apodo) + ': ' + esc(come) + '"><h2>' + esc(a.apodo) + '</h2><p>' + esc(come) + '</p></button>';
     }).join('');
     const q = sinAcentos($('per-q').value.trim());
@@ -1063,9 +1063,10 @@
   }
   /* v4.12.1: dentro de cada caja, una lista: el apodo, su nombre completo en pequeño y un punto rojo si le falta algo */
   /* v4.12.2: lo básico para la cocina, en palabras: «come entero», «come la mitad» o «no come», y lo que no come */
-  function comeTexto(p) {
+  // v4.13: «come entero» es lo normal y solo se dice si se pide (todo = true, como en el recuadro de la abuela)
+  function comeTexto(p, todo) {
     const m = p.menu ? etiquetaMenu(p.menu) : '';
-    const come = m === 'Entero' ? 'come entero' : (m === 'Medio' ? 'come la mitad' : (m === 'Nada' ? 'no come' : (m ? 'menú ' + m.toLowerCase() : '')));
+    const come = m === 'Entero' ? (todo ? 'come entero' : '') : (m === 'Medio' ? 'come la mitad' : (m === 'Nada' ? 'no come' : (m ? 'menú ' + m.toLowerCase() : '')));
     return [come, p.alergias ? 'no come: ' + p.alergias : ''].filter(Boolean).join(' · ');
   }
   /* v4.12.4: lo que falta, en corto: «falta: cumpleaños», «falta: cumpleaños y apellido» o «faltan varias cosas» */
