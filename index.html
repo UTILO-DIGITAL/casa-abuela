@@ -216,15 +216,11 @@
     .cabecera-dentro { padding: 0 32px; }
     .cabecera h1 { font-size: 38px; }
     .pagina { padding: 28px 32px 64px; }
-    .dias-semana { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-  }
-  @media (min-width: 1000px) {
-    .dias-semana { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    /* v4.2: en ordenador y tablet, tres días a la vez */
+    .dias-semana { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 16px; }
+    .dias-semana .dia-cab h3 { font-size: 26px; }
   }
   @media (min-width: 1280px) {
-    .dias-semana { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
-    .dia-cab { padding: 8px 10px; }
-    .comida { padding: 10px; }
     .fila-dia { grid-template-columns: 150px 1fr 1fr; align-items: start; gap: 20px; }
     .turno { grid-template-columns: 1fr; }
     .turno .accion { justify-self: start; }
@@ -245,6 +241,12 @@
   button.flecha svg { width: 22px; height: 22px; }
   button.flecha:disabled { opacity: .35; cursor: default; }
   .cargando { opacity: .55; pointer-events: none; }
+  /* v4.2: día anterior y día siguiente, encima de los tres días */
+  .pasos-dia { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+  button.paso { display: inline-flex; align-items: center; gap: 4px; }
+  button.paso:first-child { padding-left: 8px; }
+  button.paso:last-child { padding-right: 8px; }
+  button.paso svg { width: 20px; height: 20px; }
 
   /* v2: nota del día y días sin turno */
   .nota-dia { margin: 0; padding: 8px 14px; background: var(--color-destacado-claro); font-weight: 800; display: grid; gap: 2px; }
@@ -423,7 +425,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.3.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.4.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -464,6 +466,9 @@
   let yo = leerYo();
   let vista = 'semana';
   let lunesSel = null;
+  let diaSel = null;        // v4.2: primer día de los tres que se ven en ordenador; la semana es la suya
+  let rangoCargado = null;  // las fechas que cubren los datos que hay en memoria
+  const ESCRITORIO = window.matchMedia('(min-width: 760px)');
   let cargando = false;
   const abiertos = new Set();
 
@@ -513,6 +518,20 @@
   function siguienteLaborable(iso) { return sumar(iso, 1); }
   function primerLaborable(iso) { return iso; }
   function lunesInicio() { return datos ? lunesDe(datos.config.inicio) : null; }
+  /* v4.2: la ventana de tres días (ordenador y tablet) y la semana van juntas */
+  function enEscritorio() { return ESCRITORIO.matches; }
+  function ventana() { return [0, 1, 2].map(function (i) { return sumar(diaSel, i); }); }
+  function diaInicial() { const h = hoy(); return datos && h < datos.config.inicio ? datos.config.inicio : h; }
+  function irADia(dia) {
+    if (datos && dia < datos.config.inicio) dia = datos.config.inicio;
+    diaSel = dia;
+    lunesSel = lunesDe(dia);
+  }
+  function necesita() {
+    const finSemana = sumar(lunesSel, 6), finVentana = sumar(lunesDe(sumar(diaSel, 2)), 6);  // la semana entera del último día que se ve
+    return { desde: lunesSel, hasta: finVentana > finSemana ? finVentana : finSemana };
+  }
+  function cubierto() { const n = necesita(); return !!rangoCargado && rangoCargado.desde <= n.desde && rangoCargado.hasta >= n.hasta; }
   function etiquetaTurno(turno) { return turno === 'CENA' ? 'Cena' : (turno === 'DORMIR' ? 'Dormir' : 'Comida'); }
   function horaDe(turno) { return turno === 'CENA' ? datos.config.horaCena : (turno === 'DORMIR' ? (datos.config.horaDormir || '22:30') : datos.config.horaComida); }
   function nombreTurno(fecha, turno) { return (turno === 'CENA' ? 'cena' : (turno === 'DORMIR' ? 'noche' : 'comida')) + ' del ' + DIAS[dow(fecha)].toLowerCase() + ' ' + ddmm(fecha); }
@@ -642,13 +661,13 @@
   function rango() {
     const lh = lunesDe(hoy());
     const desde = lunesSel < lh ? lunesSel : lh;
-    const hastaSel = sumar(lunesSel, 6), hastaHoy = sumar(lh, 13);
+    const hastaSel = necesita().hasta, hastaHoy = sumar(lh, 13);
     return { desde: desde, hasta: hastaSel > hastaHoy ? hastaSel : hastaHoy, yo: yo };
   }
   /* Lo último que se vio en este móvil, para enseñarlo al momento mientras llega lo nuevo */
   const CLAVE_DATOS = 'mesa-abuela-datos';
   function guardarLocal() {
-    try { localStorage.setItem(CLAVE_DATOS, JSON.stringify({ r: rango(), d: datos, ts: Date.now() })); } catch (e) { /* sin almacenamiento, no pasa nada */ }
+    try { localStorage.setItem(CLAVE_DATOS, JSON.stringify({ r: rangoCargado || rango(), d: datos, ts: Date.now() })); } catch (e) { /* sin almacenamiento, no pasa nada */ }
   }
   function leerLocal() {
     try {
@@ -666,13 +685,15 @@
       document.querySelector('.pagina').classList.add('cargando');
     }
     marcarActualizando(true);
-    return llamar('getDatos', [rango()]).then(function (d) {
+    const r = rango();
+    return llamar('getDatos', [r]).then(function (d) {
       cargando = false;
       document.querySelector('.pagina').classList.remove('cargando');
       marcarActualizando(false);
       if (pendientes > 0) return;
       datos = d;
-      if (lunesSel < lunesInicio()) { lunesSel = lunesInicio(); return cargar(); }
+      rangoCargado = r;
+      if (diaSel < datos.config.inicio) { irADia(datos.config.inicio); if (!cubierto()) return cargar(); }
       guardarLocal();
       pintar();
     }).catch(function () {
@@ -777,7 +798,11 @@
   function pintarSemana() {
     let html = '';
     if (hoy() < datos.config.inicio && lunesSel === lunesInicio()) html += '<p class="aviso">El calendario empieza el ' + diaLargo(datos.config.inicio).toLowerCase() + '.</p>';
-    html += '<div class="dias-semana">' + semana(lunesSel).map(function (f) { return bloqueDia(f, {}); }).join('') + '</div>';
+    const tres = enEscritorio();
+    if (tres) html += '<div class="pasos-dia">' +
+      '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaSel <= datos.config.inicio ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Día anterior</button>' +
+      '<button type="button" class="accion paso" data-paso-dia="1">Día siguiente' + FLECHA_DER + '</button></div>';
+    html += '<div class="dias-semana">' + (tres ? ventana() : semana(lunesSel)).map(function (f) { return bloqueDia(f, {}); }).join('') + '</div>';
     $('semana-grande').innerHTML = html;
   }
 
@@ -1019,7 +1044,7 @@
     return llamar(fn, args).then(function (d) {
       pendientes--;
       if (d && d.renombrado && yo === d.renombrado.antes) { yo = d.renombrado.despues; guardarYo(yo); }
-      if (pendientes === 0) { datos = d; guardarLocal(); pintar(); aviso(mensaje); }
+      if (pendientes === 0) { datos = d; rangoCargado = args[args.length - 1]; guardarLocal(); pintar(); aviso(mensaje); }
     }).catch(function (err) {
       pendientes--;
       if (pendientes === 0) { datos = JSON.parse(copia); pintar(); }
@@ -1486,13 +1511,13 @@
 
   /* ---------- Clics ---------- */
   document.addEventListener('click', function (e) {
-    const el = e.target.closest('[data-persona], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
+    const el = e.target.closest('[data-persona], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
     if (el.hasAttribute('data-semana')) {
       const paso = Number(el.dataset.semana);
-      lunesSel = paso === 0 ? lunesDe(hoy()) : sumar(lunesSel, paso * 7);
-      if (lunesSel < lunesInicio()) lunesSel = lunesInicio();
+      irADia(paso === 0 ? diaInicial() : sumar(diaSel, paso * 7));
       cargar();
+    } else if (el.hasAttribute('data-paso-dia')) { pasoDia(Number(el.dataset.pasoDia));
     } else if (el.hasAttribute('data-plegar')) {
       const f = el.dataset.plegar;
       if (abiertos.has(f)) abiertos.delete(f); else abiertos.add(f);
@@ -1507,15 +1532,37 @@
     } else if (el.hasAttribute('data-comida-abuela')) { abrirComidaAbuela();
     } else if (el.hasAttribute('data-nueva-persona')) { conQuien(abrirNuevaPersona);
     } else if (el.hasAttribute('data-ir')) {
-      const fecha = el.dataset.ir, lunes = lunesDe(fecha);
+      const fecha = el.dataset.ir;
       const ir = function () {
         const destino = document.querySelector('[data-dia="' + fecha + '"]');
         if (destino) destino.closest('.dia').scrollIntoView({ behavior: 'smooth', block: 'start' });
       };
-      if (lunes !== lunesSel) { lunesSel = lunes; cargar().then(ir); } else ir();
+      const seVe = enEscritorio() ? ventana().indexOf(fecha) !== -1 : lunesDe(fecha) === lunesSel;
+      if (seVe) ir();
+      else { irADia(fecha); if (cubierto()) { pintar(); ir(); } else cargar().then(ir); }
     } else if (el.hasAttribute('data-anadir')) { abrirAnadir(el.dataset.fecha, el.dataset.turno);
     } else { abrirPersona(el.dataset.persona, el.dataset.fecha, el.dataset.turno); }
   });
+
+  /* v4.2: un día a izquierda o derecha; si entra un día que no está cargado (otra semana), se carga como con las flechas de semana */
+  function pasoDia(n) {
+    if (!datos || cargando || vista !== 'semana') return;
+    const antes = diaSel;
+    irADia(sumar(diaSel, n));
+    if (diaSel === antes) return;
+    if (cubierto()) pintar(); else cargar();
+  }
+  /* Con el teclado, las flechas izquierda y derecha también mueven los días */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    if (!enEscritorio() || $dlg.open || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.target.closest && e.target.closest('input, select, textarea, [contenteditable]')) return;
+    e.preventDefault();
+    pasoDia(e.key === 'ArrowLeft' ? -1 : 1);
+  });
+  /* Al pasar de móvil a ordenador (o al girar la tablet), se repinta con su forma */
+  if (ESCRITORIO.addEventListener) ESCRITORIO.addEventListener('change', function () { if (datos) pintar(); });
+  else if (ESCRITORIO.addListener) ESCRITORIO.addListener(function () { if (datos) pintar(); });
 
   /* ---------- Vistas ---------- */
   const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', cocina: 'Quién viene hoy y mañana', personas: 'La familia y lo que come cada uno' };
@@ -1544,15 +1591,19 @@
 
   function refrescar() {
     if (cargando || pendientes > 0 || $dlg.open || document.hidden) return;
-    llamar('getDatos', [rango()]).then(function (d) {
+    const r = rango();
+    llamar('getDatos', [r]).then(function (d) {
       if (cargando || pendientes > 0 || $dlg.open) return;
-      datos = d; guardarLocal(); pintar();
+      datos = d; rangoCargado = r; guardarLocal(); pintar();
     }).catch(function () {});
   }
 
-  lunesSel = lunesDe(hoy());
+  irADia(hoy());
   const local = leerLocal();
-  if (local && local.r && local.r.desde <= lunesSel && local.r.hasta >= sumar(lunesSel, 6)) datos = local.d;
+  if (local && local.r) {
+    rangoCargado = local.r;
+    if (cubierto()) datos = local.d; else rangoCargado = null;
+  }
   vistaInicial(function (v) {
     ponerVista(v);
     cargar(!!datos).then(function () {
