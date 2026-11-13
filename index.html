@@ -294,6 +294,13 @@
   .per-familia { font-size: 16px; font-weight: 800; margin: 20px 0 6px; }
   .per-familia span { color: var(--color-texto-suave); font-weight: 700; }
   .per-filas { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--color-linea); }
+  /* v4.10: núcleos familiares, uno dentro de otro */
+  .nucleo { margin: 10px 0 0; }
+  .nucleo .nucleo { margin-left: 14px; padding-left: 12px; border-left: 3px solid var(--color-principal-claro); }
+  .nucleo-nombre { margin: 12px 0 4px; font-size: 15px; font-weight: 800; color: var(--color-principal-oscuro); }
+  .nucleo-nombre span { color: var(--color-texto-suave); font-weight: 700; }
+  .sin-nucleo .nucleo-nombre { color: var(--color-texto-suave); }
+  .fp-nombre small.fp-pareja { color: var(--color-principal-oscuro); }
   .per-filas li { border-bottom: 1px solid var(--color-linea); }
   button.fila-persona { width: 100%; display: grid; gap: 2px; padding: 10px 4px; border: 0; background: none; font: inherit; color: var(--color-texto); text-align: left; cursor: pointer; min-height: 44px; }
   button.fila-persona:hover { background: #fff; }
@@ -440,7 +447,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.9.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.10.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -910,15 +917,144 @@
     const porFamilia = {};
     const orden = [];
     lista.forEach(function (p) { const f = esServicio(p) ? 'Servicio' : (p.familia || 'Otros'); if (!porFamilia[f]) { porFamilia[f] = []; orden.push(f); } porFamilia[f].push(p); });
+    // v4.10: sin buscar ni filtrar, cada familia se ve por núcleos (un árbol); buscando, la lista plana de siempre
+    const enArbol = hayNucleos() && !q && filtroPersonas === 'todos';
     $('per-lista').innerHTML = orden.map(function (f) {
-      return '<h3 class="per-familia">' + (f === 'Servicio' || f === 'Otros' ? esc(f) : 'Familia ' + esc(f)) + ' <span>' + porFamilia[f].length + '</span></h3><ul class="per-filas">' +
-        porFamilia[f].map(function (p) {
-          const fl = falta(p);
-          return '<li><button type="button" class="fila-persona" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' + esc(p.apodo) + marcaMenu(p) + '</b><small>' + esc(deQuien(p)) + '</small></span>' +
-            '<span class="fp-datos">' + esc(resumenPersona(p)) + '</span>' +
-            (fl.length ? '<span class="fp-falta">Falta: ' + esc(lista_(fl)) + '</span>' : '') + '</button></li>';
-        }).join('') + '</ul>';
+      const cab = '<h3 class="per-familia">' + (f === 'Servicio' || f === 'Otros' ? esc(f) : 'Familia ' + esc(f)) + ' <span>' + porFamilia[f].length + '</span></h3>';
+      if (enArbol && f !== 'Servicio' && f !== 'Otros') return cab + arbolFamilia(porFamilia[f]);
+      return cab + '<ul class="per-filas">' + porFamilia[f].map(function (p) { return filaPersona(p); }).join('') + '</ul>';
     }).join('');
+  }
+  function filaPersona(p, extra) {
+    const fl = falta(p);
+    return '<li><button type="button" class="fila-persona" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' + esc(p.apodo) + marcaMenu(p) + '</b><small>' + esc(deQuien(p)) + '</small>' +
+      (extra ? '<small class="fp-pareja">' + esc(extra) + '</small>' : '') + '</span>' +
+      '<span class="fp-datos">' + esc(resumenPersona(p)) + '</span>' +
+      (fl.length ? '<span class="fp-falta">Falta: ' + esc(lista_(fl)) + '</span>' : '') + '</button></li>';
+  }
+
+  /* ---------- v4.10: núcleos familiares ---------- */
+  /* Un núcleo es una pareja (o alguien sin pareja que tiene hijos apuntados) con sus hijos. Quien forma pareja sigue
+     dentro del núcleo de sus padres: el suyo sale dentro. Se llama «Familia <apellido de él> <apellido de ella>». */
+  function hayNucleos() { return !!(datos.personas.length && 'sexo' in datos.personas[0]); }
+  function apellidoDe(p) { return p.apellido || p.apodo; }
+  function esDeFuera(p) { return String(p.jerarquia || '').indexOf('+1') !== -1; }
+  /* Primero él y luego ella; con dos hombres o dos mujeres (o sin decir), primero quien es de la familia (no «+1») */
+  function ordenPareja(a, b) {
+    if (a.sexo === 'Mujer' && b.sexo === 'Hombre') return [b, a];
+    if (!(a.sexo === 'Hombre' && b.sexo === 'Mujer') && esDeFuera(a) && !esDeFuera(b)) return [b, a];
+    return [a, b];
+  }
+  function nombreNucleo(a, b) {
+    if (!b) return 'Familia ' + apellidoDe(a);
+    const xy = ordenPareja(a, b);
+    if (!a.apellido && !b.apellido) return xy[0].apodo + ' y ' + xy[1].apodo;
+    return 'Familia ' + apellidoDe(xy[0]) + ' ' + apellidoDe(xy[1]);
+  }
+  function parejaDe(p) { const x = p.pareja && quienEs(p.pareja); return x && x.pareja === p.id ? x : null; }
+  function arbolFamilia(gente) {
+    const todos = abuelas().concat(datos.personas);
+    const hijosDe = {};
+    todos.forEach(function (x) { if (x.hijoDe) (hijosDe[x.hijoDe] = hijosDe[x.hijoDe] || []).push(x); });
+    const enFamilia = {};
+    gente.forEach(function (x) { enFamilia[x.id] = true; });
+    const clave = function (x) {
+      const pa = parejaDe(x);
+      if (pa) return [x.id, pa.id].sort().join('|');
+      return (hijosDe[x.id] || []).length ? x.id : null;
+    };
+    // Los núcleos de esta familia
+    const nucleos = {}, ordenN = [];
+    gente.forEach(function (x) {
+      const k = clave(x);
+      if (!k || nucleos[k]) return;
+      const pa = parejaDe(x);
+      const cabezas = pa ? ordenPareja(x, pa) : [x];
+      nucleos[k] = { cabezas: cabezas, hijos: [], dentro: [] };
+      ordenN.push(k);
+    });
+    // Cada núcleo o persona, dentro del núcleo de sus padres (si es de esta familia)
+    const colocado = {}, arriba = [], sueltos = [];
+    const nucleoPadres = function (x) {
+      const padre = x.hijoDe && quienEs(x.hijoDe);
+      if (!padre) return null;
+      const k = clave(padre);
+      return k && nucleos[k] ? k : null;
+    };
+    ordenN.forEach(function (k) {
+      const n = nucleos[k];
+      const kp = n.cabezas.map(nucleoPadres).filter(function (x) { return x && x !== k; })[0];
+      if (kp) nucleos[kp].dentro.push(k); else arriba.push(k);
+      n.cabezas.forEach(function (c) { colocado[c.id] = true; });
+    });
+    gente.forEach(function (x) {
+      if (colocado[x.id]) return;
+      const kp = nucleoPadres(x);
+      if (kp) nucleos[kp].hijos.push(x); else sueltos.push(x);
+      colocado[x.id] = true;
+    });
+    const cuenta = function (k) {
+      const n = nucleos[k];
+      return n.cabezas.filter(function (c) { return enFamilia[c.id]; }).length + n.hijos.length + n.dentro.reduce(function (t, d) { return t + cuenta(d); }, 0);
+    };
+    const pinta = function (k) {
+      const n = nucleos[k];
+      return '<section class="nucleo"><h4 class="nucleo-nombre">' + esc(nombreNucleo(n.cabezas[0], n.cabezas[1])) + ' <span>' + cuenta(k) + '</span></h4>' +
+        '<ul class="per-filas">' + n.cabezas.map(function (c, i) { return filaPersona(c, n.cabezas[1] ? 'pareja de ' + n.cabezas[1 - i].apodo : ''); }).join('') +
+        n.hijos.map(function (h) { return filaPersona(h); }).join('') + '</ul>' +
+        n.dentro.map(pinta).join('') + '</section>';
+    };
+    let html = arriba.map(pinta).join('');
+    if (sueltos.length) html += (arriba.length ? '<section class="nucleo sin-nucleo"><h4 class="nucleo-nombre">Sin núcleo <span>' + sueltos.length + '</span></h4>' : '<section class="nucleo sin-nucleo">') +
+      '<ul class="per-filas">' + sueltos.map(function (h) { return filaPersona(h); }).join('') + '</ul></section>';
+    return html;
+  }
+  function opcionesPersonas(sel, sin) {
+    const grupos = {}, orden = [];
+    abuelas().concat(datos.personas).forEach(function (x) {
+      if (x.id === sin) return;
+      const g = editor(x.id) ? 'Abuela' : (esServicio(x) ? 'Servicio' : (x.familia || 'Otros'));
+      if (!grupos[g]) { grupos[g] = []; orden.push(g); }
+      grupos[g].push(x);
+    });
+    return '<option value="">Nadie</option>' + orden.map(function (g) {
+      return '<optgroup label="' + esc(g) + '">' + grupos[g].map(function (x) {
+        return '<option value="' + esc(x.id) + '"' + (x.id === sel ? ' selected' : '') + '>' + esc(x.apodo + (x.apellido ? ' ' + x.apellido : '')) + '</option>';
+      }).join('') + '</optgroup>';
+    }).join('');
+  }
+  function camposNucleo(p) {
+    if (!hayNucleos()) return '';
+    const pa = p && parejaDe(p);
+    return '<fieldset><legend>Su núcleo familiar</legend>' +
+      '<div class="dos dos-iguales"><label class="campo" for="dlg-apellido">Apellido<input id="dlg-apellido" type="text" maxlength="40" autocomplete="off" value="' + esc(p ? p.apellido || '' : '') + '"></label>' +
+      '<label class="campo" for="dlg-sexo">Es<select id="dlg-sexo"><option value="">Sin decir</option>' +
+      ['Hombre', 'Mujer'].map(function (v) { return '<option value="' + v + '"' + (p && p.sexo === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') + '</select></label></div>' +
+      '<label class="campo" for="dlg-pareja">Pareja<select id="dlg-pareja">' + opcionesPersonas(pa ? pa.id : '', p ? p.id : '') + '</select></label>' +
+      '<label class="campo" for="dlg-hijode">Hijo o hija de<select id="dlg-hijode">' + opcionesPersonas(p ? p.hijoDe || '' : '', p ? p.id : '') + '</select></label>' +
+      '<p class="ayuda">Con su pareja forma un núcleo («Familia» y los apellidos de él y de ella). Basta con poner a uno de los padres: sale en el núcleo de ese padre o madre y su pareja.</p></fieldset>';
+  }
+  function leerNucleo(p) {
+    if (!hayNucleos()) return {};
+    const c = {}, pa = p ? parejaDe(p) : null;
+    const v = { apellido: $('dlg-apellido').value.trim(), sexo: $('dlg-sexo').value, pareja: $('dlg-pareja').value, hijoDe: $('dlg-hijode').value };
+    if (v.apellido !== (p ? p.apellido || '' : '')) c.apellido = v.apellido;
+    if (v.sexo !== (p ? p.sexo || '' : '')) c.sexo = v.sexo;
+    if (v.pareja !== (pa ? pa.id : '')) c.pareja = v.pareja;
+    if (v.hijoDe !== (p ? p.hijoDe || '' : '')) c.hijoDe = v.hijoDe;
+    return c;
+  }
+  function aplicarNucleoLocal(p, c) {
+    if (c.apellido !== undefined) p.apellido = c.apellido;
+    if (c.sexo !== undefined) p.sexo = c.sexo;
+    if (c.hijoDe !== undefined) p.hijoDe = c.hijoDe;
+    if (c.pareja !== undefined) {
+      const antes = parejaDe(p);
+      if (antes) antes.pareja = '';
+      const nueva = c.pareja && quienEs(c.pareja);
+      if (nueva) { const otra = parejaDe(nueva); if (otra) otra.pareja = ''; nueva.pareja = p.id; }
+      p.pareja = c.pareja;
+    }
   }
   function lista_(a) { return lista(a); }
   $('per-q').addEventListener('input', function () { pintarPersonas(); });
@@ -940,7 +1076,7 @@
   }
 
   function abrirNuevaPersona(nombre) {
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Añadir persona</h2></div><div class="dlg-cuerpo">' + camposFicha(null) +
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Añadir persona</h2></div><div class="dlg-cuerpo">' + camposFicha(null) + camposNucleo(null) +
       '<fieldset><legend>Para la cocina</legend><label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + opcionesMenu((datos.menus || [])[0]) + '</select></label>' +
       '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna"></label></fieldset>' +
       '<fieldset><legend>Cumpleaños</legend><div class="dos"><label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
@@ -959,9 +1095,14 @@
       if ((cdia && !cmes) || (!cdia && cmes)) { errorDialogo('Para el cumpleaños, elige el día y el mes, o deja los dos vacíos.'); return; }
       const nueva = { apodo: apodo, jerarquia: jer, familia: fam, menu: $('dlg-menu').value, alergias: $('dlg-alergias').value.trim(),
         cumple: cdia ? ('0' + cdia).slice(-2) + '/' + ('0' + cmes).slice(-2) : '' };
+      const nucleo = leerNucleo(null);
+      Object.assign(nueva, nucleo);
       conQuien(function () {
         enSegundoPlano('crearPersona', [nueva, yo, rango()], apodo + ' ya está en la lista.', function () {
-          datos.personas.push({ id: id, apodo: apodo, jerarquia: jer, familia: fam, menu: nueva.menu, alergias: nueva.alergias, cumple: nueva.cumple });
+          const p = { id: id, apodo: apodo, jerarquia: jer, familia: fam, menu: nueva.menu, alergias: nueva.alergias, cumple: nueva.cumple };
+          if (hayNucleos()) { p.apellido = ''; p.sexo = ''; p.pareja = ''; p.hijoDe = ''; }
+          datos.personas.push(p);
+          aplicarNucleoLocal(p, nucleo);
         });
       });
     });
@@ -1137,6 +1278,7 @@
       if (cambios.menu !== undefined) p.menu = cambios.menu;
       if (cambios.alergias !== undefined) p.alergias = cambios.alergias;
       if (cambios.cumple !== undefined) p.cumple = cambios.cumple;
+      aplicarNucleoLocal(p, cambios);
     }
     (cambios.turnos || []).forEach(function (t) {
       const a = apunte(t.fecha, t.turno, id);
@@ -1259,7 +1401,7 @@
         return '<td><label><input type="checkbox" data-k="' + f + '|' + t.id + '" aria-label="' + t.nombre + ' del ' + diaLargo(f).toLowerCase() + '"' + (apunte(f, t.id, id) ? ' checked' : '') + '></label></td>';
       }).join('') + '</tr>';
     });
-    html += '</tbody></table></fieldset>' + camposFicha(p) +
+    html += '</tbody></table></fieldset>' + camposFicha(p) + camposNucleo(p) +
       '<fieldset><legend>Quitar de la lista</legend><p class="ayuda">Si se añadió por error o ya no va a venir (por ejemplo, porque ha fallecido).</p>' +
       '<button type="button" class="accion quitar" id="dlg-baja">Quitar a ' + esc(p.apodo) + ' de la lista</button></fieldset></div>' + pie('Guardar cambios');
     abrirDialogo(html);
@@ -1292,6 +1434,7 @@
       if (apodo !== p.apodo) cambios.apodo = apodo;
       if (jer && jer !== p.jerarquia) cambios.jerarquia = jer;
       if (fam && fam !== p.familia) cambios.familia = fam;
+      Object.assign(cambios, leerNucleo(p));
       if (alergias !== p.alergias) cambios.alergias = alergias;
       const cdia = $('dlg-cdia').value, cmes = $('dlg-cmes').value;
       if ((cdia && !cmes) || (!cdia && cmes)) { errorDialogo('Para el cumpleaños, elige el día y el mes, o deja los dos vacíos.'); return; }
