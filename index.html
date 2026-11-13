@@ -370,6 +370,8 @@
   .hijos-grupo { margin: 10px 0 0 6px; padding-left: 12px; border-left: 2px solid var(--color-linea); }
   .et-hijos { margin: 0; font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
   .hijos-grupo > .nucleo-card:first-of-type { margin-top: 6px; }
+  .hijos-grupo.sin-padres { margin: 0; padding-left: 0; border-left: 0; }
+  .hijos-grupo.sin-padres > .nucleo-card:first-of-type { margin-top: 0; }
   .punto-falta { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--color-error); flex: none; }
   .leyenda-falta { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; color: var(--color-texto-suave); }
   button.enlace.ver-ficha { justify-self: start; margin: 0; text-align: left; }
@@ -524,7 +526,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.15.2</footer>
+  <footer>Hecho con cariño por Utilo · v4.15.3</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1056,17 +1058,19 @@
     lista.forEach(function (p) { const f = esServicio(p) ? 'Servicio' : (p.familia || 'Otros'); if (!porFamilia[f]) { porFamilia[f] = []; orden.push(f); } porFamilia[f].push(p); });
     // v4.10: sin buscar ni filtrar, cada familia se ve por núcleos (un árbol); buscando, la lista plana de siempre
     // Con el árbol también si solo se filtra por familia
-    const enArbol = hayNucleos() && !q && Object.keys(filtros).every(function (k) { return k === 'familia' || !filtros[k]; });
+    // v4.15.3: con filtros también por cajas (solo con quien cumple el filtro); buscando, la lista plana
+    const enArbol = hayNucleos() && !q;
     $('per-lista').innerHTML = orden.map(function (f) {
       const cab = '<h3 class="per-familia">' + esc(nombreFamilia(f)) + ' <span>' + porFamilia[f].length + '</span></h3>';
       if (enArbol) {
         const leyenda = f === orden[0] ? '<p class="leyenda-falta"><span class="marca-politico" aria-hidden="true"></span> Entró en la familia por su pareja.</p>' : '';
         if (f === 'Servicio' || f === 'Otros') return leyenda + '<section class="familia">' + cab + tarjeta('', '', porFamilia[f], [], '') + '</section>';
         // v4.12.1: la familia se llama como el núcleo de arriba («Familia Canela Ribas»), si tiene uno solo
-        const a = arbolFamilia(porFamilia[f]);
+        const visibles = new Set(porFamilia[f].map(function (p) { return p.id; }));
+        const a = arbolFamilia(datos.personas.filter(function (p) { return familiaDe(p) === f; }), hayFiltros() ? visibles : null);
         const titulo = a.nombre || 'Familia ' + f;
         return leyenda + '<section class="familia"><h3 class="per-familia">' + esc(titulo) + ' <span>' + porFamilia[f].length + '</span>' +
-          anillo(a.estado) + '</h3>' + a.html + '</section>';
+          (hayFiltros() ? '' : anillo(a.estado)) + '</h3>' + a.html + '</section>';
       }
       return cab + '<ul class="per-filas">' + porFamilia[f].map(function (p) { return filaPersona(p); }).join('') + '</ul>';
     }).join('');
@@ -1082,7 +1086,8 @@
     const btn = $('per-filtros-btn');
     btn.setAttribute('aria-expanded', String(panelFiltros));
     btn.classList.toggle('activos', hayFiltros());
-    btn.textContent = hayFiltros() ? 'Filtros activos' : 'Filtros';
+    btn.textContent = 'Filtros';  // con filtros, el botón va relleno (sin texto más largo que estreche el buscador)
+    btn.setAttribute('aria-label', hayFiltros() ? 'Filtros (hay filtros puestos)' : 'Filtros');
     const $p = $('per-filtros');
     $p.hidden = !panelFiltros;
     if (!panelFiltros) return;
@@ -1181,7 +1186,8 @@
     return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + anillo(estado) + '</div>' : '') +
       (cabezas.length ? '<ul class="per-filas">' + cabezas.map(filaCaja).join('') + '</ul>' : '') +
       // v4.13: los hijos (sueltos o con su caja), juntos en un subgrupo un poco metido hacia dentro
-      (hijos.length || dentro ? '<div class="hijos-grupo"><p class="et-hijos">Hijos</p>' +
+      // Si al filtrar no se ve a los padres, los hijos van sin la etiqueta ni la sangría
+      (hijos.length || dentro ? (cabezas.length ? '<div class="hijos-grupo"><p class="et-hijos">Hijos</p>' : '<div class="hijos-grupo sin-padres">') +
         (hijos.length ? '<ul class="per-filas">' + hijos.map(filaCaja).join('') + '</ul>' : '') + (dentro || '') + '</div>' : '') + '</div>';
   }
 
@@ -1217,7 +1223,13 @@
     return 'Familia ' + xy[0].apellido + ' ' + xy[1].apellido;
   }
   function parejaDe(p) { const x = p.pareja && quienEs(p.pareja); return x && x.pareja === p.id ? x : null; }
-  function arbolFamilia(gente) {
+  /* visible: si se filtra, solo esas personas (las cajas sin nadie visible no salen) */
+  function arbolFamilia(gente, visible) {
+    const ve = function (p) { return !visible || visible.has(p.id); };
+    const caja = function (titulo, estado, cabezas, hijos, dentro) {
+      const c = cabezas.filter(ve), h = hijos.filter(ve);
+      return c.length || h.length || dentro ? tarjeta(titulo, c.length ? estado : '', c, h, dentro) : '';
+    };
     const todos = abuelas().concat(datos.personas);
     const hijosDe = {};
     todos.forEach(function (x) { if (x.hijoDe) (hijosDe[x.hijoDe] = hijosDe[x.hijoDe] || []).push(x); });
@@ -1275,7 +1287,7 @@
     };
     const pinta = function (k) {
       const n = nucleos[k];
-      return tarjeta(n.solo ? n.cabezas[0].apodo : nombreNucleo(n.cabezas[0], n.cabezas[1]), estado(n), n.cabezas, n.hijos, n.dentro.map(pinta).join(''));
+      return caja(n.solo ? n.cabezas[0].apodo : nombreNucleo(n.cabezas[0], n.cabezas[1]), estado(n), n.cabezas, n.hijos, n.dentro.map(pinta).join(''));
     };
     // Con un solo núcleo arriba y los dos apellidos, la familia toma su nombre y la caja de arriba lleva los nombres de la pareja
     let nombre = '';
@@ -1288,9 +1300,9 @@
     let html = arriba.map(function (k, i) {
       const n = nucleos[k];
       if (!nombre || i) return pinta(k);
-      return tarjeta('', '', n.cabezas, n.hijos, n.dentro.map(pinta).join(''));
+      return caja('', '', n.cabezas, n.hijos, n.dentro.map(pinta).join(''));
     }).join('');
-    if (sueltos.length) html += arriba.length ? tarjeta('Sin núcleo', '', sueltos, [], '') : tarjeta('', '', sueltos, [], '');
+    if (sueltos.length) html += caja(arriba.length ? 'Sin núcleo' : '', '', sueltos, [], '');
     return { html: html, nombre: nombre, estado: nombre ? estado(nucleos[arriba[0]]) : '' };
   }
   function opcionesPersonas(sel, sin) {
