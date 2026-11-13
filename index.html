@@ -161,6 +161,7 @@
     border-radius: var(--radio); background: var(--color-principal-oscuro); color: #fff;
   }
   button.principal:disabled { opacity: .6; cursor: default; }
+  button.principal.peligro { background: var(--color-error); }
 
   /* Ventana para editar */
   dialog.editor {
@@ -425,7 +426,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.4.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.7.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -565,8 +566,9 @@
   function servicioDe(ids, turno) { return turno === 'DORMIR' ? [] : ids.filter(function (id) { return esServicio(persona(id)); }); }
   function notaDia(fecha) { return datos.dias.find(function (d) { return d.fecha === fecha; }); }
   function fijosDe(id) { return (datos.fijos || []).filter(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy()); }); }
+  function deBaja(id) { return (datos.bajas || []).find(function (p) { return p.id === id; }); }
   function chip(id, fecha, turno) {
-    const p = persona(id);
+    const p = persona(id) || deBaja(id);  // v4.7: si se ha quitado de la lista, sus comidas pasadas siguen con su nombre
     const nombre = p ? p.apodo : id;
     return '<button type="button" class="p ' + clase(p) + (id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(id) + '"' +
       (fecha ? ' data-fecha="' + fecha + '" data-turno="' + turno + '"' : '') + ' aria-label="Editar a ' + esc(nombre) + '"><b>' + esc(nombre) + marcaMenu(p) + '</b><small>' +
@@ -850,7 +852,7 @@
   function falta(p) {
     const f = [];
     if (!p.menu) f.push('menú');
-    if (!p.cumple) f.push('cumpleaños');
+    if (!p.cumple && p.familia !== 'Otros') f.push('cumpleaños');  // v4.7: a los de fuera de la familia no se les pide
     return f;
   }
   function resumenPersona(p) {
@@ -938,6 +940,35 @@
         });
       });
     });
+  }
+
+  /* v4.7: quitar a alguien de la lista. En el Excel su fila se queda, con la fecha en Baja */
+  function confirmarBaja(p) {
+    const h = hoy();
+    const futuras = datos.apuntes.filter(function (a) { return a.persona === p.id && a.fecha >= h; }).length;
+    const siempre = fijosDe(p.id).length;
+    const quita = [futuras ? (futuras === 1 ? 'la comida que tiene apuntada' : 'las ' + futuras + ' comidas que tiene apuntadas') + ' de hoy en adelante' : '', siempre ? 'los días que va siempre' : ''].filter(Boolean);
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Quitar a ' + esc(p.apodo) + ' de la lista?</h2></div>' +
+      '<div class="dlg-cuerpo"><p>Dejará de salir en Personas y para apuntarse.' + (quita.length ? ' Se le quitan ' + esc(lista(quita)) + '.' : '') + '</p>' +
+      '<p class="ayuda">Las comidas que ya han pasado se quedan con su nombre. Si fue un error, vuelve a añadirlo con el mismo nombre y parentesco y se recupera.</p></div>' +
+      '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones">' +
+      '<button type="button" class="principal peligro" id="dlg-guardar">Quitar de la lista</button>' +
+      '<button type="button" class="accion quitar" id="dlg-cerrar">Cancelar</button></div></div>');
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $('dlg-guardar').addEventListener('click', function () {
+      conQuien(function () {
+        enSegundoPlano('darDeBaja', [p.id, yo, rango()], p.apodo + ' ya no está en la lista.', function () { aplicarBajaLocal(p.id); });
+      });
+    });
+  }
+  function aplicarBajaLocal(id) {
+    const h = hoy(), p = persona(id);
+    if (!p) return;
+    datos.personas = datos.personas.filter(function (x) { return x.id !== id; });
+    datos.bajas = (datos.bajas || []).concat([Object.assign({}, p, { baja: h })]);
+    datos.apuntes = datos.apuntes.filter(function (a) { return !(a.persona === id && a.fecha >= h); });
+    datos.fijos = (datos.fijos || []).filter(function (f) { return f.persona !== id; });
+    datos.misProximas = (datos.misProximas || []).filter(function (a) { return a.persona !== id; });
   }
 
   /* ---------- Buscador de nombres ---------- */
@@ -1163,7 +1194,7 @@
 
   function abrirPersona(id, fecha, turno) {
     const p = persona(id);
-    if (!p) return;
+    if (!p) { const b = deBaja(id); if (b) aviso(b.apodo + ' ya no está en la lista.'); return; }
     const a = fecha ? apunte(fecha, turno, id) : null;
     const fijosAntes = fijosDe(id).map(function (f) { return f.dow + '|' + f.turno; });
     let html = '<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2><div><span class="p ' + clase(p) + '"><small>' + esc(deQuien(p)) + '</small></span></div></div><div class="dlg-cuerpo">';
@@ -1194,8 +1225,11 @@
         return '<td><label><input type="checkbox" data-k="' + f + '|' + t.id + '" aria-label="' + t.nombre + ' del ' + diaLargo(f).toLowerCase() + '"' + (apunte(f, t.id, id) ? ' checked' : '') + '></label></td>';
       }).join('') + '</tr>';
     });
-    html += '</tbody></table></fieldset>' + camposFicha(p) + '</div>' + pie('Guardar cambios');
+    html += '</tbody></table></fieldset>' + camposFicha(p) +
+      '<fieldset><legend>Quitar de la lista</legend><p class="ayuda">Si se añadió por error o ya no va a venir (por ejemplo, porque ha fallecido).</p>' +
+      '<button type="button" class="accion quitar" id="dlg-baja">Quitar a ' + esc(p.apodo) + ' de la lista</button></fieldset></div>' + pie('Guardar cambios');
     abrirDialogo(html);
+    $('dlg-baja').addEventListener('click', function () { confirmarBaja(p); });
 
     $dlg.querySelectorAll('input[data-k]').forEach(function (c) {
       c.addEventListener('change', function () { $dlg.querySelectorAll('input[data-k="' + c.dataset.k + '"]').forEach(function (o) { o.checked = c.checked; }); });

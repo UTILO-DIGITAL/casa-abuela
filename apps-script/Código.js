@@ -4,6 +4,8 @@
  * Almacén: Sheet «Cuadrante Caldetas 2026».
  *   PERSONAS      lista de la familia (tabla). La web escribe Apodo, Jerarquia, Familia (B-D), Menu, Alergias y Cumple (F-H);
  *                 el Id (A) es una fórmula. Al cambiar apodo o jerarquía, la web añade el alias en MESA_ALIAS.
+ *                 Baja (I, v4.7): fecha en que se quitó de la lista (por error o porque ha fallecido). Su fila se queda;
+ *                 deja de salir para apuntarse y sus comidas pasadas siguen saliendo con su nombre.
  *   MESA_APUNTES  ID_APUNTE | FECHA | TURNO | PERSONA_ID | CREADO_EN | NOTA | ESTADO ('' va · 'NO' no va ese día aunque sea fijo) | NOTA_POR | NOTA_EN
  *   MESA_FIJOS    ID_FIJO | PERSONA_ID | DIA_SEMANA (0 domingo … 6 sábado) | TURNO | DESDE | HASTA | NOTA | CREADO_POR | CREADO_EN
  *   MESA_DIAS     FECHA | NOTA | SIN_TURNO | CAMBIADO_POR | CAMBIADO_EN | SIN_COMIDA | MOTIVO_COMIDA | SIN_CENA | MOTIVO_CENA | NOTA_SERVICIO | SIN_DORMIR | MOTIVO_DORMIR
@@ -22,7 +24,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.1.0
+ * Versión 4.7.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -39,6 +41,7 @@ const MENUS_BASE = ['\uD83C\uDF15 Entero', '\uD83C\uDF17 Medio', '\uD83C\uDF7C N
 const COL_MENU = 6;      // F en PERSONAS
 const COL_ALERGIAS = 7;  // G en PERSONAS
 const COL_CUMPLE = 8;    // H en PERSONAS, texto dd/mm
+const COL_BAJA = 9;      // I en PERSONAS, texto aaaa-mm-dd (v4.7)
 const COLS_APUNTES = 9;
 const COLS_FIJOS = 9;
 const COLS_DIAS = 29;
@@ -69,6 +72,7 @@ const API_ = {
   guardarDia: function (a) { return guardarDia(a[0], a[1], a[2], a[3]); },
   guardarAusencia: function (a) { return guardarAusencia(a[0], a[1], a[2], a[3], a[4], a[5]); },
   crearPersona: function (a) { return crearPersona(a[0], a[1], a[2]); },
+  darDeBaja: function (a) { return darDeBaja(a[0], a[1], a[2]); },
 };
 
 function api_(fn, args) {
@@ -139,7 +143,8 @@ function datos_(ss, p) {
     fijos: fijos.filter(function (f) { return !f.hasta || f.hasta >= hoy; }),
     dias: leerDias_(ss).filter(function (d) { return d.fecha >= desde && d.fecha <= hasta; }),
     misProximas: p.yo ? efectivos_(crudos, fijos, hoy, sumarDias_(hoy, 60)).filter(function (a) { return a.persona === p.yo; }).slice(0, 12) : [],
-    huerfanos: huerfanos_(crudos, fijos, personas.concat(leerEditores_(ss, config.excluir)), hoy),
+    bajas: leerBajas_(ss).map(function (b) { return { id: b.id, apodo: b.apodo, jerarquia: b.jerarquia, familia: b.familia, menu: b.menu, baja: b.baja }; }),
+    huerfanos: huerfanos_(crudos, fijos, personas.concat(leerEditores_(ss, config.excluir), leerBajas_(ss)), hoy),
   };
 }
 
@@ -174,17 +179,25 @@ function aPersona_(f) {
     menu: String(f[COL_MENU - 1] || '').trim(),
     alergias: String(f[COL_ALERGIAS - 1] || '').trim(),
     cumple: aCumple_(f[COL_CUMPLE - 1]),
+    baja: aFecha_(f[COL_BAJA - 1]),
   };
 }
 
 function leerPersonas_(ss, excluir) {
-  return filasPersonas_(ss).filter(function (f) { return excluir.indexOf(String(f[0]).trim()) === -1; }).map(aPersona_);
+  return filasPersonas_(ss).filter(function (f) { return excluir.indexOf(String(f[0]).trim()) === -1; }).map(aPersona_)
+    .filter(function (p) { return !p.baja; });
+}
+
+/** v4.7: quienes se han quitado de la lista (columna Baja). Solo para que sus comidas pasadas salgan con su nombre. */
+function leerBajas_(ss) {
+  return filasPersonas_(ss).map(aPersona_).filter(function (p) { return p.baja; });
 }
 
 /** Personas de EXCLUIR_IDS: no se apuntan, pero pueden identificarse para hacer cambios. */
 function leerEditores_(ss, excluir) {
   if (!excluir.length) return [];
-  return filasPersonas_(ss).filter(function (f) { return excluir.indexOf(String(f[0]).trim()) !== -1; }).map(aPersona_);
+  return filasPersonas_(ss).filter(function (f) { return excluir.indexOf(String(f[0]).trim()) !== -1; }).map(aPersona_)
+    .filter(function (p) { return !p.baja; });
 }
 
 function opcionesMenu_(personas) {
@@ -644,7 +657,8 @@ function listas_(ss, personas) {
     };
     const usados = function (campo) {
       const v = [];
-      personas.forEach(function (p) { if (p[campo] && v.indexOf(p[campo]) === -1) v.push(p[campo]); });
+      // v4.7: también quien está de baja, para poder recuperarlo
+      personas.concat(leerBajas_(ss)).forEach(function (p) { if (p[campo] && v.indexOf(p[campo]) === -1) v.push(p[campo]); });
       return v;
     };
     let jerarquias = desplegable(3); if (!jerarquias.length) jerarquias = usados('jerarquia');
@@ -685,6 +699,8 @@ function crearPersona(nueva, quien, vista) {
     const familia = String(nueva.familia || '').trim();
     validarFicha_(ss, personas, apodo, jerarquia, familia);
     const id = idDe_(apodo, jerarquia);
+    const deBaja = leerBajas_(ss).filter(function (b) { return b.id === id; })[0];
+    if (deBaja) return recuperarPersona_(ss, deBaja, familia, nueva, personas, autor, vista);
     if (filasPersonas_(ss).some(function (f) { return String(f[0]).trim() === id; })) throw new Error('Ya hay alguien llamado ' + apodo + ' con ese parentesco. Ponle un apodo distinto (por ejemplo, con la inicial del apellido).');
     const menu = nueva.menu && opcionesMenu_(personas).indexOf(nueva.menu) !== -1 ? nueva.menu : MENUS_BASE[0];
     const alergias = limpiar_(nueva.alergias, MAX_ALERGIAS, 'Las alergias');
@@ -712,6 +728,81 @@ function crearPersona(nueva, quien, vista) {
     d.creado = id;
     return d;
   });
+}
+
+/** v4.7: volver a añadir a alguien que estaba de baja (mismo nombre y parentesco): se recupera su fila y se pone al día. */
+function recuperarPersona_(ss, b, familia, nueva, personas, autor, vista) {
+  const menu = nueva.menu && opcionesMenu_(personas).indexOf(nueva.menu) !== -1 ? nueva.menu : (b.menu || MENUS_BASE[0]);
+  const alergias = limpiar_(nueva.alergias, MAX_ALERGIAS, 'Las alergias');
+  const cumple = aCumple_(nueva.cumple);
+  const fila = filaDePersona_(ss, b.id);
+  const hoja = ss.getSheetByName(HOJA_PERSONAS);
+  hoja.getRange(fila, 4).setValue(familia);
+  hoja.getRange(fila, COL_MENU, 1, 2).setValues([[menu, alergias]]);
+  if (cumple) { const c = hoja.getRange(fila, COL_CUMPLE); c.setNumberFormat('@'); c.setValue(cumple); }
+  hoja.getRange(fila, COL_BAJA).setValue('');
+  olvidar_('personas', 'listas');
+  registrar_(ss, autor, ['Vuelve a la lista ' + b.apodo + ' (' + b.jerarquia + ' · ' + familia + ')']);
+  const d = datos_(ss, vista || {});
+  d.creado = b.id;
+  return d;
+}
+
+/**
+ * v4.7: quitar a alguien de la lista (añadido por error o porque ha fallecido). No se borra nada del Excel:
+ * su fila de PERSONAS se queda con la fecha en Baja (I), se le quitan las comidas de hoy en adelante,
+ * deja de ir siempre (sus fijos terminan ayer) y sus comidas pasadas se quedan como estaban.
+ */
+function darDeBaja(personaId, quien, vista) {
+  return conBloqueo_(function (ss) {
+    const config = leerConfig_(ss);
+    const personas = leerPersonas_(ss, config.excluir);
+    const autor = autor_(personas.concat(leerEditores_(ss, config.excluir)), quien);
+    const p = personas.filter(function (x) { return x.id === personaId; })[0];
+    if (!p) throw new Error('No encontramos ese nombre en la lista.');
+    const hoy = hoy_();
+    asegurarColumnaBaja_(ss);
+    escribirEnPersonas_(ss, personaId, COL_BAJA, hoy, true);
+
+    const alias = resolverAlias_(ss);
+    const apuntes = abrirTabla_(ss.getSheetByName(HOJA_APUNTES), COLS_APUNTES, aFilaApunte_);
+    let quitadas = 0;
+    apuntes.vivas().forEach(function (x) {
+      if (alias(x.v[3]) === personaId && x.v[1] >= hoy) { x.borrada = true; if (x.v[6] !== 'NO') quitadas++; }
+    });
+    apuntes.guardar();
+
+    const fijos = abrirTabla_(hojaFijos_(ss), COLS_FIJOS, aFilaFijo_);
+    let fijosCerrados = 0;
+    fijos.vivas().forEach(function (x) {
+      const f = x.v;
+      if (alias(f[1]) !== personaId || (f[5] && f[5] < hoy)) return;
+      f[5] = sumarDias_(hoy, -1);
+      if (f[5] < f[4]) x.borrada = true; else x.cambiada = true;
+      fijosCerrados++;
+    });
+    fijos.guardar();
+    olvidar_('personas', 'listas', 'apuntes', 'fijos');
+
+    registrar_(ss, autor, ['Quita de la lista a ' + p.apodo + ' (' + p.jerarquia + ' · ' + p.familia + ')' +
+      (quitadas || fijosCerrados ? ': se le quitan ' + [quitadas ? quitadas + ' comidas apuntadas' : '', fijosCerrados ? 'las de siempre' : ''].filter(String).join(' y ') : '')]);
+    return datos_(ss, vista || {});
+  });
+}
+
+/** La columna Baja (I) de PERSONAS, con su título, si aún no está. */
+function asegurarColumnaBaja_(ss) {
+  const hoja = ss.getSheetByName(HOJA_PERSONAS);
+  if (hoja.getMaxColumns() < COL_BAJA) hoja.insertColumnsAfter(hoja.getMaxColumns(), COL_BAJA - hoja.getMaxColumns());
+  const titulo = hoja.getRange(1, COL_BAJA);
+  if (!String(titulo.getValue()).trim()) titulo.setValue('Baja');
+}
+
+function filaDePersona_(ss, personaId) {
+  const hoja = ss.getSheetByName(HOJA_PERSONAS);
+  const ids = hoja.getRange(2, 1, hoja.getLastRow() - 1, 1).getValues();
+  for (let i = 0; i < ids.length; i++) { if (String(ids[i][0]).trim() === personaId) return i + 2; }
+  throw new Error('No encontramos ese nombre en la lista.');
 }
 
 /** Cambiar apodo, jerarquía o familia. Si cambia el Id, guarda el alias para que no pierda sus apuntes. */
@@ -748,7 +839,7 @@ function renombrarPersona_(ss, p, cambios, registro) {
   return { antes: p.id, despues: nuevoId };
 }
 
-/** Escribe una celda de la fila de esa persona en PERSONAS (F, G o H). La columna A está protegida y no se toca. */
+/** Escribe una celda de la fila de esa persona en PERSONAS (F, G, H o I). La columna A está protegida y no se toca. */
 function escribirEnPersonas_(ss, personaId, columna, valor, esTexto) {
   const hoja = ss.getSheetByName(HOJA_PERSONAS);
   if (hoja.getMaxColumns() < columna) {
