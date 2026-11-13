@@ -58,7 +58,7 @@
     display: inline-flex; align-items: center; min-height: 44px; padding: 8px 16px;
     font-weight: 800; color: #fff; text-decoration: none; border-radius: var(--radio) var(--radio) 0 0; white-space: nowrap;
   }
-  @media (max-width: 420px) { nav.vistas a { padding: 8px 10px; font-size: 15px; } }
+  @media (max-width: 420px) { nav.vistas { gap: 0; } nav.vistas a { padding: 8px 9px; font-size: 15px; } }
   nav.vistas a[aria-current="page"] { background: var(--color-fondo); color: var(--color-principal-oscuro); }
 
   .pagina { max-width: 1360px; margin: 0 auto; padding: 20px 16px 48px; }
@@ -297,6 +297,18 @@
   /* v2: quién eres */
   .quien-soy { margin: 24px 0 0; font-size: 15px; color: var(--color-texto-suave); }
   .actualizando { margin: -8px 0 8px; text-align: center; font-size: 13px; color: var(--color-texto-suave); }
+  /* v4.14: pestaña Huecos */
+  .huecos-resumen { margin: 0 0 16px; font-size: 18px; font-weight: 800; }
+  .huecos-dia { margin: 0 0 12px; padding: 10px 14px; background: #fff; border: 1px solid var(--color-linea); border-radius: var(--radio); }
+  .huecos-dia h3 { margin: 0 0 6px; font-family: var(--letra-titulos); font-weight: 600; font-size: 20px; }
+  .huecos-dia h3 span { font-family: var(--letra-texto); font-size: 15px; font-weight: 800; color: var(--color-texto-suave); }
+  .huecos-dia ul { list-style: none; margin: 0; padding: 0; }
+  .huecos-dia li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--color-linea); }
+  .huecos-dia li:first-child { border-top: 0; }
+  .hueco-turno { min-width: 64px; font-weight: 800; color: var(--color-principal-oscuro); }
+  .hueco-estado { flex: 1; min-width: 0; font-weight: 700; }
+  .hueco-estado.sin-nadie { color: var(--color-error); }
+  .hueco-estado.solo-servicio { color: #8A5A00; }
   /* Pestaña Personas */
   /* v4.12.7: buscar, Filtros y Añadir en una línea; el panel de filtros, con su contador en cada opción */
   .personas-cab { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; }
@@ -447,6 +459,7 @@
       <a href="#semana" data-vista="semana">Semana</a>
       <a href="#cocina" data-vista="cocina">Hoy y mañana</a>
       <a href="#personas" data-vista="personas">Personas</a>
+      <a href="#huecos" data-vista="huecos">Huecos</a>
     </nav>
   </div>
 </header>
@@ -473,6 +486,10 @@
     <div id="per-lista"></div>
   </section>
 
+  <section id="vista-huecos" hidden>
+    <div id="huecos-lista"><p class="vacio">Cargando…</p></div>
+  </section>
+
   <section id="vista-cocina" hidden>
     <p id="reloj" class="reloj"></p>
     <div id="cocina" class="cocina"><p class="vacio">Cargando…</p></div>
@@ -493,7 +510,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.13.7</footer>
+  <footer>Hecho con cariño por Utilo · v4.14.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -782,6 +799,43 @@
     pintarMisProximas();
     pintarHuerfanos();
     pintarPersonas();
+    pintarHuecos();
+  }
+
+  /* v4.14: Huecos: de hoy al final de la semana que viene, las comidas, cenas y noches sin nadie o solo con el servicio.
+     No cuentan las que no hace falta ni en las que la abuela no está. */
+  function pintarHuecos() {
+    if (vista !== 'huecos') return;
+    const h = hoy(), fin = sumar(lunesDe(h), 13);
+    const dias = [];
+    let sinNadie = 0, soloServicio = 0;
+    for (let f = h < datos.config.inicio ? datos.config.inicio : h; f <= fin; f = sumar(f, 1)) {
+      const huecos = [];
+      TURNOS.forEach(function (t) {
+        if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id)) return;
+        const ids = idsDe(f, t.id);
+        const familia = ids.filter(function (id) { return !esServicio(persona(id)); });
+        if (familia.length) return;
+        const serv = ids.filter(function (id) { return esServicio(persona(id)); }).map(function (id) { return (persona(id) || {}).apodo || id; });
+        if (serv.length) soloServicio++; else sinNadie++;
+        huecos.push({ turno: t, serv: serv });
+      });
+      if (huecos.length) dias.push({ fecha: f, huecos: huecos });
+    }
+    const vez = function (n, uno, varios) { return n === 1 ? uno : varios.replace('%', n); };
+    let html = '<p class="huecos-resumen">' + (!sinNadie && !soloServicio
+      ? 'No hay huecos de aquí al ' + diaLargo(fin).toLowerCase() + ': todo tiene a alguien.'
+      : 'De aquí al ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, 'una sin nadie', '% sin nadie') : '', soloServicio ? vez(soloServicio, 'una solo con el servicio', '% solo con el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>';
+    html += dias.map(function (d) {
+      return '<section class="huecos-dia"><h3>' + DIAS[dow(d.fecha)] + ' <span>' + (d.fecha === h ? 'Hoy' : ddmm(d.fecha)) + '</span></h3><ul>' +
+        d.huecos.map(function (x) {
+          const datosTurno = ' data-anadir data-fecha="' + d.fecha + '" data-turno="' + x.turno.id + '"';
+          return '<li><span class="hueco-turno">' + x.turno.nombre + '</span>' +
+            (x.serv.length ? '<span class="hueco-estado solo-servicio">Solo el servicio: ' + esc(lista(x.serv)) + '</span>' : '<span class="hueco-estado sin-nadie">Sin nadie</span>') +
+            '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(d.fecha, x.turno.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button></li>';
+        }).join('') + '</ul></section>';
+    }).join('');
+    $('huecos-lista').innerHTML = html;
   }
 
   /* Apuntes de alguien que ya no está en PERSONAS (seguramente le han cambiado el apodo) */
@@ -2058,10 +2112,10 @@
   }
 
   /* ---------- Vistas ---------- */
-  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', cocina: 'Quién viene hoy y mañana', personas: 'La familia y lo que come cada uno' };
+  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', cocina: 'Quién viene hoy y mañana', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
   function ponerVista(v) {
     vista = SUBTITULOS[v] ? v : 'semana';
-    ['semana', 'cocina', 'personas'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
+    ['semana', 'cocina', 'personas', 'huecos'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
     $('subtitulo').textContent = SUBTITULOS[vista];
     document.querySelectorAll('nav.vistas a').forEach(function (a) {
       if (a.dataset.vista === vista) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
