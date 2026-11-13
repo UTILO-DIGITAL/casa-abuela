@@ -447,7 +447,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.10.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.11.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -882,6 +882,7 @@
   let filtroPersonas = 'todos';
   function falta(p) {
     const f = [];
+    if (apodoRepetido(p.apodo, p.id)) f.push('un apodo que no se repita');  // v4.11
     if (!p.menu) f.push('menú');
     if (!p.cumple && p.familia !== 'Otros') f.push('cumpleaños');  // v4.7: a los de fuera de la familia no se les pide
     return f;
@@ -909,7 +910,7 @@
     }).join('');
     const q = sinAcentos($('per-q').value.trim());
     let lista = filtroPersonas === 'falta' ? conFalta : datos.personas;
-    if (q) lista = lista.filter(function (p) { return sinAcentos(p.apodo + ' ' + p.familia + ' ' + deQuien(p)).indexOf(q) !== -1; });
+    if (q) lista = lista.filter(function (p) { return sinAcentos(p.apodo + ' ' + (p.nombre || '') + ' ' + (p.apellido || '') + ' ' + p.familia + ' ' + deQuien(p)).indexOf(q) !== -1; });
     if (!lista.length) {
       $('per-lista').innerHTML = '<p class="vacio">' + (filtroPersonas === 'falta' && !q ? 'A nadie le falta nada por definir.' : 'No hay nadie con ese nombre en la lista. Puedes añadirlo con «Añadir persona».') + '</p>';
       return;
@@ -927,7 +928,9 @@
   }
   function filaPersona(p, extra) {
     const fl = falta(p);
-    return '<li><button type="button" class="fila-persona" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' + esc(p.apodo) + marcaMenu(p) + '</b><small>' + esc(deQuien(p)) + '</small>' +
+    const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
+    return '<li><button type="button" class="fila-persona" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' + esc(p.apodo) + marcaMenu(p) + '</b>' +
+      (completo && completo !== p.apodo ? '<small class="fp-completo">' + esc(completo) + '</small>' : '') + '<small>' + esc(deQuien(p)) + '</small>' +
       (extra ? '<small class="fp-pareja">' + esc(extra) + '</small>' : '') + '</span>' +
       '<span class="fp-datos">' + esc(resumenPersona(p)) + '</span>' +
       (fl.length ? '<span class="fp-falta">Falta: ' + esc(lista_(fl)) + '</span>' : '') + '</button></li>';
@@ -936,8 +939,17 @@
   /* ---------- v4.10: núcleos familiares ---------- */
   /* Un núcleo es una pareja (o alguien sin pareja que tiene hijos apuntados) con sus hijos. Quien forma pareja sigue
      dentro del núcleo de sus padres: el suyo sale dentro. Se llama «Familia <apellido de él> <apellido de ella>». */
+  /* v4.11: el apodo es como le llaman en casa y no se repite (da igual mayúsculas y acentos) */
+  function apodoRepetido(apodo, salvo) {
+    const n = sinAcentos(String(apodo || '').trim());
+    return abuelas().concat(datos.personas, datos.bajas || []).find(function (x) { return x.id !== salvo && sinAcentos(x.apodo) === n; }) || null;
+  }
+  function errorApodo(apodo, salvo) {
+    const otro = apodoRepetido(apodo, salvo);
+    return otro ? 'Ya hay alguien que se llama «' + otro.apodo + '» en la lista. El apodo no se puede repetir: añade una inicial o como le llamáis en casa (por ejemplo, «' + apodo + ' M»).' : '';
+  }
+  function hayNombre() { return !!(datos.personas.length && 'nombre' in datos.personas[0]); }
   function hayNucleos() { return !!(datos.personas.length && 'sexo' in datos.personas[0]); }
-  function apellidoDe(p) { return p.apellido || p.apodo; }
   function esDeFuera(p) { return String(p.jerarquia || '').indexOf('+1') !== -1; }
   /* Primero él y luego ella; con dos hombres o dos mujeres (o sin decir), primero quien es de la familia (no «+1») */
   function ordenPareja(a, b) {
@@ -945,11 +957,12 @@
     if (!(a.sexo === 'Hombre' && b.sexo === 'Mujer') && esDeFuera(a) && !esDeFuera(b)) return [b, a];
     return [a, b];
   }
+  /* Con los dos apellidos, «Familia Puig Canela»; si falta alguno, los nombres («Mercedes y Jordi») hasta que se rellene */
   function nombreNucleo(a, b) {
-    if (!b) return 'Familia ' + apellidoDe(a);
+    if (!b) return a.apellido ? 'Familia ' + a.apellido : 'Familia de ' + a.apodo;
     const xy = ordenPareja(a, b);
-    if (!a.apellido && !b.apellido) return xy[0].apodo + ' y ' + xy[1].apodo;
-    return 'Familia ' + apellidoDe(xy[0]) + ' ' + apellidoDe(xy[1]);
+    if (!a.apellido || !b.apellido) return xy[0].apodo + ' y ' + xy[1].apodo;
+    return 'Familia ' + xy[0].apellido + ' ' + xy[1].apellido;
   }
   function parejaDe(p) { const x = p.pareja && quienEs(p.pareja); return x && x.pareja === p.id ? x : null; }
   function arbolFamilia(gente) {
@@ -1026,9 +1039,10 @@
   function camposNucleo(p) {
     if (!hayNucleos()) return '';
     const pa = p && parejaDe(p);
-    return '<fieldset><legend>Su núcleo familiar</legend>' +
-      '<div class="dos dos-iguales"><label class="campo" for="dlg-apellido">Apellido<input id="dlg-apellido" type="text" maxlength="40" autocomplete="off" value="' + esc(p ? p.apellido || '' : '') + '"></label>' +
-      '<label class="campo" for="dlg-sexo">Es<select id="dlg-sexo"><option value="">Sin decir</option>' +
+    return '<fieldset><legend>Nombre completo y núcleo familiar</legend>' +
+      '<div class="dos dos-iguales">' + (hayNombre() ? '<label class="campo" for="dlg-nombre">Nombre<input id="dlg-nombre" type="text" maxlength="40" autocomplete="off" value="' + esc(p ? p.nombre || '' : '') + '"></label>' : '') +
+      '<label class="campo" for="dlg-apellido">Apellido<input id="dlg-apellido" type="text" maxlength="40" autocomplete="off" value="' + esc(p ? p.apellido || '' : '') + '"></label></div>' +
+      '<div class="dos dos-iguales"><label class="campo" for="dlg-sexo">Es<select id="dlg-sexo"><option value="">Sin decir</option>' +
       ['Hombre', 'Mujer'].map(function (v) { return '<option value="' + v + '"' + (p && p.sexo === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') + '</select></label></div>' +
       '<label class="campo" for="dlg-pareja">Pareja<select id="dlg-pareja">' + opcionesPersonas(pa ? pa.id : '', p ? p.id : '') + '</select></label>' +
       '<label class="campo" for="dlg-hijode">Hijo o hija de<select id="dlg-hijode">' + opcionesPersonas(p ? p.hijoDe || '' : '', p ? p.id : '') + '</select></label>' +
@@ -1037,6 +1051,7 @@
   function leerNucleo(p) {
     if (!hayNucleos()) return {};
     const c = {}, pa = p ? parejaDe(p) : null;
+    if (hayNombre()) { const nom = $('dlg-nombre').value.trim(); if (nom !== (p ? p.nombre || '' : '')) c.nombre = nom; }
     const v = { apellido: $('dlg-apellido').value.trim(), sexo: $('dlg-sexo').value, pareja: $('dlg-pareja').value, hijoDe: $('dlg-hijode').value };
     if (v.apellido !== (p ? p.apellido || '' : '')) c.apellido = v.apellido;
     if (v.sexo !== (p ? p.sexo || '' : '')) c.sexo = v.sexo;
@@ -1044,7 +1059,16 @@
     if (v.hijoDe !== (p ? p.hijoDe || '' : '')) c.hijoDe = v.hijoDe;
     return c;
   }
+  /* v4.10.1: el círculo se avisa en la misma ficha, antes de guardar (el servidor lo vuelve a comprobar) */
+  function errorNucleo(p, c) {
+    if (!p || !c.hijoDe) return '';
+    for (let x = c.hijoDe, i = 0; x && i < 50; x = (quienEs(x) || {}).hijoDe, i++) {
+      if (x === p.id) return (quienEs(c.hijoDe) || {}).apodo + ' no puede ser padre o madre de ' + p.apodo + ': ya desciende de él o de ella.';
+    }
+    return '';
+  }
   function aplicarNucleoLocal(p, c) {
+    if (c.nombre !== undefined) p.nombre = c.nombre;
     if (c.apellido !== undefined) p.apellido = c.apellido;
     if (c.sexo !== undefined) p.sexo = c.sexo;
     if (c.hijoDe !== undefined) p.hijoDe = c.hijoDe;
@@ -1069,7 +1093,7 @@
   function camposFicha(p) {
     const l = datos.listas || { jerarquias: [], familias: [] };
     return '<fieldset><legend>Nombre y familia</legend>' +
-      '<label class="campo" for="dlg-apodo">Nombre (como lo conoce la familia)<input id="dlg-apodo" type="text" maxlength="40" autocomplete="off" value="' + esc(p ? p.apodo : '') + '"></label>' +
+      '<label class="campo" for="dlg-apodo">Apodo (como le llamáis en casa; no se puede repetir)<input id="dlg-apodo" type="text" maxlength="40" autocomplete="off" value="' + esc(p ? p.apodo : '') + '"></label>' +
       '<div class="dos dos-iguales"><label class="campo" for="dlg-jerarquia">Parentesco con la abuela<select id="dlg-jerarquia">' + (p ? '' : '<option value="">Elige</option>') + opcionesLista(l.jerarquias, p ? p.jerarquia : '', nombreJerarquia) + '</select></label>' +
       '<label class="campo" for="dlg-familia">Familia<select id="dlg-familia">' + (p ? '' : '<option value="">Elige</option>') + opcionesLista(l.familias, p ? p.familia : '') + '</select></label></div>' +
       (p ? '<p class="ayuda">Si le cambias el nombre o el parentesco, sus comidas apuntadas siguen siendo suyas.</p>' : '') + '</fieldset>';
@@ -1090,7 +1114,8 @@
       if (!apodo) { errorDialogo('Pon el nombre.'); return; }
       if (!jer || !fam) { errorDialogo('Elige el parentesco y la familia.'); return; }
       const id = '(' + jer.charAt(0) + (jer.indexOf('+1') !== -1 ? '+1' : '') + ') - ' + apodo;
-      if (quienEs(id)) { errorDialogo('Ya hay alguien llamado ' + apodo + ' con ese parentesco. Ponle un apodo distinto, por ejemplo con la inicial del apellido.'); return; }
+      const errorA = errorApodo(apodo, '');
+      if (errorA) { errorDialogo(errorA); return; }
       const cdia = $('dlg-cdia').value, cmes = $('dlg-cmes').value;
       if ((cdia && !cmes) || (!cdia && cmes)) { errorDialogo('Para el cumpleaños, elige el día y el mes, o deja los dos vacíos.'); return; }
       const nueva = { apodo: apodo, jerarquia: jer, familia: fam, menu: $('dlg-menu').value, alergias: $('dlg-alergias').value.trim(),
@@ -1101,6 +1126,7 @@
         enSegundoPlano('crearPersona', [nueva, yo, rango()], apodo + ' ya está en la lista.', function () {
           const p = { id: id, apodo: apodo, jerarquia: jer, familia: fam, menu: nueva.menu, alergias: nueva.alergias, cumple: nueva.cumple };
           if (hayNucleos()) { p.apellido = ''; p.sexo = ''; p.pareja = ''; p.hijoDe = ''; }
+          if (hayNombre()) p.nombre = '';
           datos.personas.push(p);
           aplicarNucleoLocal(p, nucleo);
         });
@@ -1155,7 +1181,7 @@
         res = e0 && candidatos.indexOf(e0) !== -1 ? [e0] : [];
         $('bus-titulo').textContent = '';
       } else {
-        res = candidatos.filter(function (p) { return sinAcentos(p.apodo + ' ' + p.familia + ' ' + deQuien(p)).indexOf(q) !== -1; }).slice(0, 15);
+        res = candidatos.filter(function (p) { return sinAcentos(p.apodo + ' ' + (p.nombre || '') + ' ' + (p.apellido || '') + ' ' + p.familia + ' ' + deQuien(p)).indexOf(q) !== -1; }).slice(0, 15);
         $('bus-titulo').textContent = res.length ? '' : 'No hay nadie con ese nombre en la lista.';
       }
       $('bus-res').innerHTML = res.map(function (p) {
@@ -1431,10 +1457,16 @@
       if (menu && menu !== p.menu) cambios.menu = menu;
       const apodo = $('dlg-apodo').value.trim(), jer = $('dlg-jerarquia').value, fam = $('dlg-familia').value;
       if (!apodo) { errorDialogo('El nombre no puede quedar vacío.'); return; }
-      if (apodo !== p.apodo) cambios.apodo = apodo;
+      if (apodo !== p.apodo) {
+        const errorA = errorApodo(apodo, p.id);
+        if (errorA) { errorDialogo(errorA); return; }
+        cambios.apodo = apodo;
+      }
       if (jer && jer !== p.jerarquia) cambios.jerarquia = jer;
       if (fam && fam !== p.familia) cambios.familia = fam;
-      Object.assign(cambios, leerNucleo(p));
+      const nucleo = leerNucleo(p), errorN = errorNucleo(p, nucleo);
+      if (errorN) { errorDialogo(errorN); return; }
+      Object.assign(cambios, nucleo);
       if (alergias !== p.alergias) cambios.alergias = alergias;
       const cdia = $('dlg-cdia').value, cmes = $('dlg-cmes').value;
       if ((cdia && !cmes) || (!cdia && cmes)) { errorDialogo('Para el cumpleaños, elige el día y el mes, o deja los dos vacíos.'); return; }
