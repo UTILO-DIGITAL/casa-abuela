@@ -186,6 +186,7 @@
   .dlg-cuerpo .ayuda { margin: 0; font-size: 15px; color: var(--color-texto-suave); }
   .dos { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 12px; }
   .dos.dos-iguales { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .tres { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1.2fr); gap: 12px; }
   /* v4.12: nada se sale de la ventana (un fieldset crece por defecto hasta el desplegable más largo) */
   .dlg-cuerpo fieldset { min-width: 0; }
   .dlg-cuerpo .campo select, .dlg-cuerpo .campo input { width: 100%; min-width: 0; }
@@ -486,7 +487,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.12.9</footer>
+  <footer>Hecho con cariño por Utilo · v4.13.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -688,10 +689,14 @@
   }
   function cumplesDe(fecha) {
     const dm = fecha.slice(8, 10) + '/' + fecha.slice(5, 7);
-    return datos.personas.concat(datos.editores || []).filter(function (p) { return p.cumple === dm; });
+    return datos.personas.concat(datos.editores || []).filter(function (p) { return (p.cumple || '').slice(0, 5) === dm; });
   }
   function textoCumples(fecha) {
-    const out = cumplesDe(fecha).map(function (p) { return 'Cumple de ' + p.apodo; });
+    // v4.13: con el año, la edad que cumple ese día
+    const out = cumplesDe(fecha).map(function (p) {
+      const ano = Number((p.cumple || '').slice(6, 10));
+      return 'Cumple de ' + p.apodo + (ano ? ': ' + (Number(fecha.slice(0, 4)) - ano) + ' años' : '');
+    });
     return out;
   }
   function menusTexto(ids) {
@@ -1300,13 +1305,25 @@
       (p ? '<p class="ayuda">Si le cambias el nombre o el parentesco, sus comidas apuntadas siguen siendo suyas.</p>' : '') + '</fieldset>';
   }
 
+  /* v4.13: el año del cumpleaños, opcional (para saber cuántos cumple) */
+  function campoAno(v) {
+    return '<label class="campo" for="dlg-cano">Año<input id="dlg-cano" type="number" inputmode="numeric" min="1900" max="' + hoy().slice(0, 4) + '" placeholder="aaaa" value="' + esc(v || '') + '"></label>';
+  }
+  function leerCumple() {
+    const d = $('dlg-cdia').value, m = $('dlg-cmes').value, a = ($('dlg-cano') ? $('dlg-cano').value : '').trim();
+    if ((d && !m) || (!d && m)) return { error: 'Para el cumpleaños, elige el día y el mes, o deja los dos vacíos.' };
+    if (a && !d) return { error: 'Para poner el año, elige también el día y el mes del cumpleaños.' };
+    const max = Number(hoy().slice(0, 4));
+    if (a && !(/^\d{4}$/.test(a) && Number(a) >= 1900 && Number(a) <= max)) return { error: 'El año del cumpleaños tiene que ser de 1900 a ' + max + ', con cuatro cifras.' };
+    return { cumple: d ? ('0' + d).slice(-2) + '/' + ('0' + m).slice(-2) + (a ? '/' + a : '') : '' };
+  }
   function abrirNuevaPersona(nombre) {
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Añadir persona</h2></div><div class="dlg-cuerpo">' + camposFicha(null) + camposNucleo(null) +
       '<fieldset><legend>Para la cocina</legend><label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + opcionesMenu((datos.menus || [])[0]) + '</select></label>' +
       '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna"></label></fieldset>' +
-      '<fieldset class="solo-no-otros"><legend>Cumpleaños</legend><div class="dos"><label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
+      '<fieldset class="solo-no-otros"><legend>Cumpleaños</legend><div class="tres"><label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
       Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
-      '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' + MESES.map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select></label></div></fieldset></div>' +
+      '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' + MESES.map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select></label>' + campoAno('') + '</div></fieldset></div>' +
       pie('Añadir a la lista'));
     if (nombre) $('dlg-apodo').value = nombre;
     montarFormularioFamilia();
@@ -1318,10 +1335,10 @@
       const id = '(' + jer.charAt(0) + (jer.indexOf('+1') !== -1 ? '+1' : '') + ') - ' + apodo;
       const errorA = errorApodo(apodo, '');
       if (errorA) { errorDialogo(errorA); return; }
-      const cdia = $('dlg-cdia').value, cmes = $('dlg-cmes').value;
-      if ((cdia && !cmes) || (!cdia && cmes)) { errorDialogo('Para el cumpleaños, elige el día y el mes, o deja los dos vacíos.'); return; }
+      const lc = leerCumple();
+      if (lc.error) { errorDialogo(lc.error); return; }
       const nueva = { apodo: apodo, jerarquia: jer, familia: fam, menu: $('dlg-menu').value, alergias: $('dlg-alergias').value.trim(),
-        cumple: cdia ? ('0' + cdia).slice(-2) + '/' + ('0' + cmes).slice(-2) : '' };
+        cumple: lc.cumple };
       const nucleo = leerNucleo(null);
       Object.assign(nueva, nucleo);
       conQuien(function () {
@@ -1620,11 +1637,11 @@
       '<label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + (p.menu ? '' : '<option value="">Sin definir</option>') + opcionesMenu(p.menu) + '</select></label>' +
       '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna" value="' + esc(p.alergias) + '"></label></fieldset>';
     const cd = p.cumple ? Number(p.cumple.slice(0, 2)) : 0, cm = p.cumple ? Number(p.cumple.slice(3, 5)) : 0;
-    html += '<fieldset class="solo-no-otros"><legend>Cumpleaños</legend><div class="dos">' +
+    html += '<fieldset class="solo-no-otros"><legend>Cumpleaños</legend><div class="tres">' +
       '<label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
       Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '"' + (cd === i + 1 ? ' selected' : '') + '>' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' +
-      MESES.map(function (m, i) { return '<option value="' + (i + 1) + '"' + (cm === i + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label></div></fieldset>';
+      MESES.map(function (m, i) { return '<option value="' + (i + 1) + '"' + (cm === i + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' + campoAno((p.cumple || '').slice(6, 10)) + '</div></fieldset>';
     html += '<fieldset><legend>Va siempre, desde hoy</legend><table class="tabla-turnos tabla-fijos"><thead><tr><th scope="col">Día</th>' + TURNOS.map(function (t) { return '<th scope="col">' + t.nombre + '</th>'; }).join('') + '</tr></thead><tbody>' +
       [1, 2, 3, 4, 5, 6, 0].map(function (d) {
         return '<tr><td>' + DIAS[d] + '</td>' + TURNOS.map(function (t) {
@@ -1675,10 +1692,9 @@
       if (errorN) { errorDialogo(errorN); return; }
       Object.assign(cambios, nucleo);
       if (alergias !== p.alergias) cambios.alergias = alergias;
-      const cdia = $('dlg-cdia').value, cmes = $('dlg-cmes').value;
-      if ((cdia && !cmes) || (!cdia && cmes)) { errorDialogo('Para el cumpleaños, elige el día y el mes, o deja los dos vacíos.'); return; }
-      const cumple = cdia ? ('0' + cdia).slice(-2) + '/' + ('0' + cmes).slice(-2) : '';
-      if (cumple !== (p.cumple || '')) cambios.cumple = cumple;
+      const lc = leerCumple();
+      if (lc.error) { errorDialogo(lc.error); return; }
+      if (lc.cumple !== (p.cumple || '')) cambios.cumple = lc.cumple;
       const fijosAhora = Array.from($dlg.querySelectorAll('input[data-fijo]:checked')).map(function (c) { return c.dataset.fijo; });
       if (fijosAhora.sort().join(',') !== fijosAntes.slice().sort().join(',')) {
         cambios.fijos = fijosAhora.map(function (k) { return { dow: Number(k.split('|')[0]), turno: k.split('|')[1] }; });

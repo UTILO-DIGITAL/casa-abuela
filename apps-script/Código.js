@@ -28,7 +28,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.12.0
+ * Versión 4.13.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -44,7 +44,7 @@ const TURNOS = ['COMIDA', 'CENA', 'DORMIR'];
 const MENUS_BASE = ['\uD83C\uDF15 Entero', '\uD83C\uDF17 Medio', '\uD83C\uDF7C Nada'];  // luna llena, media luna y biberón, escritos así para que no se estropeen al copiar
 const COL_MENU = 6;      // F en PERSONAS
 const COL_ALERGIAS = 7;  // G en PERSONAS
-const COL_CUMPLE = 8;    // H en PERSONAS, texto dd/mm
+const COL_CUMPLE = 8;    // H en PERSONAS, texto dd/mm o dd/mm/aaaa (con el año, v4.13)
 const COL_BAJA = 9;      // I en PERSONAS, texto aaaa-mm-dd (v4.7)
 const COL_APELLIDO = 10; // J (v4.10)
 const COL_SEXO = 11;     // K: Hombre o Mujer
@@ -428,7 +428,7 @@ function guardarPersona(personaId, cambios, quien, vista) {
 
     if (cambios.cumple !== undefined) {
       const cumple = aCumple_(cambios.cumple);
-      if (String(cambios.cumple || '').trim() && !cumple) throw new Error('El cumpleaños tiene que ser un día y un mes que existan.');
+      if (String(cambios.cumple || '').trim() && !cumple) throw new Error('El cumpleaños tiene que ser un día y un mes que existan (y, si se pone, un año de 1900 a hoy).');
       escribirEnPersonas_(ss, personaId, COL_CUMPLE, cumple, true);
       if (cumple !== p.cumple) registro.push('Cumpleaños de ' + p.apodo + ': ' + (cumple || 'borrado'));
     }
@@ -1056,14 +1056,19 @@ function limpiar_(v, max, que, esCeldaTexto) {
 }
 
 /** Cumpleaños como texto dd/mm (acepta fechas del Excel y «5/3»). Vacío si no es válido. */
+/** Cumpleaños: dd/mm o, con el año (v4.13), dd/mm/aaaa. Una fecha escrita a mano en el Excel se queda sin año (el Excel le pone el de hoy). */
 function aCumple_(v) {
   if (v instanceof Date) return Utilities.formatDate(v, TZ, 'dd/MM');
-  const m = String(v || '').trim().match(/^(\d{1,2})[\/\-.](\d{1,2})/);
+  const m = String(v || '').trim().match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{4}))?$/);
   if (!m) return '';
   const d = Number(m[1]), mes = Number(m[2]);
   const max = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1];
   if (!max || d < 1 || d > max) return '';
-  return ('0' + d).slice(-2) + '/' + ('0' + mes).slice(-2);
+  const dm = ('0' + d).slice(-2) + '/' + ('0' + mes).slice(-2);
+  if (!m[3]) return dm;
+  const ano = Number(m[3]);
+  if (ano < 1900 || ano > Number(hoy_().slice(0, 4))) return '';
+  return dm + '/' + ano;
 }
 
 function aFecha_(v) {
