@@ -319,6 +319,7 @@
   .fila-caja .fp-nombre { flex: 1; min-width: 0; }
   .fp-come { flex-basis: 100%; font-size: 14px; color: var(--color-texto-suave); }
   .fp-come.con-alergia { color: var(--color-error); }
+  .marca-politico { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border: 2px solid var(--color-principal); border-radius: 50%; vertical-align: 1px; flex: none; }
   .fp-falta-corto { flex-basis: 100%; font-size: 14px; font-weight: 800; color: var(--color-error); }
   .et-hijos { margin: 8px 0 0; padding-top: 6px; border-top: 1px solid var(--color-linea); font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
   .punto-falta { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--color-error); flex: none; }
@@ -470,7 +471,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.12.4</footer>
+  <footer>Hecho con cariño por Utilo · v4.12.5</footer>
 </div>
 
 <div id="impresion"></div>
@@ -943,7 +944,7 @@
     $('per-lista').innerHTML = orden.map(function (f) {
       const cab = '<h3 class="per-familia">' + (f === 'Servicio' || f === 'Otros' ? esc(f) : 'Familia ' + esc(f)) + ' <span>' + porFamilia[f].length + '</span></h3>';
       if (enArbol) {
-        const leyenda = '';
+        const leyenda = f === orden[0] ? '<p class="leyenda-falta"><span class="marca-politico" aria-hidden="true"></span> Entró en la familia por su pareja.</p>' : '';
         if (f === 'Servicio' || f === 'Otros') return leyenda + '<section class="familia">' + cab + tarjeta('', '', porFamilia[f], [], '') + '</section>';
         // v4.12.1: la familia se llama como el núcleo de arriba («Familia Canela Ribas»), si tiene uno solo
         const a = arbolFamilia(porFamilia[f]);
@@ -978,7 +979,10 @@
   function filaCaja(p) {
     const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
     const come = comeTexto(p);
-    return '<li><button type="button" class="fila-persona fila-caja" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' + esc(p.apodo) + '</b>' +
+    // v4.12.5: un circulito a quien entró en la familia por su pareja (los «+1»: no son de sangre)
+    const deFuera = esDeFuera(p) && !esServicio(p) && p.familia !== 'Otros';
+    return '<li><button type="button" class="fila-persona fila-caja" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' +
+      (deFuera ? '<span class="marca-politico" role="img" aria-label="entró en la familia por su pareja" title="Entró en la familia por su pareja"></span>' : '') + esc(p.apodo) + '</b>' +
       (completo && completo !== p.apodo ? '<small>' + esc(completo) + '</small>' : '') +
       (come ? '<span class="fp-come' + (p.alergias ? ' con-alergia' : '') + '">' + esc(come) + '</span>' : '') +
       (falta(p).length ? '<span class="fp-falta-corto">' + esc(faltaCorto(p)) + '</span>' : '') + '</span></button></li>';
