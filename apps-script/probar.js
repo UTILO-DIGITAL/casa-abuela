@@ -13,7 +13,11 @@ function hoja(nombre, filas) {
   h.getDataRange = () => h.getRange(1, 1, h.getLastRow(), h.getMaxColumns());
   h.getRange = (r, c, nr = 1, nc = 1) => ({
     getValues: () => { const o = []; for (let i = 0; i < nr; i++) { const f = []; for (let j = 0; j < nc; j++) f.push(((h.filas[r - 1 + i] || [])[c - 1 + j]) ?? ''); o.push(f); } return o; },
-    setValues: v => { v.forEach((f, i) => f.forEach((x, j) => { celda(r + i, c + j)[c - 1 + j] = x; })); h.formula && h.formula(); },
+    setValues: v => {
+      // Como el Google de verdad: el ancho de los datos tiene que ser el del intervalo
+      if (v.length !== nr || v.some(f => f.length !== nc)) throw new Error('El número de columnas de los datos no coincide con el del intervalo. Los datos tienen ' + (v[0] || []).length + ' y el intervalo, ' + nc + '.');
+      v.forEach((f, i) => f.forEach((x, j) => { celda(r + i, c + j)[c - 1 + j] = x; })); h.formula && h.formula();
+    },
     setValue: x => { celda(r, c)[c - 1] = x; h.formula && h.formula(); },
     getValue: () => ((h.filas[r - 1] || [])[c - 1]) ?? '',
     setNumberFormat: () => {}, getDataValidation: () => null,
@@ -170,3 +174,10 @@ d = R.guardarDia('2026-11-22', { evento: 'Santo de la abuela' }, M_, V2);
 ver('sin turno, el evento es a la comida', (d.dias.find(x => x.fecha === '2026-11-22') || {}).eventoTurno === 'COMIDA');
 d = R.guardarDia('2026-11-22', {}, M_, V2);
 ver('borrar el día quita el evento', !d.dias.some(x => x.fecha === '2026-11-22'));
+
+// ---------- v4.15.1: «no va» un día de los de siempre (fila con todas las columnas) ----------
+d = R.guardarPersona(M_, { fijos: [{ dow: 6, turno: 'COMIDA' }] }, M_, V2);
+ver('Mercedes va siempre los sábados a comer', !!ap('2026-11-21', 'COMIDA', M_));
+d = R.guardarPersona(M_, { turnos: [{ fecha: '2026-11-21', turno: 'COMIDA', apuntado: false }] }, M_, V2);
+ver('un sábado concreto no va (sin error de columnas)', !ap('2026-11-21', 'COMIDA', M_));
+ver('la fila «no va» tiene las 10 columnas', hojas.MESA_APUNTES.filas.filter(f => f[6] === 'NO').every(f => f.length >= 10));
