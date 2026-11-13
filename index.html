@@ -432,7 +432,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.5.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.8.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -473,7 +473,7 @@
   let yo = leerYo();
   let vista = 'semana';
   let lunesSel = null;
-  let diaSel = null;        // v4.2: primer día de los que se ven en tablet y ordenador; la semana es la suya
+  let diaFoco = null;       // v4.8: el día del centro en tablet y ordenador (hoy, al entrar); la semana es la suya
   let rangoCargado = null;  // las fechas que cubren los datos que hay en memoria
   const ESCRITORIO = window.matchMedia('(min-width: 760px)');
   const CINCO = window.matchMedia('(min-width: 1200px)');  // v4.5: en ordenador, cinco días
@@ -529,23 +529,22 @@
   /* v4.2: la ventana de días (tablet: tres; ordenador, v4.5: cinco) y la semana van juntas */
   function enEscritorio() { return ESCRITORIO.matches; }
   function cuantosDias() { return CINCO.matches ? 5 : 3; }
-  function ventana() { const n = cuantosDias(), v = []; for (let i = 0; i < n; i++) v.push(sumar(diaSel, i)); return v; }
-  /* Tres días: desde hoy. Cinco: de lunes a viernes; en sábado o domingo, de miércoles a domingo */
-  function diaInicial() {
-    const h = hoy();
-    if (datos && h < datos.config.inicio) return datos.config.inicio;
-    if (cuantosDias() === 3) return h;
-    const d = dow(h);
-    return sumar(lunesDe(h), d === 6 || d === 0 ? 2 : 0);
-  }
+  /* v4.8: hoy (o el día elegido) en el centro: en ordenador, dos días a cada lado; en tablet, uno; en el móvil, la semana */
+  function lado() { return enEscritorio() ? (cuantosDias() - 1) / 2 : 0; }
+  function primerDia() { return sumar(diaFoco, -lado()); }
+  function ventana() { const n = cuantosDias(), v = []; for (let i = 0; i < n; i++) v.push(sumar(primerDia(), i)); return v; }
+  function diaInicial() { return hoy(); }
+  /* No se ven días anteriores al inicio del calendario: el centro se corre lo que haga falta */
+  function minFoco() { return datos ? sumar(datos.config.inicio, lado()) : null; }
   function irADia(dia) {
-    if (datos && dia < datos.config.inicio) dia = datos.config.inicio;
-    diaSel = dia;
+    const m = minFoco();
+    if (m && dia < m) dia = m;
+    diaFoco = dia;
     lunesSel = lunesDe(dia);
   }
   function necesita() {
-    const finSemana = sumar(lunesSel, 6), finVentana = sumar(lunesDe(sumar(diaSel, cuantosDias() - 1)), 6);  // la semana entera del último día que se ve
-    return { desde: lunesSel, hasta: finVentana > finSemana ? finVentana : finSemana };
+    const ini = lunesDe(primerDia()), fin = sumar(lunesDe(sumar(diaFoco, lado())), 6);  // las semanas enteras del primer y el último día que se ven
+    return { desde: ini < lunesSel ? ini : lunesSel, hasta: fin };
   }
   function cubierto() { const n = necesita(); return !!rangoCargado && rangoCargado.desde <= n.desde && rangoCargado.hasta >= n.hasta; }
   function etiquetaTurno(turno) { return turno === 'CENA' ? 'Cena' : (turno === 'DORMIR' ? 'Dormir' : 'Comida'); }
@@ -676,8 +675,9 @@
   /* ---------- Carga ---------- */
   function rango() {
     const lh = lunesDe(hoy());
-    const desde = lunesSel < lh ? lunesSel : lh;
-    const hastaSel = necesita().hasta, hastaHoy = sumar(lh, 13);
+    const n = necesita();
+    const desde = n.desde < lh ? n.desde : lh;
+    const hastaSel = n.hasta, hastaHoy = sumar(lh, 13);
     return { desde: desde, hasta: hastaSel > hastaHoy ? hastaSel : hastaHoy, yo: yo };
   }
   /* Lo último que se vio en este móvil, para enseñarlo al momento mientras llega lo nuevo */
@@ -709,7 +709,7 @@
       if (pendientes > 0) return;
       datos = d;
       rangoCargado = r;
-      if (diaSel < datos.config.inicio) { irADia(datos.config.inicio); if (!cubierto()) return cargar(); }
+      if (diaFoco < minFoco()) { irADia(diaFoco); if (!cubierto()) return cargar(); }
       guardarLocal();
       pintar();
     }).catch(function () {
@@ -816,7 +816,7 @@
     if (hoy() < datos.config.inicio && lunesSel === lunesInicio()) html += '<p class="aviso">El calendario empieza el ' + diaLargo(datos.config.inicio).toLowerCase() + '.</p>';
     const tres = enEscritorio();
     if (tres) html += '<div class="pasos-dia">' +
-      '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaSel <= datos.config.inicio ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Día anterior</button>' +
+      '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaFoco <= minFoco() ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Día anterior</button>' +
       '<button type="button" class="accion paso" data-paso-dia="1">Día siguiente' + FLECHA_DER + '</button></div>';
     html += '<div class="dias-semana">' + (tres ? ventana() : semana(lunesSel)).map(function (f) { return bloqueDia(f, {}); }).join('') + '</div>';
     $('semana-grande').innerHTML = html;
@@ -1531,7 +1531,7 @@
     if (!el || !datos || $dlg.contains(el) || cargando) return;
     if (el.hasAttribute('data-semana')) {
       const paso = Number(el.dataset.semana);
-      irADia(paso === 0 ? diaInicial() : sumar(diaSel, paso * 7));
+      irADia(paso === 0 ? diaInicial() : sumar(diaFoco, paso * 7));
       cargar();
     } else if (el.hasAttribute('data-paso-dia')) { pasoDia(Number(el.dataset.pasoDia));
     } else if (el.hasAttribute('data-plegar')) {
@@ -1563,9 +1563,9 @@
   /* v4.2: un día a izquierda o derecha; si entra un día que no está cargado (otra semana), se carga como con las flechas de semana */
   function pasoDia(n) {
     if (!datos || cargando || vista !== 'semana') return;
-    const antes = diaSel;
-    irADia(sumar(diaSel, n));
-    if (diaSel === antes) return;
+    const antes = diaFoco;
+    irADia(sumar(diaFoco, n));
+    if (diaFoco === antes) return;
     if (cubierto()) pintar(); else cargar();
   }
   /* Con el teclado, las flechas izquierda y derecha también mueven los días */
@@ -1578,7 +1578,7 @@
   });
   /* Al pasar de móvil a ordenador (o al girar la tablet), se repinta con su forma */
   [ESCRITORIO, CINCO].forEach(function (m) {
-    const repintar = function () { if (!datos) return; if (cubierto()) pintar(); else cargar(true); };
+    const repintar = function () { if (!datos) return; irADia(diaFoco); if (cubierto()) pintar(); else cargar(true); };
     if (m.addEventListener) m.addEventListener('change', repintar); else if (m.addListener) m.addListener(repintar);
   });
 
