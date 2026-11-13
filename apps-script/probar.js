@@ -140,3 +140,13 @@ d = R.guardarPersona(M_, { pareja: '(N) - Lucía'.replace('Lucía', 'Laura') }, 
 ver('al cambiar de pareja, «casados» se borra en los tres', !quien(M_).casados && !quien('(T+1) - Jordi P').casados && !quien('(N) - Laura').casados && quien(M_).pareja === '(N) - Laura');
 d = R.guardarPersona(M_, { pareja: '(T+1) - Jordi P', casados: 'No' }, M_, V);
 ver('pareja y «no casados» en el mismo guardado', quien(M_).pareja === '(T+1) - Jordi P' && quien(M_).casados === 'No' && quien('(T+1) - Jordi P').casados === 'No');
+
+// ---------- v4.13: el año del cumpleaños ----------
+d = R.guardarPersona(M_, { cumple: '07/03/1952' }, M_, V);
+ver('cumpleaños con año', quien(M_).cumple === '07/03/1952');
+d = R.guardarPersona(M_, { cumple: '7/3' }, M_, V);
+ver('y sin año, como antes', quien(M_).cumple === '07/03');
+err = ''; try { R.guardarPersona(M_, { cumple: '07/03/1850' }, M_, V); } catch (e) { err = e.message; }
+ver('un año imposible no se guarda', /de 1900 a hoy/.test(err));
+err = ''; try { R.guardarPersona(M_, { cumple: '07/03/2099' }, M_, V); } catch (e) { err = e.message; }
+ver('ni uno del futuro', /de 1900 a hoy/.test(err));
