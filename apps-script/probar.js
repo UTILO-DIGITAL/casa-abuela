@@ -20,7 +20,9 @@ function hoja(nombre, filas) {
     },
     setValue: x => { celda(r, c)[c - 1] = x; h.formula && h.formula(); },
     getValue: () => ((h.filas[r - 1] || [])[c - 1]) ?? '',
-    setNumberFormat: () => {}, getDataValidation: () => null,
+    setNumberFormat: () => { if (h.tabla && nc > 1) throw new Error('Haz una selección en una sola columna para realizar acciones a nivel de columna.'); },
+    getDataValidation: () => null,
+    getSheet: () => h, getRow: () => r, getColumn: () => c, getNumRows: () => nr, getNumColumns: () => nc,
     copyTo: () => {},
   });
   return h;
@@ -181,3 +183,14 @@ ver('Mercedes va siempre los sábados a comer', !!ap('2026-11-21', 'COMIDA', M_)
 d = R.guardarPersona(M_, { turnos: [{ fecha: '2026-11-21', turno: 'COMIDA', apuntado: false }] }, M_, V2);
 ver('un sábado concreto no va (sin error de columnas)', !ap('2026-11-21', 'COMIDA', M_));
 ver('la fila «no va» tiene las 10 columnas', hojas.MESA_APUNTES.filas.filter(f => f[6] === 'NO').every(f => f.length >= 10));
+
+// ---------- v4.15.2: con las pestañas en formato de tabla ----------
+Object.values(hojas).forEach(h => { h.tabla = true; });
+d = R.guardarPersona(M_, { turnos: [{ fecha: '2026-11-25', turno: 'CENA', apuntado: true, nota: 'Con tabla' }] }, M_, V2);
+ver('con tablas: apuntarse con nota (MESA_APUNTES y MESA_CAMBIOS)', !!ap('2026-11-25', 'CENA', M_));
+d = R.guardarDia('2026-11-26', { nota: 'Con tabla' }, M_, V2);
+ver('con tablas: nota del día (MESA_DIAS)', (d.dias.find(x => x.fecha === '2026-11-26') || {}).nota === 'Con tabla');
+d = R.guardarPersona('(O) - Amiga M', { apodo: 'Amiga N' }, M_, V2);
+ver('con tablas: cambiar el apodo (MESA_ALIAS)', !!d.personas.find(x => x.id === '(O) - Amiga N'));
+d = R.guardarPersona(M_, { fijos: [{ dow: 3, turno: 'CENA' }] }, M_, V2);
+ver('con tablas: va siempre (MESA_FIJOS)', d.fijos.some(f => f.persona === M_ && f.dow === 3));

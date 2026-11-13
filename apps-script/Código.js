@@ -28,7 +28,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.15.1
+ * Versión 4.15.2
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -304,14 +304,14 @@ function abrirTabla_(hoja, cols, aFila) {
       filas.forEach(function (x) {
         if (x.n && x.cambiada && !x.borrada) {
           const r = hoja.getRange(x.n, 1, 1, cols);
-          r.setNumberFormat('@');
+          comoTexto_(r);
           r.setValues([texto(x.v)]);
         }
       });
       const nuevas = filas.filter(function (x) { return !x.n && !x.borrada; }).map(function (x) { return texto(x.v); });
       if (nuevas.length) {
         const r = hoja.getRange(hoja.getLastRow() + 1, 1, nuevas.length, cols);
-        r.setNumberFormat('@');
+        comoTexto_(r);
         r.setValues(nuevas);
       }
       filas.filter(function (x) { return x.n && x.borrada; }).map(function (x) { return x.n; })
@@ -630,7 +630,7 @@ function guardarDia(fecha, dia, quien, vista) {
     } else {
       const fila = i !== -1 ? i + 2 : hoja.getLastRow() + 1;
       const rango = hoja.getRange(fila, 1, 1, COLS_DIAS);
-      rango.setNumberFormat('@');
+      comoTexto_(rango);
       rango.setValues([[fecha, nota, sinComida && sinCena ? 'TRUE' : 'FALSE', autor.apodo, ahora,
         sinComida ? 'TRUE' : 'FALSE', motivoComida, sinCena ? 'TRUE' : 'FALSE', motivoCena, notaServicio,
         sinDormir ? 'TRUE' : 'FALSE', motivoDormir].concat(aNota, aServ, aComida, aCena, aDormir, ['FALSE', motivoFuera], aFuera,
@@ -681,10 +681,10 @@ function guardarAusencia(desde, hasta, marcados, motivo, quien, vista) {
       const turnos = [c ? 'TRUE' : 'FALSE', x ? 'TRUE' : 'FALSE', z ? 'TRUE' : 'FALSE'];
       if (i !== -1) {
         const r1 = hoja.getRange(i + 2, 23, 1, 4);
-        r1.setNumberFormat('@');
+        comoTexto_(r1);
         r1.setValues([fuera]);
         const r2 = hoja.getRange(i + 2, 27, 1, 3);
-        r2.setNumberFormat('@');
+        comoTexto_(r2);
         r2.setValues([turnos]);
       } else if (algo) {
         const fila = new Array(COLS_DIAS).fill('');
@@ -692,7 +692,7 @@ function guardarAusencia(desde, hasta, marcados, motivo, quien, vista) {
         fila[22] = fuera[0]; fila[23] = fuera[1]; fila[24] = fuera[2]; fila[25] = fuera[3];
         fila[26] = turnos[0]; fila[27] = turnos[1]; fila[28] = turnos[2];
         const r = hoja.getRange(hoja.getLastRow() + 1, 1, 1, COLS_DIAS);
-        r.setNumberFormat('@');
+        comoTexto_(r);
         r.setValues([fila]);
         fechas.push(d);
       }
@@ -986,7 +986,7 @@ function renombrarPersona_(ss, p, cambios, registro) {
   if (nuevoId !== p.id) {
     const alias = ss.getSheetByName(HOJA_ALIAS) || crearHoja_(ss, HOJA_ALIAS, ['ID_ANTIGUO', 'ID_NUEVO', 'NOTA']);
     const r = alias.getRange(alias.getLastRow() + 1, 1, 1, 3);
-    r.setNumberFormat('@');
+    comoTexto_(r);
     r.setValues([[p.id, nuevoId, 'Cambiado desde la web el ' + ahora_().slice(0, 10)]]);
   }
   olvidar_('personas', 'alias', 'apuntes', 'fijos', 'listas');
@@ -1025,7 +1025,7 @@ function registrar_(ss, autor, lineas) {
   const cuando = ahora_();
   const filas = lineas.map(function (l) { return [cuando, autor.id, autor.apodo, l]; });
   const rango = hoja.getRange(hoja.getLastRow() + 1, 1, filas.length, 4);
-  rango.setNumberFormat('@');
+  comoTexto_(rango);
   rango.setValues(filas);
 }
 
@@ -1062,6 +1062,16 @@ function conBloqueo_(fn) {
 }
 
 /* ---------- Utilidades ---------- */
+
+/**
+ * v4.15.2: formato de texto (para que las fechas y los Ids no se conviertan), columna a columna:
+ * en una pestaña con formato de tabla, Google no deja hacerlo de golpe en varias columnas
+ * («Haz una selección en una sola columna para realizar acciones a nivel de columna»).
+ */
+function comoTexto_(rango) {
+  const hoja = rango.getSheet(), fila = rango.getRow(), col = rango.getColumn(), filas = rango.getNumRows();
+  for (let i = 0; i < rango.getNumColumns(); i++) hoja.getRange(fila, col + i, filas, 1).setNumberFormat('@');
+}
 
 function hojaDias_(ss) {
   return ss.getSheetByName(HOJA_DIAS) || crearHoja_(ss, HOJA_DIAS,
