@@ -524,7 +524,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.15.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.15.1</footer>
 </div>
 
 <div id="impresion"></div>
@@ -2082,13 +2082,13 @@
       '<div class="dlg-cuerpo"><label class="campo" for="dlg-que">Qué quieres compartir<select id="dlg-que">' +
       opciones.map(function (o) { return '<option value="' + o.v + '"' + (o.v === inicial ? ' selected' : '') + '>' + esc(o.t) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-texto">Mensaje (puedes cambiarlo)<textarea id="dlg-texto"></textarea></label></div>' +
-      '<div class="dlg-pie"><div class="botones"><a class="principal" id="dlg-wa" target="_blank" rel="noopener">Abrir WhatsApp</a>' +
-      '<button type="button" class="accion" id="dlg-copiar">Copiar el mensaje</button>' +
+      // v4.15.1: solo copiar (se pega en el grupo); sin «Abrir WhatsApp»
+      '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-copiar">Copiar el mensaje</button>' +
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
-    function actualizarEnlace() { $('dlg-wa').href = 'https://wa.me/?text=' + encodeURIComponent($('dlg-texto').value); }
-    function poner() { $('dlg-texto').value = mensaje($('dlg-que').value); actualizarEnlace(); }
+    function poner() { $('dlg-texto').value = mensaje($('dlg-que').value); }
     $('dlg-que').addEventListener('change', poner);
-    $('dlg-texto').addEventListener('input', actualizarEnlace);
+    // Que no se abra solo el desplegable (el móvil lo abre si es lo primero que recibe el foco): el foco, en el título
+    const tit = $('dlg-titulo'); tit.setAttribute('tabindex', '-1'); tit.focus();
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-copiar').addEventListener('click', function () {
       const t = $('dlg-texto');

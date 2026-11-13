@@ -28,7 +28,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.15.0
+ * Versión 4.15.1
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -295,7 +295,12 @@ function abrirTabla_(hoja, cols, aFila) {
     nueva: function (v) { filas.push({ n: null, v: v, cambiada: true, borrada: false }); },
     guardar: function () {
       if (hoja.getMaxColumns() < cols) hoja.insertColumnsAfter(hoja.getMaxColumns(), cols - hoja.getMaxColumns());
-      const texto = function (v) { return v.map(function (c) { return c === null || c === undefined ? '' : String(c); }); };
+      // v4.15.1: cada fila, con todas las columnas de la pestaña (aunque venga más corta)
+      const texto = function (v) {
+        const r = v.map(function (c) { return c === null || c === undefined ? '' : String(c); });
+        while (r.length < cols) r.push('');
+        return r.slice(0, cols);
+      };
       filas.forEach(function (x) {
         if (x.n && x.cambiada && !x.borrada) {
           const r = hoja.getRange(x.n, 1, 1, cols);
@@ -498,7 +503,7 @@ function guardarPersona(personaId, cambios, quien, vista) {
             if (x) x.borrada = true;
             cierres.push({ fecha: t.fecha, dow: dow, turno: t.turno });
           } else if (esFijo) {
-            if (x) { fila[6] = 'NO'; x.cambiada = true; } else { tabla.nueva([Utilities.getUuid(), t.fecha, t.turno, personaId, ahora_(), '', 'NO', '', '']); }
+            if (x) { fila[6] = 'NO'; x.cambiada = true; } else { tabla.nueva([Utilities.getUuid(), t.fecha, t.turno, personaId, ahora_(), '', 'NO', '', '', '']); }
           } else if (x) {
             x.borrada = true;
           }
