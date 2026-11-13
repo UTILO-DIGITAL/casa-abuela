@@ -339,7 +339,9 @@
   .fp-come.con-alergia { color: var(--color-error); }
   .marca-politico { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border: 2px solid var(--color-principal); border-radius: 50%; vertical-align: 1px; flex: none; }
   .fp-falta-corto { flex-basis: 100%; font-size: 14px; font-weight: 800; color: var(--color-error); }
-  .et-hijos { margin: 8px 0 0; padding-top: 6px; border-top: 1px solid var(--color-linea); font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
+  .hijos-grupo { margin: 10px 0 0 6px; padding-left: 12px; border-left: 2px solid var(--color-linea); }
+  .et-hijos { margin: 0; font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
+  .hijos-grupo > .nucleo-card:first-of-type { margin-top: 6px; }
   .punto-falta { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--color-error); flex: none; }
   .leyenda-falta { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; color: var(--color-texto-suave); }
   button.enlace.ver-ficha { justify-self: start; margin: 0; text-align: left; }
@@ -489,7 +491,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.13.3</footer>
+  <footer>Hecho con cariño por Utilo · v4.13.4</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1103,8 +1105,9 @@
   function tarjeta(titulo, estado, cabezas, hijos, dentro) {
     return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + anillo(estado) + '</div>' : '') +
       (cabezas.length ? '<ul class="per-filas">' + cabezas.map(filaCaja).join('') + '</ul>' : '') +
-      (hijos.length ? '<p class="et-hijos">Hijos</p><ul class="per-filas">' + hijos.map(filaCaja).join('') + '</ul>' : '') +
-      (dentro || '') + '</div>';
+      // v4.13: los hijos (sueltos o con su caja), juntos en un subgrupo un poco metido hacia dentro
+      (hijos.length || dentro ? '<div class="hijos-grupo"><p class="et-hijos">Hijos</p>' +
+        (hijos.length ? '<ul class="per-filas">' + hijos.map(filaCaja).join('') + '</ul>' : '') + (dentro || '') + '</div>' : '') + '</div>';
   }
 
   /* ---------- v4.10: núcleos familiares ---------- */
