@@ -81,6 +81,7 @@
   .g-bisnietos { background: var(--gen-bisnietos-fondo); color: var(--gen-bisnietos-texto); }
   .g-otros { background: var(--gen-otros-fondo); color: var(--gen-otros-texto); }
   .p.soy-yo { box-shadow: inset 0 0 0 3px var(--color-accion); }
+  button.fila-persona.soy-yo, button.fila-persona.fila-caja.soy-yo { box-shadow: inset 0 0 0 3px var(--color-accion); border-radius: calc(var(--radio) / 2); padding-left: 10px; padding-right: 10px; }
   button.p { border: 0; font: inherit; text-align: left; cursor: pointer; min-height: 40px; }
   button.p:hover { filter: brightness(.95); }
 
@@ -119,7 +120,11 @@
   .comida-cab .nadie.con-icono { margin-left: auto; gap: 6px; min-height: 36px; padding: 4px 10px; white-space: nowrap; }
   .comida-cab .nadie.con-icono svg { width: 18px; height: 18px; flex: none; }
   .cuantos { font-size: 14px; font-weight: 700; color: var(--color-texto-suave); font-variant-numeric: tabular-nums; }
-  .gente { display: flex; flex-wrap: wrap; gap: 6px; }
+  /* v4.14.1: la gente de cada comida, una debajo de otra, con su nota dentro */
+  .gente { display: grid; gap: 4px; }
+  .gente .p { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+  .nota-chip { flex-basis: 100%; font-size: 15px; font-weight: 600; color: var(--color-texto); }
+  .servicio-linea .nota-chip { font-size: 13px; }
   .notas { margin: 0; padding: 0; list-style: none; font-size: 15px; font-weight: 600; color: var(--color-texto-suave); }
   .notas b { color: var(--color-texto); }
   button.anadir { justify-self: start; min-height: 44px; padding: 8px 0; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 800; color: var(--color-principal-oscuro); text-decoration: underline; cursor: pointer; }
@@ -510,7 +515,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.14.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.14.1</footer>
 </div>
 
 <div id="impresion"></div>
@@ -662,9 +667,10 @@
   function chip(id, fecha, turno) {
     const p = persona(id) || deBaja(id);  // v4.7: si se ha quitado de la lista, sus comidas pasadas siguen con su nombre
     const nombre = p ? p.apodo : id;
+    const a = fecha ? apunte(fecha, turno, id) : null;  // v4.14.1: su nota, dentro de su fila
     return '<button type="button" class="p ' + clase(p) + (id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(id) + '"' +
       (fecha ? ' data-fecha="' + fecha + '" data-turno="' + turno + '"' : '') + ' aria-label="Editar a ' + esc(nombre) + '"><b>' + esc(nombre) + marcaMenu(p) + '</b><small>' +
-      esc(deQuien(p)) + '</small></button>';
+      esc(deQuien(p)) + '</small>' + (a && a.nota ? '<span class="nota-chip">' + esc(a.nota) + '</span>' : '') + '</button>';
   }
   /* Marca en la tarjeta para medio menú o sin menú (entero no lleva nada) */
   const ICONO_MEDIO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>';
@@ -917,8 +923,6 @@
       if (serv.length) html += '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
       const al = t.id === 'DORMIR' ? [] : ids.map(persona).filter(function (p) { return p && p.alergias; });
       if (al.length) html += '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>';
-      const notas = ids.map(function (id) { return apunte(fecha, t.id, id); }).filter(function (a) { return a && a.nota; });
-      if (notas.length) html += '<ul class="notas">' + notas.map(function (a) { return '<li><b>' + esc((persona(a.persona) || {}).apodo || a.persona) + ':</b> ' + esc(a.nota) + '</li>'; }).join('') + '</ul>';
       html += '</div>';
     });
     return html + '</article>';
@@ -1101,7 +1105,7 @@
   function filaPersona(p) {
     const fl = falta(p);
     const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
-    return '<li><button type="button" class="fila-persona" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' + esc(p.apodo) + '</b>' +
+    return '<li><button type="button" class="fila-persona' + (p.id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' + esc(p.apodo) + '</b>' +
       (completo && completo !== p.apodo ? '<small class="fp-completo">' + esc(completo) + '</small>' : '') + '<small>' + esc(deQuien(p)) + '</small></span>' +
       (fl.length ? '<span class="fp-falta">Falta: ' + esc(lista_(fl)) + '</span>' : '') + '</button></li>';
   }
@@ -1133,7 +1137,7 @@
     const come = [e === null ? '' : (e === 1 ? '1 año' : e + ' años'), comeTexto(p)].filter(Boolean).join(' · ');
     // v4.12.5: un circulito a quien entró en la familia por su pareja (los «+1»: no son de sangre)
     const deFuera = esDeFuera(p) && !esServicio(p) && p.familia !== 'Otros';
-    return '<li><button type="button" class="fila-persona fila-caja" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' +
+    return '<li><button type="button" class="fila-persona fila-caja' + (p.id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' +
       (deFuera ? '<span class="marca-politico" role="img" aria-label="entró en la familia por su pareja" title="Entró en la familia por su pareja"></span>' : '') + esc(p.apodo) + '</b>' +
       (completo && completo !== p.apodo ? '<small>' + esc(completo) + '</small>' : '') +
       (come ? '<span class="fp-come' + (p.alergias ? ' con-alergia' : '') + '">' + esc(come) + '</span>' : '') +
