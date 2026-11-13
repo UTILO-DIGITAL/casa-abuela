@@ -316,7 +316,9 @@
   .abuela-ficha p { margin: 2px 0 0; font-weight: 700; }
   .per-familia { font-size: 16px; font-weight: 800; margin: 20px 0 6px; }
   .per-familia span { color: var(--color-texto-suave); font-weight: 700; }
-  .per-familia .estado-pareja { vertical-align: middle; color: var(--color-principal-oscuro); font-weight: 800; }
+  .anillo { display: inline-flex; vertical-align: -3px; color: var(--color-principal-oscuro); }
+  .anillo svg { width: 18px; height: 18px; }
+  .per-familia .anillo { color: var(--color-principal-oscuro); }
   .per-filas { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--color-linea); }
   /* v4.12: núcleos familiares como tarjetas, una dentro de otra; cada persona, un botón con su apodo */
   .familia { margin: 0 0 20px; }
@@ -487,7 +489,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.13.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.13.1</footer>
 </div>
 
 <div id="impresion"></div>
@@ -992,7 +994,7 @@
         const a = arbolFamilia(porFamilia[f]);
         const titulo = a.nombre || 'Familia ' + f;
         return leyenda + '<section class="familia"><h3 class="per-familia">' + esc(titulo) + ' <span>' + porFamilia[f].length + '</span>' +
-          (a.estado ? ' <span class="estado-pareja">' + esc(a.estado) + '</span>' : '') + '</h3>' + a.html + '</section>';
+          anillo(a.estado) + '</h3>' + a.html + '</section>';
       }
       return cab + '<ul class="per-filas">' + porFamilia[f].map(function (p) { return filaPersona(p); }).join('') + '</ul>';
     }).join('');
@@ -1083,8 +1085,13 @@
       (come ? '<span class="fp-come' + (p.alergias ? ' con-alergia' : '') + '">' + esc(come) + '</span>' : '') +
       (falta(p).length ? '<span class="fp-falta-corto">' + esc(faltaCorto(p)) + '</span>' : '') + '</span></button></li>';
   }
+  /* v4.13: los casados, con un anillo dibujado; los que solo salen juntos, sin nada */
+  const ICONO_ANILLO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="15" r="6"/><path d="M12 3.5l2.5 2.5L12 8.5 9.5 6z"/></svg>';
+  function anillo(estado) {
+    return estado === 'casados' ? ' <span class="anillo" role="img" aria-label="casados" title="Casados">' + ICONO_ANILLO + '</span>' : '';
+  }
   function tarjeta(titulo, estado, cabezas, hijos, dentro) {
-    return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + (estado ? '<span class="estado-pareja">' + esc(estado) + '</span>' : '') + '</div>' : '') +
+    return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + anillo(estado) + '</div>' : '') +
       (cabezas.length ? '<ul class="per-filas">' + cabezas.map(filaCaja).join('') + '</ul>' : '') +
       (hijos.length ? '<p class="et-hijos">Hijos</p><ul class="per-filas">' + hijos.map(filaCaja).join('') + '</ul>' : '') +
       (dentro || '') + '</div>';
