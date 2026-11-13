@@ -289,12 +289,21 @@
   .quien-soy { margin: 24px 0 0; font-size: 15px; color: var(--color-texto-suave); }
   .actualizando { margin: -8px 0 8px; text-align: center; font-size: 13px; color: var(--color-texto-suave); }
   /* Pestaña Personas */
-  .personas-cab { display: grid; gap: 12px; margin: 0 0 16px; }
-  .personas-cab input { font: inherit; min-height: 44px; padding: 8px 12px; border-radius: calc(var(--radio) / 2); border: 1px solid var(--color-principal-oscuro); background: #fff; color: var(--color-texto); }
-  .per-filtros { display: flex; gap: 8px; flex-wrap: wrap; }
+  /* v4.12.7: buscar, Filtros y Añadir en una línea; el panel de filtros, con su contador en cada opción */
+  .personas-cab { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; }
+  .personas-cab .buscar { flex: 1; min-width: 0; }
+  .personas-cab input { width: 100%; font: inherit; min-height: 44px; padding: 8px 12px; border-radius: calc(var(--radio) / 2); border: 1px solid var(--color-principal-oscuro); background: #fff; color: var(--color-texto); }
+  .personas-cab .accion { padding: 8px 12px; }
+  .personas-cab #per-filtros-btn[aria-expanded="true"], .personas-cab #per-filtros-btn.activos { background: var(--color-principal-oscuro); color: #fff; }
+  .oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .per-filtros-panel { display: grid; gap: 12px; margin: 0 0 16px; padding: 12px 14px; background: #fff; border: 1px solid var(--color-linea); border-radius: var(--radio); }
+  .grupo-filtro h3 { margin: 0 0 6px; font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
+  .per-filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+  button.filtro span { font-weight: 700; opacity: .75; margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .per-resultado { margin: 0 0 16px; font-weight: 800; }
+  .per-resultado button.enlace { margin-left: 8px; padding: 4px 0; }
   button.filtro { min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--color-linea); background: #fff; color: var(--color-texto); font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
   button.filtro[aria-pressed="true"] { background: var(--color-principal-oscuro); border-color: var(--color-principal-oscuro); color: #fff; }
-  .personas-cab > .accion { justify-self: start; }
   .abuela-ficha { display: block; width: 100%; padding: 12px 16px; margin: 0 0 20px; border: 0; border-radius: var(--radio); background: var(--color-principal-claro); color: var(--color-texto); font: inherit; text-align: left; cursor: pointer; }
   .abuela-ficha h2 { margin: 0; font-family: var(--letra-titulos); font-weight: 600; font-size: 20px; }
   .abuela-ficha p { margin: 2px 0 0; font-weight: 700; }
@@ -333,7 +342,7 @@
   .fp-nombre small { font-size: 13px; color: var(--color-texto-suave); font-weight: 600; }
   .fp-datos { font-size: 14px; color: var(--color-texto-suave); }
   .fp-falta { font-size: 14px; font-weight: 800; color: var(--color-error); }
-  @media (min-width: 760px) { .personas-cab { grid-template-columns: minmax(240px, 380px) auto auto; align-items: end; } .personas-cab > .accion { justify-self: end; } }
+  @media (min-width: 760px) { .personas-cab .buscar { flex: 0 1 420px; } .personas-cab [data-nueva-persona] { margin-left: auto; } }
   .huerfanos { margin: 16px 0 0; padding: 10px 14px; border-radius: var(--radio); background: var(--color-destacado-claro); font-size: 14px; }
   .acciones-yo { display: inline-flex; flex-wrap: wrap; gap: 0 16px; margin-left: 6px; }
   .acciones-yo button.enlace { margin-left: 0; }
@@ -440,13 +449,12 @@
 
   <section id="vista-personas" hidden>
     <div class="personas-cab">
-      <label class="campo" for="per-q">Buscar<input id="per-q" type="search" autocomplete="off" placeholder="Nombre, familia o parentesco"></label>
-      <div class="per-filtros" role="group" aria-label="Qué personas ver">
-        <button type="button" class="filtro" data-filtro="todos" aria-pressed="true">Todos</button>
-        <button type="button" class="filtro" data-filtro="falta" aria-pressed="false" id="per-falta">Les falta algo</button>
-      </div>
-      <button type="button" class="accion" data-nueva-persona>Añadir persona</button>
+      <label class="buscar" for="per-q"><span class="oculto">Buscar</span><input id="per-q" type="search" autocomplete="off" placeholder="Buscar por nombre o familia"></label>
+      <button type="button" class="accion" id="per-filtros-btn" aria-expanded="false" aria-controls="per-filtros">Filtros</button>
+      <button type="button" class="accion" data-nueva-persona>Añadir</button>
     </div>
+    <div id="per-filtros" class="per-filtros-panel" hidden></div>
+    <p id="per-resultado" class="per-resultado" hidden></p>
     <div id="per-abuela"></div>
     <div id="per-lista"></div>
   </section>
@@ -471,7 +479,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.12.6</footer>
+  <footer>Hecho con cariño por Utilo · v4.12.7</footer>
 </div>
 
 <div id="impresion"></div>
@@ -903,7 +911,23 @@
   }
 
   /* ---------- Pestaña Personas ---------- */
-  let filtroPersonas = 'todos';
+  // v4.12.7: filtros de Personas (uno por grupo, se combinan); vacío = todos
+  const filtros = { falta: '', familia: '', generacion: '', sangre: '', come: '' };
+  let panelFiltros = false;
+  function hayFiltros() { return Object.keys(filtros).some(function (k) { return filtros[k]; }); }
+  function familiaDe(p) { return esServicio(p) ? 'Servicio' : (p.familia || 'Otros'); }
+  function sangreDe(p) { return familiaDe(p) === 'Servicio' || familiaDe(p) === 'Otros' ? '' : (esDeFuera(p) ? 'pareja' : 'sangre'); }
+  function comeDe(p) { const m = p.menu ? etiquetaMenu(p.menu) : ''; return m === 'Entero' ? 'entero' : (m === 'Medio' ? 'mitad' : (m === 'Nada' ? 'nada' : 'sin')); }
+  const VALOR = {
+    falta: function (p) { return falta(p).length ? 'si' : ''; },
+    familia: familiaDe,
+    generacion: function (p) { return familiaDe(p) === 'Servicio' ? 'servicio' : generacion(p).nombre; },
+    sangre: sangreDe,
+    come: comeDe,
+  };
+  function pasaFiltros(p, salvo) {
+    return Object.keys(filtros).every(function (k) { return k === salvo || !filtros[k] || VALOR[k](p) === filtros[k]; });
+  }
   function falta(p) {
     const f = [];
     if (apodoRepetido(p.apodo, p.id)) f.push('un apodo que no se repita');  // v4.11
@@ -920,28 +944,31 @@
   }
   function pintarPersonas() {
     if (vista !== 'personas') return;
-    const conFalta = datos.personas.filter(function (p) { return falta(p).length; });
-    $('per-falta').textContent = 'Les falta algo (' + conFalta.length + ')';
-    document.querySelectorAll('[data-filtro]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.filtro === filtroPersonas)); });
+    pintarFiltros();
     // La abuela, arriba: lo que come, para todos. v4.12.6: sin botón de cambiar (se abre al tocarla, sin invitar a hacerlo)
     $('per-abuela').innerHTML = abuelas().map(function (a) {
       const come = comeTexto(a) || 'sin anotar lo que come';
       return '<button type="button" class="abuela-ficha" data-comida-abuela aria-label="' + esc(a.apodo) + ': ' + esc(come) + '"><h2>' + esc(a.apodo) + '</h2><p>' + esc(come) + '</p></button>';
     }).join('');
     const q = sinAcentos($('per-q').value.trim());
-    let lista = filtroPersonas === 'falta' ? conFalta : datos.personas;
-    if (q) lista = lista.filter(function (p) { return sinAcentos(p.apodo + ' ' + (p.nombre || '') + ' ' + (p.apellido || '') + ' ' + p.familia + ' ' + deQuien(p)).indexOf(q) !== -1; });
+    let lista = datos.personas.filter(function (p) { return pasaFiltros(p); });
+    if (q) lista = lista.filter(function (p) { return sinAcentos(p.apodo + ' ' + (p.nombre || '') + ' ' + (p.apellido || '') + ' ' + p.familia + ' ' + nombreFamilia(p.familia) + ' ' + deQuien(p)).indexOf(q) !== -1; });
+    const $r = $('per-resultado');
+    $r.hidden = !hayFiltros() && !q;
+    if (!$r.hidden) $r.innerHTML = (lista.length === 1 ? 'Sale 1 persona' : 'Salen ' + lista.length + ' personas') +
+      (hayFiltros() ? '<button type="button" class="enlace" data-quitar-filtros>Quitar filtros</button>' : '');
     if (!lista.length) {
-      $('per-lista').innerHTML = '<p class="vacio">' + (filtroPersonas === 'falta' && !q ? 'A nadie le falta nada por definir.' : 'No hay nadie con ese nombre en la lista. Puedes añadirlo con «Añadir persona».') + '</p>';
+      $('per-lista').innerHTML = '<p class="vacio">' + (hayFiltros() ? 'Nadie cumple estos filtros.' : 'No hay nadie con ese nombre en la lista. Puedes añadirlo con «Añadir».') + '</p>';
       return;
     }
     const porFamilia = {};
     const orden = [];
     lista.forEach(function (p) { const f = esServicio(p) ? 'Servicio' : (p.familia || 'Otros'); if (!porFamilia[f]) { porFamilia[f] = []; orden.push(f); } porFamilia[f].push(p); });
     // v4.10: sin buscar ni filtrar, cada familia se ve por núcleos (un árbol); buscando, la lista plana de siempre
-    const enArbol = hayNucleos() && !q && filtroPersonas === 'todos';
+    // Con el árbol también si solo se filtra por familia
+    const enArbol = hayNucleos() && !q && Object.keys(filtros).every(function (k) { return k === 'familia' || !filtros[k]; });
     $('per-lista').innerHTML = orden.map(function (f) {
-      const cab = '<h3 class="per-familia">' + (f === 'Servicio' || f === 'Otros' ? esc(f) : 'Familia ' + esc(f)) + ' <span>' + porFamilia[f].length + '</span></h3>';
+      const cab = '<h3 class="per-familia">' + esc(nombreFamilia(f)) + ' <span>' + porFamilia[f].length + '</span></h3>';
       if (enArbol) {
         const leyenda = f === orden[0] ? '<p class="leyenda-falta"><span class="marca-politico" aria-hidden="true"></span> Entró en la familia por su pareja.</p>' : '';
         if (f === 'Servicio' || f === 'Otros') return leyenda + '<section class="familia">' + cab + tarjeta('', '', porFamilia[f], [], '') + '</section>';
@@ -954,7 +981,61 @@
       return cab + '<ul class="per-filas">' + porFamilia[f].map(function (p) { return filaPersona(p); }).join('') + '</ul>';
     }).join('');
   }
-  /* Buscando o con «Les falta algo»: una fila por persona, con lo que le falta */
+  /* El nombre de cada familia: el de su núcleo de arriba si lo tiene («Familia Canela Ribas») */
+  function nombreFamilia(f) {
+    if (f === 'Servicio' || f === 'Otros') return f;
+    if (!hayNucleos()) return 'Familia ' + f;
+    const gente = datos.personas.filter(function (p) { return familiaDe(p) === f; });
+    return (gente.length && arbolFamilia(gente).nombre) || 'Familia ' + f;
+  }
+  function pintarFiltros() {
+    const btn = $('per-filtros-btn');
+    btn.setAttribute('aria-expanded', String(panelFiltros));
+    btn.classList.toggle('activos', hayFiltros());
+    btn.textContent = hayFiltros() ? 'Filtros activos' : 'Filtros';
+    const $p = $('per-filtros');
+    $p.hidden = !panelFiltros;
+    if (!panelFiltros) return;
+    const orden = { familia: [], generacion: [] };
+    datos.personas.forEach(function (p) {
+      const f = familiaDe(p), g = VALOR.generacion(p);
+      if (orden.familia.indexOf(f) === -1) orden.familia.push(f);
+      if (orden.generacion.indexOf(g) === -1) orden.generacion.push(g);
+    });
+    const ordenGen = GENERACIONES.map(function (g) { return g.nombre; }).concat(['servicio']);
+    orden.generacion.sort(function (a, b) { return ordenGen.indexOf(a) - ordenGen.indexOf(b); });
+    const grupos = [
+      ['falta', 'Mostrar', [['si', 'Les falta algo']]],
+      ['familia', 'Familia', orden.familia.map(function (f) { return [f, nombreFamilia(f).replace(/^Familia /, '')]; })],
+      ['generacion', 'Generación', orden.generacion.map(function (g) { return [g, g.charAt(0).toUpperCase() + g.slice(1)]; })],
+      ['sangre', 'Sangre', [['sangre', 'De sangre'], ['pareja', 'Entraron por pareja']]],
+      ['come', 'Qué come', [['entero', 'Entero'], ['mitad', 'La mitad'], ['nada', 'No come'], ['sin', 'Sin anotar']]],
+    ];
+    $p.innerHTML = grupos.map(function (g) {
+      const k = g[0];
+      const ops = g[2].map(function (o) {
+        // El contador cuenta con los demás filtros puestos
+        const n = datos.personas.filter(function (p) { return VALOR[k](p) === o[0] && pasaFiltros(p, k); }).length;
+        if (!n && filtros[k] !== o[0]) return '';
+        return '<button type="button" class="filtro" data-fk="' + k + '" data-fv="' + esc(o[0]) + '" aria-pressed="' + (filtros[k] === o[0]) + '">' + esc(o[1]) + '<span>' + n + '</span></button>';
+      }).join('');
+      return ops ? '<div class="grupo-filtro" role="group" aria-label="' + g[1] + '"><h3>' + g[1] + '</h3><div class="per-filtros">' + ops + '</div></div>' : '';
+    }).join('') + (hayFiltros() ? '<div><button type="button" class="enlace" data-quitar-filtros>Quitar filtros</button></div>' : '');
+  }
+  $('per-filtros-btn').addEventListener('click', function () { panelFiltros = !panelFiltros; pintarPersonas(); });
+  $('per-filtros').addEventListener('click', function (e) {
+    const b = e.target.closest('[data-fk]');
+    if (!b) return;
+    filtros[b.dataset.fk] = filtros[b.dataset.fk] === b.dataset.fv ? '' : b.dataset.fv;
+    pintarPersonas();
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('[data-quitar-filtros]')) return;
+    Object.keys(filtros).forEach(function (k) { filtros[k] = ''; });
+    pintarPersonas();
+  });
+
+  /* Buscando o con filtros: una fila por persona, con lo que le falta */
   function filaPersona(p) {
     const fl = falta(p);
     const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
@@ -1190,9 +1271,7 @@
   }
   function lista_(a) { return lista(a); }
   $('per-q').addEventListener('input', function () { pintarPersonas(); });
-  document.querySelectorAll('[data-filtro]').forEach(function (b) {
-    b.addEventListener('click', function () { filtroPersonas = b.dataset.filtro; pintarPersonas(); });
-  });
+
 
   function opcionesLista(valores, sel, nombre) {
     return valores.map(function (v) { return '<option value="' + esc(v) + '"' + (v === sel ? ' selected' : '') + '>' + esc(nombre ? nombre(v) : v) + '</option>'; }).join('');
