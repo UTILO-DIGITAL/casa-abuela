@@ -468,7 +468,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios y negocios del barrio, para que pierdan menos tiempo en organizarse: reservas, turnos del equipo, pedidos o avisos por WhatsApp, cada cosa hecha a la medida del negocio.</p>
     <p>Esta web es un ejemplo: una hoja de cálculo de siempre detrás y una pantalla clara delante, que cualquiera entiende desde el móvil. Si conocéis algún negocio al que le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.12.2</footer>
+  <footer>Hecho con cariño por Utilo · v4.12.3</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1104,21 +1104,42 @@
   function camposNucleo(p) {
     if (!hayNucleos()) return '';
     const pa = p && parejaDe(p);
-    return '<fieldset><legend>Nombre completo y núcleo familiar</legend>' +
+    return '<fieldset><legend>Nombre completo<span class="solo-familia"> y núcleo familiar</span></legend>' +
       '<div class="dos dos-iguales">' + (hayNombre() ? '<label class="campo" for="dlg-nombre">Nombre<input id="dlg-nombre" type="text" maxlength="40" autocomplete="off" value="' + esc(p ? p.nombre || '' : '') + '"></label>' : '') +
       '<label class="campo" for="dlg-apellido">Apellido<input id="dlg-apellido" type="text" maxlength="40" autocomplete="off" value="' + esc(p ? p.apellido || '' : '') + '"></label></div>' +
-      '<div class="dos dos-iguales"><label class="campo" for="dlg-sexo">Es<select id="dlg-sexo"><option value="">Sin decir</option>' +
+      '<div class="solo-familia nucleo-campos"><div class="dos dos-iguales"><label class="campo" for="dlg-sexo">Es<select id="dlg-sexo"><option value="">Sin decir</option>' +
       ['Hombre', 'Mujer'].map(function (v) { return '<option value="' + v + '"' + (p && p.sexo === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') + '</select></label></div>' +
       '<label class="campo" for="dlg-pareja">Pareja<select id="dlg-pareja">' + opcionesPersonas(pa ? pa.id : '', p ? p.id : '') + '</select></label>' +
       (hayCasados() ? '<label class="campo" for="dlg-casados">¿Están casados?<select id="dlg-casados"><option value="">Sin decir</option>' +
         ['Sí', 'No'].map(function (v) { return '<option value="' + v + '"' + (p && p.casados === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') + '</select></label>' : '') +
       '<label class="campo" for="dlg-hijode">Hijo o hija de<select id="dlg-hijode">' + opcionesPersonas(p ? p.hijoDe || '' : '', p ? p.id : '') + '</select></label>' +
-      '<p class="ayuda">Con su pareja forma un núcleo («Familia» y los apellidos de él y de ella). Basta con poner a uno de los padres: sale en el núcleo de ese padre o madre y su pareja.</p></fieldset>';
+      '<p class="ayuda">Con su pareja forma un núcleo («Familia» y los apellidos de él y de ella). Basta con poner a uno de los padres: sale en el núcleo de ese padre o madre y su pareja.</p></div></fieldset>';
+  }
+  /* Del Servicio o de Otros: sin parentesco ni núcleo (y a Otros, sin cumpleaños) */
+  function ajustarFormularioFamilia() {
+    const sel = $('dlg-familia');
+    if (!sel) return;
+    const fam = sel.value, fuera = fam === 'Servicio' || fam === 'Otros';
+    $dlg.querySelectorAll('.solo-familia').forEach(function (e) { e.hidden = fuera; });
+    $dlg.querySelectorAll('.solo-no-otros').forEach(function (e) { e.hidden = fam === 'Otros'; });
+    const jer = $('dlg-jerarquia');
+    if (fuera && jer && Array.from(jer.options).some(function (o) { return o.value === 'Otros'; })) jer.value = 'Otros';
+  }
+  function montarFormularioFamilia() {
+    const sel = $('dlg-familia');
+    if (sel) sel.addEventListener('change', ajustarFormularioFamilia);
+    ajustarFormularioFamilia();
   }
   function leerNucleo(p) {
     if (!hayNucleos()) return {};
     const c = {}, pa = p ? parejaDe(p) : null;
     if (hayNombre()) { const nom = $('dlg-nombre').value.trim(); if (nom !== (p ? p.nombre || '' : '')) c.nombre = nom; }
+    const fam = $('dlg-familia') ? $('dlg-familia').value : '';
+    if (fam === 'Servicio' || fam === 'Otros') {  // de fuera: solo nombre y apellido
+      const ap = $('dlg-apellido').value.trim();
+      if (ap !== (p ? p.apellido || '' : '')) c.apellido = ap;
+      return c;
+    }
     const v = { apellido: $('dlg-apellido').value.trim(), sexo: $('dlg-sexo').value, pareja: $('dlg-pareja').value, hijoDe: $('dlg-hijode').value };
     if (v.apellido !== (p ? p.apellido || '' : '')) c.apellido = v.apellido;
     if (v.sexo !== (p ? p.sexo || '' : '')) c.sexo = v.sexo;
@@ -1169,8 +1190,9 @@
     const l = datos.listas || { jerarquias: [], familias: [] };
     return '<fieldset><legend>Nombre y familia</legend>' +
       '<label class="campo" for="dlg-apodo">Apodo (como le llamáis en casa; no se puede repetir)<input id="dlg-apodo" type="text" maxlength="40" autocomplete="off" value="' + esc(p ? p.apodo : '') + '"></label>' +
-      '<div class="dos dos-iguales"><label class="campo" for="dlg-jerarquia">Parentesco con la abuela<select id="dlg-jerarquia">' + (p ? '' : '<option value="">Elige</option>') + opcionesLista(l.jerarquias, p ? p.jerarquia : '', nombreJerarquia) + '</select></label>' +
-      '<label class="campo" for="dlg-familia">Familia<select id="dlg-familia">' + (p ? '' : '<option value="">Elige</option>') + opcionesLista(l.familias, p ? p.familia : '') + '</select></label></div>' +
+      // v4.12.3: primero la familia; si es del Servicio o de Otros, no se pregunta el parentesco (es «Otros»)
+      '<div class="dos dos-iguales"><label class="campo" for="dlg-familia">Familia<select id="dlg-familia">' + (p ? '' : '<option value="">Elige</option>') + opcionesLista(l.familias, p ? p.familia : '') + '</select></label>' +
+      '<label class="campo solo-familia" for="dlg-jerarquia">Parentesco con la abuela<select id="dlg-jerarquia">' + (p ? '' : '<option value="">Elige</option>') + opcionesLista(l.jerarquias, p ? p.jerarquia : '', nombreJerarquia) + '</select></label></div>' +
       (p ? '<p class="ayuda">Si le cambias el nombre o el parentesco, sus comidas apuntadas siguen siendo suyas.</p>' : '') + '</fieldset>';
   }
 
@@ -1178,11 +1200,12 @@
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Añadir persona</h2></div><div class="dlg-cuerpo">' + camposFicha(null) + camposNucleo(null) +
       '<fieldset><legend>Para la cocina</legend><label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + opcionesMenu((datos.menus || [])[0]) + '</select></label>' +
       '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna"></label></fieldset>' +
-      '<fieldset><legend>Cumpleaños</legend><div class="dos"><label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
+      '<fieldset class="solo-no-otros"><legend>Cumpleaños</legend><div class="dos"><label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
       Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' + MESES.map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select></label></div></fieldset></div>' +
       pie('Añadir a la lista'));
     if (nombre) $('dlg-apodo').value = nombre;
+    montarFormularioFamilia();
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
       const apodo = $('dlg-apodo').value.trim(), jer = $('dlg-jerarquia').value, fam = $('dlg-familia').value;
@@ -1493,7 +1516,7 @@
       '<label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + (p.menu ? '' : '<option value="">Sin definir</option>') + opcionesMenu(p.menu) + '</select></label>' +
       '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna" value="' + esc(p.alergias) + '"></label></fieldset>';
     const cd = p.cumple ? Number(p.cumple.slice(0, 2)) : 0, cm = p.cumple ? Number(p.cumple.slice(3, 5)) : 0;
-    html += '<fieldset><legend>Cumpleaños</legend><div class="dos">' +
+    html += '<fieldset class="solo-no-otros"><legend>Cumpleaños</legend><div class="dos">' +
       '<label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
       Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '"' + (cd === i + 1 ? ' selected' : '') + '>' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' +
@@ -1508,6 +1531,7 @@
     html += '<fieldset><legend>Quitar de la lista</legend><p class="ayuda">Si se añadió por error o ya no va a venir.</p>' +
       '<button type="button" class="accion quitar" id="dlg-baja">Quitar a ' + esc(p.apodo) + ' de la lista</button></fieldset></div>' + pie('Guardar cambios');
     abrirDialogo(html);
+    montarFormularioFamilia();
     $('dlg-baja').addEventListener('click', function () { confirmarBaja(p); });
     }
 
