@@ -111,3 +111,20 @@ ver('persona nueva con apellido y pareja', quien('(N) - Laura').apellido === 'L�
 d = R.guardarPersona(J_, { apodo: 'Jordi P' }, M_, V);
 ver('si Jordi cambia de nombre, su pareja y sus referencias le siguen', quien(M_).pareja === '(T+1) - Jordi P' && quien('(T+1) - Jordi P').pareja === M_);
 ver('queda en el registro', hojas.MESA_CAMBIOS.filas.some(f => /son pareja/.test(f[3])) && hojas.MESA_CAMBIOS.filas.some(f => /es hijo o hija de/.test(f[3])));
+
+// ---------- v4.11: nombre y apodo único ----------
+d = R.guardarPersona(M_, { nombre: 'Mercedes', apellido: 'Ribas' }, M_, V);
+ver('nombre de verdad y título N', quien(M_).nombre === 'Mercedes' && hojas.PERSONAS.filas[0][13] === 'Nombre');
+err = ''; try { R.crearPersona({ apodo: 'mercedes', jerarquia: 'Nietos', familia: 'Canela' }, M_, V); } catch (e) { err = e.message; }
+ver('no se puede añadir otro apodo «mercedes» (aunque sea otra jerarquía y en minúsculas)', /no se puede repetir/.test(err));
+err = ''; try { R.crearPersona({ apodo: 'Jordí P', jerarquia: 'Nietos', familia: 'Canela' }, M_, V); } catch (e) { err = e.message; }
+ver('ni «Jordí P» con acento si ya está «Jordi P»', /no se puede repetir/.test(err));
+err = ''; try { R.guardarPersona('(O) - Amiga', { apodo: 'Jan' }, M_, V); } catch (e) { err = e.message; }
+ver('ni cambiar un apodo a uno que ya existe', /no se puede repetir/.test(err));
+d = R.guardarPersona('(O) - Amiga', { apodo: 'Amiga M' }, M_, V);
+ver('cambiar a un apodo libre, sí', !!d.personas.find(p => p.id === '(O) - Amiga M'));
+d = R.darDeBaja('(O) - Amiga M', M_, V);
+err = ''; try { R.crearPersona({ apodo: 'Amiga M', jerarquia: 'Nietos', familia: 'Canela' }, M_, V); } catch (e) { err = e.message; }
+ver('el apodo de alguien de baja tampoco se reutiliza con otro parentesco', /no se puede repetir/.test(err));
+d = R.crearPersona({ apodo: 'Amiga M', jerarquia: 'Otros', familia: 'Otros', nombre: 'Ana' }, M_, V);
+ver('pero se recupera con el mismo parentesco, con su nombre', !!d.personas.find(p => p.id === '(O) - Amiga M' && p.nombre === 'Ana'));
