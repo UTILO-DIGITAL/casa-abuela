@@ -22,7 +22,7 @@
  *   MESA_ALIAS    ID_ANTIGUO | ID_NUEVO | NOTA   (si a alguien se le cambia el apodo o la jerarquía en PERSONAS)
  *   MESA_VISITAS  PERSONA_ID | ULTIMA_VEZ | VECES (v4.58; se crea sola: quién abre la web, como mucho una vez por hora)
  *   MESA_EVENTOS  ID | NOMBRE | DESDE | HASTA | CUANDO (DIA, COMIDA, CENA o DORMIR) | TEXTO | VAN | NO_VAN (Ids con «;») | CREADO_EN | BORRADO | LUGAR | HORA | TURNOS (v4.33: de cada día, los que se salta) (v4.28; se crea sola)
- *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), PISTA (v4.18: se enseña al pedir la clave), ADMIN_IDS (v4.58: quién ve los Ajustes, Ids con «;»), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
+ *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), PISTA (v4.18: se enseña al pedir la clave), ADMIN_IDS (v4.58: quién ve los Ajustes, Ids con «;»), NO_CUENTAN (v4.61: quién no cuenta en «Quién la usa»), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
  *                 (EXCLUIR_IDS: no salen para apuntarse, pero pueden hacer cambios, como la abuela)
  * Turnos: COMIDA, CENA y DORMIR (quién pasa la noche en casa).
  * El servicio son las personas de PERSONAS con Familia = «Servicio»: cuentan para cocinar y no como compañía en comida y cena; para dormir, sí.
@@ -223,6 +223,7 @@ function leerConfigSin_(ss) {
     clave: String(mapa.CLAVE || '').trim(),
     pista: String(mapa.PISTA || '').trim(),
     admins: String(mapa.ADMIN_IDS || '').split(';').map(function (s) { return s.trim(); }).filter(Boolean),  // v4.58
+    noCuentan: String(mapa.NO_CUENTAN || '').split(';').map(function (s) { return s.trim(); }).filter(Boolean),  // v4.61: quién no cuenta en «Quién la usa»
   };
 }
 
@@ -1225,7 +1226,7 @@ function getAjustes(quien) {
     return { persona: String(f[0]).trim(), ultima: f[1] instanceof Date ? Utilities.formatDate(f[1], TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(f[1]), veces: Number(f[2]) || 0 };
   }) : [];
   return {
-    config: { clave: config.clave, pista: config.pista, horaComida: config.horaComida, horaCena: config.horaCena, horaDormir: config.horaDormir, avisoHoras: config.avisoHoras, inicio: config.inicio },
+    config: { clave: config.clave, pista: config.pista, horaComida: config.horaComida, horaCena: config.horaCena, horaDormir: config.horaDormir, avisoHoras: config.avisoHoras, inicio: config.inicio, noCuentan: config.noCuentan },
     cambios: cambios, visitas: visitas,
   };
 }
@@ -1257,6 +1258,11 @@ function guardarAjustes(aj, quien, vista) {
     if (aj.inicio !== undefined) {
       if (!esFecha_(aj.inicio)) throw new Error('Elige el día en que empieza el calendario.');
       if (aj.inicio !== config.inicio) { ponerConfig_(ss, 'FECHA_INICIO', aj.inicio); registro.push('El calendario empieza el ' + aj.inicio); }
+    }
+    if (aj.noCuentan !== undefined) {  // v4.61
+      if (!Array.isArray(aj.noCuentan)) throw new Error('La lista de quién no cuenta no se entiende.');
+      const lista = aj.noCuentan.map(function (x) { return String(x).replace(/;/g, ' ').trim(); }).filter(Boolean);
+      if (lista.join(';') !== config.noCuentan.join(';')) { ponerConfig_(ss, 'NO_CUENTAN', lista.join('; ')); registro.push('Quién no cuenta en «Quién la usa»: ' + (lista.length ? lista.length + ' personas' : 'nadie')); }
     }
     if (!registro.length) throw new Error('No has cambiado nada.');
     try { CacheService.getScriptCache().remove('clave_familia_v2'); } catch (e) { /* la clave nueva vale en 5 minutos */ }

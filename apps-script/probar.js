@@ -333,6 +333,8 @@ err = ''; try { R.guardarAjustes({ clave: '' }, M_, V2); } catch (e) { err = e.m
 ver('la clave no puede quedar vacía', /no puede quedar vacía/.test(err));
 err = ''; try { R.guardarAjustes({ horaComida: '13:30' }, JP_, V2); } catch (e) { err = e.message; }
 ver('los demás no pueden guardar ajustes', /solo para quien lleva la web/.test(err));
+d = R.guardarAjustes({ noCuentan: [N_, JP_] }, M_, V2);
+ver('quién no cuenta, en el Excel', R.getAjustes(M_).config.noCuentan.join() === [N_, JP_].join());
 hojas.MESA_CONFIG.filas = hojas.MESA_CONFIG.filas.filter(f => f[0] !== 'CLAVE' && f[0] !== 'PISTA');
 d = R.getDatos(Object.assign({}, V2, { yo: JP_ }));
 ver('al entrar, se apunta la visita (una vez)', !!hojas.MESA_VISITAS && hojas.MESA_VISITAS.filas.some(f => f[0] === JP_ && f[2] === '1'));

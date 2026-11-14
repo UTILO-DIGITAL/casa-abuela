@@ -361,7 +361,10 @@
   .aj-fam-c { font-size: 13px; color: var(--color-texto-suave); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .aj-top { margin: 0; padding-left: 20px; font-size: 14px; display: grid; gap: 4px; }
   .aj-top span { color: var(--color-texto-suave); }
-  .aj-nunca-l li { color: var(--color-texto); }
+  .aj-nunca-l li { color: var(--color-texto); line-height: 2; }
+  .aj-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px 2px 10px; margin: 2px 0; border-radius: 999px; background: #FFE7E0; font-weight: 700; font-size: 13px; }
+  .aj-chip.gris { background: var(--color-linea); }
+  .aj-chip button { border: 0; border-radius: 999px; padding: 3px 8px; background: #fff; font: inherit; font-size: 12px; font-weight: 700; color: var(--color-texto-suave); cursor: pointer; }
   .aj-nunca-l b { color: var(--color-accion); }
   .aj-hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; font-size: 14px; max-height: 60vh; overflow: auto; }
   .aj-hist li { padding: 7px 0; border-top: 1px solid var(--color-linea); }
@@ -1567,7 +1570,7 @@
     return d <= 0 ? 'hoy' : d === 1 ? 'ayer' : d < 14 ? 'hace ' + d + ' días' : d < 60 ? 'hace ' + Math.round(d / 7) + ' semanas' : 'hace ' + Math.round(d / 30) + ' meses';
   }
   /* v4.61: quién la usa, como un pequeño panel: cifras, por familia, los más activos y quién no la ha usado */
-  function panelUso(gente, usan, nunca, visita, cambiosDe) {
+  function panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan) {
     const h = hoy(), hace7 = sumar(h, -7), hace30 = sumar(h, -30);
     const activos7 = gente.filter(function (p) { const v = visita[p.id]; return v && v.ultima.slice(0, 10) > hace7; }).length;
     const cambios7 = ajustes.cambios.filter(function (x) { return x.cuando.slice(0, 10) > hace7; }).length;
@@ -1605,10 +1608,22 @@
         return '<tr><td><b>' + esc(p.apodo) + '</b></td><td>' + esc(v ? haceCuanto(v.ultima) : '—') + '</td><td class="n">' + (cambiosDe[p.id] || 0) + '</td></tr>';
       }).join('') + '</tbody></table>' : '<p class="vacio">Aún nadie.</p>') +
       (nunca.length ? '<h3 class="rf-sec">No la han usado nunca (' + nunca.length + ')</h3><ul class="aj-nunca-l">' + porFam.filter(function (x) { return x.nunca.length; }).map(function (x) {
-        return '<li><b>' + esc(famNom(x.f)) + ':</b> ' + esc(x.nunca.map(function (p) { return p.apodo; }).join(', ')) + '</li>';
-      }).join('') + '</ul>' : '') +
-      '<p class="ayuda">Las visitas se apuntan desde que se publicó esto (como mucho una vez por hora); los cambios, de los últimos ' + ajustes.cambios.length + '. No cuenta a los niños ni al servicio.</p></section>';
+        return '<li><b>' + esc(famNom(x.f)) + ':</b> ' + x.nunca.map(function (p) { return '<span class="aj-chip">' + esc(p.apodo) + '<button type="button" data-no-cuenta="' + esc(p.id) + '" aria-label="' + esc(p.apodo) + ' no cuenta">No cuenta</button></span>'; }).join(' ') + '</li>';
+      }).join('') + '</ul><p class="ayuda">Si alguien no va a usarla (no tiene móvil, por ejemplo), toca «No cuenta» y deja de salir aquí y en las cifras.</p>' : '') +
+      (noCuentan.length ? '<h3 class="rf-sec">No cuentan (' + noCuentan.length + ')</h3><p>' + noCuentan.map(function (id) { return '<span class="aj-chip gris">' + esc(nombre(id)) + '<button type="button" data-si-cuenta="' + esc(id) + '" aria-label="Volver a contar a ' + esc(nombre(id)) + '">Volver a contar</button></span>'; }).join(' ') + '</p>' : '') +
+      '<p class="ayuda">Las visitas se apuntan desde que se publicó esto (como mucho una vez por hora); los cambios, de los últimos ' + ajustes.cambios.length + '. No cuentan los bisnietos, los menores de 18, el servicio ni los marcados como «No cuenta».</p></section>';
   }
+  // v4.61: «No cuenta» / «Volver a contar»: se guarda en el Excel al momento (montado una sola vez)
+  document.addEventListener('click', function (e) {
+    const b = e.target.closest('[data-no-cuenta], [data-si-cuenta]');
+    if (!b || !ajustes) return;
+    const c = ajustes.config;
+    const lista = (c.noCuentan || []).filter(function (id) { return id !== b.dataset.siCuenta; });
+    if (b.dataset.noCuenta && lista.indexOf(b.dataset.noCuenta) === -1) lista.push(b.dataset.noCuenta);
+    c.noCuentan = lista; pintarAjustes();
+    llamar('guardarAjustes', [{ noCuentan: lista }, yo, rango()]).then(function (d) { datos = d; guardarLocal(); })
+      .catch(function (err) { aviso('No se ha guardado. ' + mensajeError(err), 9000); ajustes = null; pintarAjustes(); });
+  });
   function cargarAjustes() {
     if (ajCargando) return;
     ajCargando = true;
@@ -1624,8 +1639,10 @@
     ajustes.cambios.forEach(function (x) { cambiosDe[x.quien] = (cambiosDe[x.quien] || 0) + 1; if (!ultimoCambio[x.quien]) ultimoCambio[x.quien] = x.cuando; });
     const visita = {};
     ajustes.visitas.forEach(function (v) { visita[v.persona] = v; });
-    const mayor = function (p) { const e = edad(p); return e !== null ? e >= 14 : p.jerarquia !== 'Biznietos'; };  // los niños no cuentan
-    const gente = abuelas().concat(datos.personas).filter(function (p) { return !esFallecido(p) && !enCamino(p) && !esServicio(p) && p.familia !== 'Otros' && mayor(p); });
+    // v4.61: no cuentan los bisnietos, los menores de 18 ni los que se marcan como «No cuenta»
+    const noCuentan = c.noCuentan || [];
+    const mayor = function (p) { if (p.jerarquia === 'Biznietos') return false; const e = edad(p); return e === null || e >= 18; };
+    const gente = abuelas().concat(datos.personas).filter(function (p) { return !esFallecido(p) && !enCamino(p) && !esServicio(p) && p.familia !== 'Otros' && mayor(p) && noCuentan.indexOf(p.id) === -1; });
     const usan = gente.filter(function (p) { return visita[p.id] || cambiosDe[p.id]; })
       .sort(function (a, b) { return ((visita[b.id] || {}).ultima || ultimoCambio[b.id] || '').localeCompare((visita[a.id] || {}).ultima || ultimoCambio[a.id] || ''); });
     const nunca = gente.filter(function (p) { return !visita[p.id] && !cambiosDe[p.id]; });
@@ -1637,7 +1654,7 @@
         '<div class="dos dos-iguales">' + campo('aviso', 'Avisar de «falta alguien» (horas antes)', 'number', c.avisoHoras, ' min="0" max="48"') + campo('inicio', 'El calendario empieza el', 'date', c.inicio) + '</div>' +
         '<p class="ayuda">Si cambias la clave, a todos les pedirá la nueva la próxima vez que entren (con la pista).</p>' +
         '<div><button type="button" class="principal" id="aj-guardar">Guardar ajustes</button></div></section>' +
-      panelUso(gente, usan, nunca, visita, cambiosDe) +
+      panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan) +
       '<section class="aj-sec"><h2>Historial de cambios</h2>' +
         '<label class="buscar" for="aj-q"><span class="oculto">Buscar</span><input id="aj-q" type="search" autocomplete="off" placeholder="Buscar (persona, fecha, qué)"></label>' +
         '<ul class="aj-hist" id="aj-hist"></ul></section>';
@@ -1650,6 +1667,7 @@
       }).join('') : '<li>Nada con eso.</li>';
     };
     $('aj-q').addEventListener('input', pintarHist);
+
     const ir = $a.querySelector('[data-ir-rellenar]'); if (ir) ir.addEventListener('click', function (e) { e.preventDefault(); rfFamilia = ''; ponerVista('rellenar'); history.replaceState(null, '', '#rellenar'); window.scrollTo(0, 0); });
     pintarHist();
     $('aj-guardar').addEventListener('click', function () {
