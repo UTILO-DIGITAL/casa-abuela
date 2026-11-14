@@ -805,8 +805,9 @@
   }
   function vidaTexto(p) {
     const n = p.cumple && p.cumple.length >= 10 ? fechaTexto(p.cumple) : '';
-    if (p.fallecio === 'Sí') return n ? n + ' – falleció' : 'falleció';  // v4.20: sin saber cuándo
-    return (n ? n + ' – ' : 'falleció en ') + fechaTexto(p.fallecio);
+    // v4.20: sin la palabra «falleció» (la cruz ya lo dice): solo las fechas que se sepan
+    const f = p.fallecio === 'Sí' ? '' : fechaTexto(p.fallecio);
+    return n && f ? n + ' – ' + f : (n || f);
   }
   function menusTexto(ids) {
     const menus = {};
