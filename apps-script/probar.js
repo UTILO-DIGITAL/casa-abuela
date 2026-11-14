@@ -60,7 +60,7 @@ const ctx = {
   ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, api_ };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, api_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -157,6 +157,8 @@ err = ''; try { R.guardarPersona(M_, { boda: '31/02/1985' }, M_, V); } catch (e)
 ver('una boda que no existe no se guarda', /la boda/.test(err));
 d = R.guardarPersona(M_, { boda: '20/06/2030' }, M_, V);
 ver('una boda que viene, también', quien(M_).boda === '20/06/2030');
+d = R.guardarPersona(M_, { boda: '04/10' }, M_, V);
+ver('v4.30: una boda sin año, en los dos', quien(M_).boda === '04/10' && quien('(T+1) - Jordi P').boda === '04/10');
 err = ''; try { R.guardarPersona(M_, { boda: '2099' }, M_, V); } catch (e) { err = e.message; }
 ver('pero no de aquí a más de diez años', /diez años/.test(err));
 err = ''; try { R.guardarPersona(M_, { novios: '2030' }, M_, V); } catch (e) { err = e.message; }
@@ -242,6 +244,68 @@ d = R.guardarPersona('(N) - Nacio', { fallecio: '06/2008' }, M_, V2);
 ver('y se le puede volver a poner fecha', (d.personas.find(p => p.id === '(N) - Nacio') || {}).fallecio === '00/06/2008');
 d = R.guardarPersona(M_, { cumple: '1952' }, M_, V2);
 ver('cumpleaños con solo el año', quien(M_).cumple === '00/00/1952');
+
+// ---------- v4.28: eventos ----------
+const JP_ = '(T+1) - Jordi P';
+ver('sin MESA_EVENTOS, ningún evento', Array.isArray(d.eventos) && d.eventos.length === 0);
+d = R.guardarEvento({ nombre: 'PortAventura', desde: '2026-12-19', hasta: '2026-12-20', cuando: 'DIA', texto: 'Salimos a las 9' }, M_, V2);
+const ev1 = (d.eventos || []).find(e => e.nombre === 'PortAventura') || {};
+ver('se crea la pestaña y el evento, de dos días', !!hojas.MESA_EVENTOS && ev1.desde === '2026-12-19' && ev1.hasta === '2026-12-20' && ev1.cuando === 'DIA' && ev1.texto === 'Salimos a las 9');
+d = R.apuntarEvento(ev1.id, M_, true, M_, V2);
+d = R.apuntarEvento(ev1.id, JP_, false, M_, V2);
+let evt = d.eventos.find(e => e.id === ev1.id);
+ver('quién va y quién no', evt.van.join() === M_ && evt.noVan.join() === JP_);
+d = R.apuntarEvento(ev1.id, JP_, true, M_, V2);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('cambiar de «no voy» a «voy»', evt.van.join() === M_ + ',' + JP_ && !evt.noVan.length);
+d = R.apuntarEvento(ev1.id, M_, null, M_, V2);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('y quitarse', evt.van.join() === JP_);
+d = R.guardarEvento({ id: ev1.id, nombre: 'PortAventura y Ferrari Land', desde: '2026-12-19', hasta: '2026-12-21', cuando: 'DIA' }, M_, V2);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('cambiar el evento no borra quién va', evt.nombre === 'PortAventura y Ferrari Land' && evt.hasta === '2026-12-21' && evt.van.join() === JP_);
+err = ''; try { R.guardarEvento({ nombre: 'X', desde: '2026-12-20', hasta: '2026-12-19' }, M_, V2); } catch (e) { err = e.message; }
+ver('el último día no puede ser antes', /antes del primero/.test(err));
+err = ''; try { R.guardarEvento({ nombre: '', desde: '2026-12-20' }, M_, V2); } catch (e) { err = e.message; }
+ver('sin nombre, no', /nombre del evento/.test(err));
+err = ''; try { R.guardarEvento({ nombre: 'Largo', desde: '2026-12-01', hasta: '2027-01-15' }, M_, V2); } catch (e) { err = e.message; }
+ver('un mes como mucho', /un mes/.test(err));
+err = ''; try { R.apuntarEvento(ev1.id, '(X) - Nadie', true, M_, V2); } catch (e) { err = e.message; }
+ver('apuntar a alguien que no está, no', /No encontramos/.test(err));
+d = R.borrarEvento(ev1.id, M_, V2);
+ver('borrar el evento', !d.eventos.some(e => e.id === ev1.id) && hojas.MESA_EVENTOS.filas.some(f => f[0] === ev1.id && f[9]));
+err = ''; try { R.apuntarEvento(ev1.id, M_, true, M_, V2); } catch (e) { err = e.message; }
+ver('y ya no se puede apuntar nadie', /ya no está/.test(err));
+
+d = R.guardarEvento({ nombre: 'Cena de Navidad', desde: '2026-12-24', lugar: 'Casa de la abuela', hora: '21:00' }, M_, V2);
+const cen = d.eventos.find(e => e.nombre === 'Cena de Navidad') || {};
+ver('el evento con dónde y a qué hora', cen.lugar === 'Casa de la abuela' && cen.hora === '21:00' && cen.hasta === '2026-12-24');
+d = R.apuntarEvento(cen.id, JP_, true, M_, V2);
+ver('se puede apuntar a otro (un padre por su hijo)', d.eventos.find(e => e.id === cen.id).van.join() === JP_);
+
+d = R.guardarEvento({ nombre: 'PortAventura', desde: '2026-12-19', hasta: '2026-12-20', cuando: 'DIA', turnos: { '2026-12-19': ['COMIDA', 'CENA', 'DORMIR'], '2026-12-20': ['COMIDA'], '2027-01-01': ['CENA'] } }, M_, V2);
+const pa = d.eventos.find(e => e.nombre === 'PortAventura' && e.desde === '2026-12-19') || {};
+ver('v4.33: los turnos de cada día, y nada fuera del evento', JSON.stringify(pa.turnos) === JSON.stringify({ '2026-12-19': ['COMIDA', 'CENA', 'DORMIR'], '2026-12-20': ['COMIDA'] }));
+err = ''; try { R.guardarEvento({ nombre: 'Nada', desde: '2026-12-19', hasta: '2026-12-20', turnos: { '2026-12-19': [], '2026-12-20': [] } }, M_, V2); } catch (e) { err = e.message; }
+ver('al menos un turno', /al menos una/.test(err));
+d = R.guardarEvento({ nombre: 'Un día', desde: '2026-12-22', cuando: 'CENA' }, M_, V2);
+ver('un evento de un día, sin turnos', (d.eventos.find(e => e.nombre === 'Un día') || {}).turnos === null);
+
+// ---------- v4.28: otras fechas de cada persona ----------
+d = R.guardarPersona(M_, { fechas: [{ que: 'Bautizo', fecha: '12/05/1961' }, { que: 'Carnet de conducir', fecha: '03/1980' }] }, M_, V2);
+ver('otras fechas, con lo que se sepa', JSON.stringify(quien(M_).fechas) === JSON.stringify([{ que: 'Bautizo', fecha: '12/05/1961' }, { que: 'Carnet de conducir', fecha: '00/03/1980' }]) && hojas.PERSONAS.filas[0][18] === 'Otras fechas');
+d = R.guardarPersona(M_, { fechas: [{ que: 'Comunión; 2ª: parte', fecha: '1968' }] }, M_, V2);
+ver('sin «;» ni «:» en el nombre, y se cambia la lista entera', quien(M_).fechas.length === 1 && quien(M_).fechas[0].que === 'Comunión 2ª parte' && quien(M_).fechas[0].fecha === '00/00/1968');
+err = ''; try { R.guardarPersona(M_, { fechas: [{ que: '', fecha: '1968' }] }, M_, V2); } catch (e) { err = e.message; }
+ver('sin decir qué es, no', /ponle qué es/.test(err));
+err = ''; try { R.guardarPersona(M_, { fechas: [{ que: 'Futuro', fecha: '2099' }] }, M_, V2); } catch (e) { err = e.message; }
+ver('ni una fecha imposible', /Futuro/.test(err));
+d = R.guardarPersona(M_, { fechas: [{ que: 'Santo', fecha: '25/07' }] }, M_, V2);
+ver('v4.30: una fecha sin año (un santo)', quien(M_).fechas[0].fecha === '25/07');
+err = ''; try { R.guardarPersona(M_, { fechas: [{ que: 'Santo', fecha: '31/02' }] }, M_, V2); } catch (e) { err = e.message; }
+ver('pero que exista', /Santo/.test(err));
+d = R.guardarPersona(M_, { fechas: [] }, M_, V2);
+ver('y se pueden quitar todas', quien(M_).fechas.length === 0);
 
 // ---------- v4.17: la clave de la familia ----------
 ver('sin CLAVE en MESA_CONFIG, no se pide', R.api_('getDatos', [V2], undefined).ok === true);

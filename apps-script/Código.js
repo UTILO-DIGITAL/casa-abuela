@@ -20,6 +20,7 @@
  *                 (la abuela no está en esa comida, cena o noche; FUERA = las tres, de versiones anteriores)
  *   MESA_CAMBIOS  CUANDO | QUIEN_ID | QUIEN | CAMBIO   (registro de quién cambia qué)
  *   MESA_ALIAS    ID_ANTIGUO | ID_NUEVO | NOTA   (si a alguien se le cambia el apodo o la jerarquía en PERSONAS)
+ *   MESA_EVENTOS  ID | NOMBRE | DESDE | HASTA | CUANDO (DIA, COMIDA, CENA o DORMIR) | TEXTO | VAN | NO_VAN (Ids con «;») | CREADO_EN | BORRADO | LUGAR | HORA | TURNOS (v4.33: de cada día, los que se salta) (v4.28; se crea sola)
  *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), PISTA (v4.18: se enseña al pedir la clave), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
  *                 (EXCLUIR_IDS: no salen para apuntarse, pero pueden hacer cambios, como la abuela)
  * Turnos: COMIDA, CENA y DORMIR (quién pasa la noche en casa).
@@ -30,7 +31,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.24.0
+ * Versión 4.33.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -42,6 +43,7 @@ const HOJA_CONFIG = 'MESA_CONFIG';
 const HOJA_DIAS = 'MESA_DIAS';
 const HOJA_CAMBIOS = 'MESA_CAMBIOS';
 const HOJA_ALIAS = 'MESA_ALIAS';
+const HOJA_EVENTOS = 'MESA_EVENTOS';  // v4.28: los eventos (castañada, PortAventura…) con quién va
 const TURNOS = ['COMIDA', 'CENA', 'DORMIR'];
 const MENUS_BASE = ['\uD83C\uDF15 Entero', '\uD83C\uDF17 Medio', '\uD83C\uDF7C Nada'];  // luna llena, media luna y biberón, escritos así para que no se estropeen al copiar
 const COL_MENU = 6;      // F en PERSONAS
@@ -57,7 +59,9 @@ const COL_CASADOS = 15;  // O: Sí o No (v4.12)
 const COL_FALLECIO = 16; // P: fecha de fallecimiento, como se sepa (v4.16)
 const COL_NOVIOS = 17;   // Q: cuándo empezaron a salir, como se sepa, en los dos de la pareja (v4.21)
 const COL_BODA = 18;     // R: cuándo se casaron, como se sepa, en los dos de la pareja (v4.21)
-const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de', 14: 'Nombre', 15: 'Casados', 16: 'Falleció', 17: 'Novios desde', 18: 'Boda' };
+const COL_FECHAS = 19;   // S: otras fechas que cada uno quiere recordar, «Bautizo: 12/05/1961; Primera comunión: 00/05/1969; Santo: 24/09» (v4.28)
+const MAX_FECHAS = 10;
+const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de', 14: 'Nombre', 15: 'Casados', 16: 'Falleció', 17: 'Novios desde', 18: 'Boda', 19: 'Otras fechas' };
 const CAMPOS_NUCLEO = ['nombre', 'apellido', 'sexo', 'pareja', 'hijoDe', 'casados', 'fallecio', 'novios', 'boda'];
 const CASADOS = ['Sí', 'No'];
 const SEXOS = ['Hombre', 'Mujer'];
@@ -67,6 +71,9 @@ const COLS_DIAS = 32;     // v4.15: AD EVENTO, AE EVENTO_TURNO, AF EVENTO_TEXTO
 const TITULOS_DIAS_V415 = ['EVENTO', 'EVENTO_TURNO', 'EVENTO_TEXTO'];
 const MAX_ACOMPANANTES = 20;
 const MAX_EVENTO = 60, MAX_EVENTO_TEXTO = 500;
+const COLS_EVENTOS = 13;  // ID | NOMBRE | DESDE | HASTA | CUANDO | TEXTO | VAN | NO_VAN | CREADO_EN | BORRADO | LUGAR | HORA | TURNOS
+const CUANDO_EVENTO = ['DIA', 'COMIDA', 'CENA', 'DORMIR'];
+const MAX_DIAS_EVENTO = 31;
 const MAX_ALERGIAS = 100;
 const MAX_NOTA = 140;
 const MAX_DIAS_RANGO = 400;
@@ -92,6 +99,9 @@ const API_ = {
   getDatos: function (a) { return getDatos(a[0]); },
   guardarPersona: function (a) { return guardarPersona(a[0], a[1], a[2], a[3]); },
   guardarDia: function (a) { return guardarDia(a[0], a[1], a[2], a[3]); },
+  guardarEvento: function (a) { return guardarEvento(a[0], a[1], a[2]); },
+  borrarEvento: function (a) { return borrarEvento(a[0], a[1], a[2]); },
+  apuntarEvento: function (a) { return apuntarEvento(a[0], a[1], a[2], a[3], a[4]); },
   guardarAusencia: function (a) { return guardarAusencia(a[0], a[1], a[2], a[3], a[4], a[5]); },
   crearPersona: function (a) { return crearPersona(a[0], a[1], a[2]); },
   darDeBaja: function (a) { return darDeBaja(a[0], a[1], a[2]); },
@@ -183,6 +193,7 @@ function datos_(ss, p) {
     apuntes: efectivos_(crudos, fijos, desde, hasta),
     fijos: fijos.filter(function (f) { return !f.hasta || f.hasta >= hoy; }),
     dias: leerDias_(ss).filter(function (d) { return d.fecha >= desde && d.fecha <= hasta; }),
+    eventos: leerEventos_(ss).filter(function (e) { return e.hasta >= (desde < sumarDias_(hoy, -60) ? desde : sumarDias_(hoy, -60)); }),  // v4.28
     misProximas: p.yo ? efectivos_(crudos, fijos, hoy, sumarDias_(hoy, 60)).filter(function (a) { return a.persona === p.yo; }).slice(0, 12) : [],
     bajas: leerBajas_(ss).map(function (b) { return { id: b.id, apodo: b.apodo, jerarquia: b.jerarquia, familia: b.familia, menu: b.menu, baja: b.baja }; }),
     huerfanos: huerfanos_(crudos, fijos, personas.concat(leerEditores_(ss, config.excluir), leerBajas_(ss)), hoy),
@@ -230,8 +241,9 @@ function aPersona_(f) {
     nombre: String(f[COL_NOMBRE - 1] || '').trim(),
     casados: CASADOS.indexOf(String(f[COL_CASADOS - 1] || '').trim()) !== -1 ? String(f[COL_CASADOS - 1]).trim() : '',
     fallecio: aFallecio_(f[COL_FALLECIO - 1]),
-    novios: aFechaParcial_(f[COL_NOVIOS - 1], 1850),
-    boda: aFechaParcial_(f[COL_BODA - 1], 1850, 10),
+    novios: aFechaSinAno_(f[COL_NOVIOS - 1], 1850),
+    boda: aFechaSinAno_(f[COL_BODA - 1], 1850, 10),
+    fechas: leerFechas_(f[COL_FECHAS - 1]),
   };
 }
 
@@ -470,6 +482,15 @@ function guardarPersona(personaId, cambios, quien, vista) {
       if (String(cambios.cumple || '').trim() && !cumple) throw new Error('El cumpleaños tiene que ser un día y un mes que existan (y, si se pone, un año de 1900 a hoy, o el que viene si está en camino), o el mes y el año, o solo el año.');
       escribirEnPersonas_(ss, personaId, COL_CUMPLE, cumple, true);
       if (cumple !== p.cumple) registro.push('Cumpleaños de ' + p.apodo + ': ' + (cumple || 'borrado'));
+    }
+    if (cambios.fechas !== undefined) {  // v4.28: otras fechas (bautizo, primera comunión, santo…), la lista entera
+      const texto = textoFechas_(cambios.fechas);
+      const antes = (p.fechas || []).map(function (x) { return x.que + ': ' + x.fecha; }).join('; ');
+      if (texto !== antes) {
+        asegurarColumnas_(ss, COL_FECHAS);
+        escribirEnPersonas_(ss, personaId, COL_FECHAS, texto, true);
+        registro.push('Otras fechas de ' + p.apodo + ': ' + (texto || 'ninguna'));
+      }
     }
     if (cambios.menu !== undefined && cambios.menu !== p.menu) {
       if (opcionesMenu_(personas).indexOf(cambios.menu) === -1) throw new Error('Ese menú no está en la lista.');
@@ -984,8 +1005,8 @@ function ponerNucleo_(ss, p, cambios, registro, todos) {
   [['novios', COL_NOVIOS, 'empezaron a salir', 'cuándo empezaron a salir'], ['boda', COL_BODA, 'se casaron', 'la boda']].forEach(function (x) {
     if (cambios[x[0]] === undefined) return;
     const texto = String(cambios[x[0]] || '').trim();
-    const fecha = aFechaParcial_(texto, 1850, x[0] === 'boda' ? 10 : 0);  // v4.23: la boda, también la que viene
-    if (texto && !fecha) throw new Error('La fecha de ' + x[3] + ' tiene que ser un día, mes y año que existan (o mes y año, o solo el año)' + (x[0] === 'boda' ? ', de aquí a diez años como mucho.' : ', y no de después de hoy.'));
+    const fecha = aFechaSinAno_(texto, 1850, x[0] === 'boda' ? 10 : 0);  // v4.23: la boda, también la que viene; v4.30: o sin año
+    if (texto && !fecha) throw new Error('La fecha de ' + x[3] + ' tiene que ser un día, mes y año que existan (o mes y año, o solo el año, o el día y el mes)' + (x[0] === 'boda' ? ', de aquí a diez años como mucho.' : ', y no de después de hoy.'));
     const pareja = cambios.pareja !== undefined ? String(cambios.pareja || '').trim() : p.pareja;
     if (fecha && !pareja) throw new Error('Para poner la fecha de ' + x[3] + ', elige primero su pareja.');
     if (fecha !== (p[x[0]] || '')) {
@@ -1131,6 +1152,143 @@ function hojaDias_(ss) {
       'NOTA_POR', 'NOTA_EN', 'SERVICIO_POR', 'SERVICIO_EN', 'COMIDA_POR', 'COMIDA_EN', 'CENA_POR', 'CENA_EN', 'DORMIR_POR', 'DORMIR_EN']);
 }
 
+/* ---------- v4.28: otras fechas de cada persona ---------- */
+function leerFechas_(v) {
+  return String(v || '').split(';').map(function (t) {
+    const i = t.lastIndexOf(':');
+    if (i < 1) return null;
+    const que = t.slice(0, i).trim(), fecha = aFechaSinAno_(t.slice(i + 1).trim(), 1850);
+    return que && fecha ? { que: que, fecha: fecha } : null;
+  }).filter(Boolean);
+}
+function textoFechas_(lista) {
+  if (!Array.isArray(lista)) throw new Error('Las fechas no se entienden. Recarga la página.');
+  if (lista.length > MAX_FECHAS) throw new Error('Caben ' + MAX_FECHAS + ' fechas como mucho.');
+  return lista.map(function (x) {
+    const que = limpiar_(String((x && x.que) || '').replace(/[;:]/g, ' '), 40, 'Qué se recuerda', true);
+    const t = String((x && x.fecha) || '').trim();
+    const fecha = aFechaSinAno_(t, 1850);
+    if (!que) throw new Error('A cada fecha ponle qué es (bautizo, primera comunión…).');
+    if (!fecha) throw new Error('La fecha de «' + que + '» tiene que ser un día, mes y año que existan (o mes y año, o solo el año), y no de después de hoy.');
+    return que + ': ' + fecha;
+  }).join('; ');
+}
+
+/* ---------- v4.28: eventos ---------- */
+
+function hojaEventos_(ss) {
+  return ss.getSheetByName(HOJA_EVENTOS) || crearHoja_(ss, HOJA_EVENTOS, ['ID', 'NOMBRE', 'DESDE', 'HASTA', 'CUANDO', 'TEXTO', 'VAN', 'NO_VAN', 'CREADO_EN', 'BORRADO', 'LUGAR', 'HORA', 'TURNOS']);
+}
+function listaIds_(t) { return String(t || '').split(';').map(function (x) { return x.trim(); }).filter(Boolean); }
+function aFilaEvento_(f) { return f.map(function (c, i) { return (i === 2 || i === 3) ? (aFecha_(c) || String(c || '').trim()) : String(c == null ? '' : c).trim(); }); }
+function leerEventos_(ss) {
+  return memo_('eventos', function () {
+    const hoja = ss.getSheetByName(HOJA_EVENTOS);
+    if (!hoja) return [];
+    const alias = resolverAlias_(ss);
+    return abrirTabla_(hoja, COLS_EVENTOS, aFilaEvento_).vivas().filter(function (x) { return !x.v[9]; }).map(function (x) {
+      const f = x.v;
+      return { id: f[0], nombre: f[1], desde: f[2], hasta: f[3] || f[2], cuando: f[4] || 'DIA', texto: f[5],
+        van: listaIds_(f[6]).map(alias), noVan: listaIds_(f[7]).map(alias), lugar: f[10], hora: f[11], turnos: leerTurnosEv_(f[12]) };
+    }).sort(function (a, b) { return (a.desde + a.id).localeCompare(b.desde + b.id); });
+  });
+}
+/* v4.33: en un evento de varios días, qué turnos de cada día se salta («2026-12-19 COMIDA CENA DORMIR; 2026-12-20 COMIDA») */
+function leerTurnosEv_(v) {
+  const t = String(v || '').trim();
+  if (!t) return null;
+  const r = {};
+  t.split(';').forEach(function (x) {
+    const p = x.trim().split(/\s+/);
+    if (esFecha_(p[0])) r[p[0]] = p.slice(1).filter(function (k) { return TURNOS.indexOf(k) !== -1; });
+  });
+  return r;
+}
+function textoTurnosEv_(turnos, desde, hasta) {
+  if (!turnos || typeof turnos !== 'object') return '';
+  const dias = Object.keys(turnos).filter(function (f) { return esFecha_(f) && f >= desde && f <= hasta; }).sort();
+  const partes = dias.map(function (f) { return [f].concat(TURNOS.filter(function (k) { return (turnos[f] || []).indexOf(k) !== -1; })); });
+  if (!partes.some(function (p) { return p.length > 1; })) throw new Error('Marca al menos una comida, cena o noche del evento.');
+  return partes.map(function (p) { return p.join(' '); }).join('; ');
+}
+function abrirEventos_(ss) { return abrirTabla_(hojaEventos_(ss), COLS_EVENTOS, aFilaEvento_); }
+function filaEvento_(tabla, id) {
+  const x = tabla.vivas().filter(function (r) { return r.v[0] === id && !r.v[9]; })[0];
+  if (!x) throw new Error('Ese evento ya no está. Recarga la página.');
+  return x;
+}
+
+function guardarEvento(ev, quien, vista) {
+  return conBloqueo_(function (ss) {
+    const config = leerConfig_(ss);
+    const personas = leerPersonas_(ss, config.excluir);
+    const autor = autor_(personas.concat(leerEditores_(ss, config.excluir)), quien);
+    ev = ev || {};
+    const nombre = limpiar_(ev.nombre, MAX_EVENTO, 'El nombre del evento', true);
+    if (!nombre) throw new Error('Pon el nombre del evento.');
+    if (!esFecha_(ev.desde)) throw new Error('Elige el día en que empieza.');
+    const hasta = esFecha_(ev.hasta) ? ev.hasta : ev.desde;
+    const lugar = limpiar_(ev.lugar, 100, 'El sitio', true);
+    const hora = limpiar_(ev.hora, 40, 'La hora', true);
+    const turnos = hasta > ev.desde ? textoTurnosEv_(ev.turnos, ev.desde, hasta) : '';  // v4.33
+    if (hasta < ev.desde) throw new Error('El último día no puede ser antes del primero.');
+    if (diasEntre_(ev.desde, hasta) >= MAX_DIAS_EVENTO) throw new Error('Un evento dura un mes como mucho.');
+    const cuando = CUANDO_EVENTO.indexOf(ev.cuando) !== -1 ? ev.cuando : 'DIA';
+    const texto = limpiar_(ev.texto, MAX_EVENTO_TEXTO, 'La descripción del evento', true);
+    const tabla = abrirEventos_(ss);
+    let registro;
+    if (ev.id) {
+      const x = filaEvento_(tabla, ev.id);
+      x.v[1] = nombre; x.v[2] = ev.desde; x.v[3] = hasta; x.v[4] = cuando; x.v[5] = texto; x.v[10] = lugar; x.v[11] = hora; x.v[12] = turnos; x.cambiada = true;
+      registro = 'Cambia el evento ' + nombre + ' (' + ev.desde + (hasta !== ev.desde ? ' a ' + hasta : '') + ')';
+    } else {
+      const id = 'E' + Utilities.formatDate(new Date(), TZ, 'yyyyMMddHHmmss') + Math.floor(Math.random() * 90 + 10);
+      tabla.nueva([id, nombre, ev.desde, hasta, cuando, texto, '', '', ahora_(), '', lugar, hora, turnos]);
+      registro = 'Añade el evento ' + nombre + ' (' + ev.desde + (hasta !== ev.desde ? ' a ' + hasta : '') + ')';
+    }
+    tabla.guardar();
+    olvidar_('eventos');
+    registrar_(ss, autor, [registro]);
+    return datos_(ss, vista || {});
+  });
+}
+
+function borrarEvento(id, quien, vista) {
+  return conBloqueo_(function (ss) {
+    const config = leerConfig_(ss);
+    const autor = autor_(leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir)), quien);
+    const tabla = abrirEventos_(ss);
+    const x = filaEvento_(tabla, id);
+    x.v[9] = ahora_(); x.cambiada = true;
+    tabla.guardar();
+    olvidar_('eventos');
+    registrar_(ss, autor, ['Quita el evento ' + x.v[1]]);
+    return datos_(ss, vista || {});
+  });
+}
+
+/** va: true (va), false (no va) o null (sin decir) */
+function apuntarEvento(id, personaId, va, quien, vista) {
+  return conBloqueo_(function (ss) {
+    const config = leerConfig_(ss);
+    const todos = leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir));
+    const autor = autor_(todos, quien);
+    const p = todos.filter(function (t) { return t.id === personaId; })[0];
+    if (!p) throw new Error('No encontramos ese nombre en la lista.');
+    const tabla = abrirEventos_(ss);
+    const x = filaEvento_(tabla, id);
+    const alias = resolverAlias_(ss);
+    const van = listaIds_(x.v[6]).map(alias).filter(function (i) { return i !== personaId; });
+    const noVan = listaIds_(x.v[7]).map(alias).filter(function (i) { return i !== personaId; });
+    if (va === true) van.push(personaId); else if (va === false) noVan.push(personaId);
+    x.v[6] = van.join('; '); x.v[7] = noVan.join('; '); x.cambiada = true;
+    tabla.guardar();
+    olvidar_('eventos');
+    registrar_(ss, autor, [p.apodo + (va === true ? ' va a ' : va === false ? ' no va a ' : ' sin decir si va a ') + x.v[1]]);
+    return datos_(ss, vista || {});
+  });
+}
+
 function crearHoja_(ss, nombre, cabecera) {
   const hoja = ss.insertSheet(nombre);
   hoja.getRange(1, 1, 1, cabecera.length).setValues([cabecera]);
@@ -1166,6 +1324,15 @@ function aCumple_(v) {
 /* v4.20: el fallecimiento, con su fecha (como se sepa) o «Sí» si no se sabe cuándo */
 function aFallecio_(v) {
   return /^s[ií]$/i.test(String(v || '').trim()) ? 'Sí' : aFechaParcial_(v, 1850);
+}
+
+/* v4.30: como aFechaParcial_, pero también día y mes sin año («04/10»): bodas, noviazgos y otras fechas (los santos) */
+function aFechaSinAno_(v, desde, futuro) {
+  const m = String(v || '').trim().match(/^(\d{1,2})[\/\-.](\d{1,2})$/);
+  if (!m) return aFechaParcial_(v, desde, futuro);
+  const d = Number(m[1]), mes = Number(m[2]);
+  if (mes < 1 || mes > 12 || d < 1 || d > [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1]) return '';
+  return ('0' + d).slice(-2) + '/' + ('0' + mes).slice(-2);
 }
 
 function aFechaParcial_(v, desde, futuro) {  // v4.23: futuro = años que puede ir por delante de hoy (la boda)
