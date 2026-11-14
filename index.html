@@ -640,7 +640,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.48.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.49.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1380,10 +1380,15 @@
     // v4.48: sin pareja (y sin ser un niño), si quiere ponerla: de la lista o escribiendo su nombre
     const ed = edad(p), jerPareja = p.jerarquia && !/\+1$/.test(p.jerarquia) ? p.jerarquia + ' +1' : '';
     const sinPareja = !pa && !esDeFuera(p) && (ed !== null ? ed >= 16 : p.jerarquia !== 'Biznietos');
+    // v4.49: si tiene pareja (y no hay ya un bebé en camino), si esperan uno
+    const madreBebe = pa ? (!esDeFuera(p) ? p : (!esDeFuera(pa) ? pa : p)) : null;
+    const yaEnCamino = madreBebe && datos.personas.some(function (x) { return enCamino(x) && (x.hijoDe === p.id || x.hijoDe === pa.id); });
+    const preguntaBebe = madreBebe && GEN_HIJOS[madreBebe.jerarquia] && !yaEnCamino ? '<fieldset><legend>¿Esperáis un bebé?</legend>' +
+      '<button type="button" class="accion" id="dlg-rfbebe">+ Sí, añadir el bebé en camino</button><p class="ayuda">Si no, nada.</p></fieldset>' : '';
     const preguntaPareja = sinPareja ? '<fieldset><legend>¿Tienes pareja? <small class="leyenda-suave">· si quieres ponerla</small></legend>' +
       '<label class="campo" for="dlg-rfpa">Si ya está en la web<select id="dlg-rfpa">' + opcionesPersonas('', p.id) + '</select></label>' +
-      ((datos.listas && datos.listas.jerarquias || []).indexOf(jerPareja) !== -1 ? '<label class="campo" for="dlg-rfpanueva">Si no está, su nombre<input id="dlg-rfpanueva" type="text" maxlength="40" autocomplete="off" placeholder="Por ejemplo: Laura"></label>' : '') +
-      '<p class="ayuda">Si no, déjalo en blanco.</p></fieldset>' : '';
+      ((datos.listas && datos.listas.jerarquias || []).indexOf(jerPareja) !== -1 ? '<p class="ayuda">Si no está en la lista:</p><button type="button" class="accion" id="dlg-rfpaalta">+ Dar de alta a mi pareja</button>' : '') +
+      '<p class="ayuda">Si no tienes, déjalo en blanco.</p></fieldset>' : '';
     // lo que ya tenemos, abajo (para corregir)
     let abajo = '';
     if (!falta('cumple') && p.cumple) abajo += campo.cumple();
@@ -1400,48 +1405,68 @@
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2><div><small>' + esc([[p.nombre, p.apellido].filter(Boolean).join(' '), rfContexto(p)].filter(Boolean).join(' · ')) + '</small></div></div>' +
       '<div class="dlg-cuerpo">' +
       (arriba ? '<h3 class="rf-sec">Lo que falta</h3><p class="ayuda">Rellena lo que sepas; lo que no, déjalo en blanco.' + (falta('novios') || falta('boda') ? ' Las fechas de la pareja valen para los dos.' : '') + '</p>' + arriba : '<p class="rf-todo">✓ No le falta nada.</p>') +
-      pregunta + preguntaPareja +
+      pregunta + preguntaPareja + preguntaBebe +
       '<h3 class="rf-sec">Lo que ya tenemos de ' + esc(p.apodo) + '</h3><p class="ayuda">Si algo no está bien, corrígelo aquí.</p>' + abajo +
       '<div id="dlg-rfotras"></div><button type="button" class="enlace" id="dlg-rfmas">+ Añadir otra fecha (bautizo, comunión…)</button></div>' + pie('Guardar'));
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     let n = 0;
     $('dlg-rfmas').addEventListener('click', function () { $('dlg-rfotras').insertAdjacentHTML('beforeend', filaFecha('rfo' + (n++), {})); });
     $dlg.querySelector('.dlg-cuerpo').addEventListener('click', function (e) { const b = e.target.closest('[data-rf-quitar]'); if (b) { const fs = $dlg.querySelector('[data-rfe="' + b.dataset.rfQuitar + '"]'); if (fs) fs.remove(); } });
-    $('dlg-guardar').addEventListener('click', function () {
+    const leerCambios = function () {
       const cambios = {};
       const texto = function (idc, k) { const el = $(idc); if (el && el.value.trim() !== (p[k] || '')) cambios[k] = el.value.trim(); };
-      if ($('dlg-rfcdia')) { const r = leerFecha('rfc', 'el cumpleaños', 1900, 1); if (r.error) { errorDialogo(r.error); return; } if (r.valor !== (p.cumple || '')) cambios.cumple = r.valor; }
+      if ($('dlg-rfcdia')) { const r = leerFecha('rfc', 'el cumpleaños', 1900, 1); if (r.error) { return { error: r.error }; } if (r.valor !== (p.cumple || '')) cambios.cumple = r.valor; }
       texto('dlg-rfnom', 'nombre'); texto('dlg-rfap', 'apellido'); texto('dlg-rfal', 'alergias');
       if ($('dlg-rfsexo') && $('dlg-rfsexo').value !== (p.sexo || '')) cambios.sexo = $('dlg-rfsexo').value;
       if ($('dlg-rfmenu') && $('dlg-rfmenu').value && $('dlg-rfmenu').value !== (p.menu || '')) cambios.menu = $('dlg-rfmenu').value;
-      if ($('dlg-rfndia')) { const r = leerFechaPareja('rfn', 'el inicio del noviazgo', 0); if (r.error) { errorDialogo(r.error); return; } if (r.valor !== (p.novios || '')) cambios.novios = r.valor; }
-      if ($('dlg-rfbdia')) { const r = leerFechaPareja('rfb', 'la boda', 10); if (r.error) { errorDialogo(r.error); return; } if (r.valor !== (p.boda || '')) cambios.boda = r.valor; }
+      if ($('dlg-rfndia')) { const r = leerFechaPareja('rfn', 'el inicio del noviazgo', 0); if (r.error) { return { error: r.error }; } if (r.valor !== (p.novios || '')) cambios.novios = r.valor; }
+      if ($('dlg-rfbdia')) { const r = leerFechaPareja('rfb', 'la boda', 10); if (r.error) { return { error: r.error }; } if (r.valor !== (p.boda || '')) cambios.boda = r.valor; }
       // las otras fechas: las que había (como queden), el santo nuevo y las nuevas
       const fechas = [];
-      if ($('dlg-rfsdia')) { const r = leerFechaPareja('rfs', 'el santo', 0); if (r.error) { errorDialogo(r.error); return; } if (r.valor) fechas.push({ que: 'Santo', fecha: r.valor }); }
+      if ($('dlg-rfsdia')) { const r = leerFechaPareja('rfs', 'el santo', 0); if (r.error) { return { error: r.error }; } if (r.valor) fechas.push({ que: 'Santo', fecha: r.valor }); }
       const filas = Array.from($dlg.querySelectorAll('[data-rfe]'));
       for (let o = 0; o < filas.length; o++) {
         const pre = filas[o].dataset.rfe, que = $('dlg-' + pre + 'que').value.trim();
         const r = leerFechaPareja(pre, que ? '«' + que + '»' : 'esa fecha', 0);
-        if (r.error) { errorDialogo(r.error); return; }
+        if (r.error) { return { error: r.error }; }
         if (!que && !r.valor) continue;
-        if (!que || !r.valor) { errorDialogo('A cada fecha ponle qué es y la fecha.'); return; }
+        if (!que || !r.valor) { return { error: 'A cada fecha ponle qué es y la fecha.' }; }
         fechas.push({ que: que.replace(/[;:]/g, ' ').replace(/\s+/g, ' ').trim(), fecha: r.valor });
       }
       if (JSON.stringify(fechas) !== JSON.stringify(p.fechas || [])) cambios.fechas = fechas;
       if ($('dlg-rfpa') && $('dlg-rfpa').value) cambios.pareja = $('dlg-rfpa').value;  // v4.48
-      const nueva = $('dlg-rfpanueva') && !cambios.pareja ? $('dlg-rfpanueva').value.trim() : '';
-      if (!Object.keys(cambios).length && !nueva) { errorDialogo('No has cambiado nada. Si está todo bien, ciérralo.'); return; }
+      return { cambios: cambios };
+    };
+    const guardarLuego = function (cambios, despues) {  // guarda lo suyo y, si hace falta, sigue (el alta de su pareja)
+      if (!Object.keys(cambios).length) { despues(); return; }
+      cerrarDialogo(); aviso('Guardando…', 0);
+      llamar('guardarPersona', [id, cambios, yo, rango()]).then(function (d) { datos = d; rfSucio = true; guardarLocal(); pintar(); aviso('Guardado lo de ' + p.apodo + '.'); despues(); })
+        .catch(function (err) { if (esErrorClave(err)) { pedirClave(err); return; } aviso('No se ha guardado. ' + mensajeError(err), 9000); });
+    };
+    if ($('dlg-rfbebe')) $('dlg-rfbebe').addEventListener('click', function () {  // v4.49
+      const r = leerCambios();
+      if (r.error) { errorDialogo(r.error); return; }
+      conQuien(function () { guardarLuego(r.cambios, function () { rfSucio = true; altaBebe(madreBebe, false); }); });
+    });
+    if ($('dlg-rfpaalta')) $('dlg-rfpaalta').addEventListener('click', function () {  // v4.48: la pareja, como persona nueva y completa
+      const r = leerCambios();
+      if (r.error) { errorDialogo(r.error); return; }
+      delete r.cambios.pareja;
       conQuien(function () {
-        const altaPareja = function () {
-          enSegundoPlano('crearPersona', [{ apodo: nueva, jerarquia: jerPareja, familia: p.familia, pareja: p.id }, yo, rango()], '¡Gracias! ' + nueva + ' ya está como pareja de ' + p.apodo + '.', function () { rfSucio = true; });
-        };
-        if (!Object.keys(cambios).length) { altaPareja(); return; }
-        if (!nueva) { enSegundoPlano('guardarPersona', [id, cambios, yo, rango()], '¡Gracias! Guardado lo de ' + p.apodo + '.', function () { aplicarPersonaLocal(id, cambios); rfSucio = true; }); return; }
-        // primero lo suyo y luego su pareja nueva
-        cerrarDialogo(); aviso('Guardando…', 0);
-        llamar('guardarPersona', [id, cambios, yo, rango()]).then(function (d) { datos = d; rfSucio = true; altaPareja(); })
-          .catch(function (err) { if (esErrorClave(err)) { pedirClave(err); return; } aviso('No se ha guardado. ' + mensajeError(err), 9000); });
+        guardarLuego(r.cambios, function () {
+          rfSucio = true;
+          abrirNuevaPersona('', { pareja: p.id, familia: p.familia, jerarquia: jerPareja, de: p.apodo, titulo: 'La pareja de ' + p.apodo,
+            ayuda: 'Rellena sus datos como los de cualquiera de la familia. Ya sale como pareja de ' + esc(p.apodo) + '.' });
+        });
+      });
+    });
+    $('dlg-guardar').addEventListener('click', function () {
+      const r = leerCambios();
+      if (r.error) { errorDialogo(r.error); return; }
+      const cambios = r.cambios;
+      if (!Object.keys(cambios).length) { errorDialogo('No has cambiado nada. Si está todo bien, ciérralo.'); return; }
+      conQuien(function () {
+        enSegundoPlano('guardarPersona', [id, cambios, yo, rango()], '¡Gracias! Guardado lo de ' + p.apodo + '.', function () { aplicarPersonaLocal(id, cambios); rfSucio = true; });
       });
     });
   }
@@ -1455,6 +1480,12 @@
     rfFamilia = b.dataset.rfFam; rfSucio = false; pintarRellenar(); window.scrollTo(0, 0);
   });
 
+  function altaBebe(m, nacido) {  // v4.45 (v4.49: también desde Rellenar)
+    const pa = parejaDe(m), de = m.apodo + (pa ? ' y ' + pa.apodo : '');
+    abrirNuevaPersona(nacido ? '' : 'Bebé de ' + m.apodo, { hijoDe: m.id, familia: m.familia, jerarquia: GEN_HIJOS[m.jerarquia] || '', de: m.apodo, menu: 'Nada',
+      titulo: nacido ? 'Un bebé de ' + de : 'Un bebé en camino de ' + de,
+      ayuda: nacido ? 'Pon su nombre y, en el cumpleaños, el día que nació.' : 'De momento, un nombre provisional; en el cumpleaños, <b>cuándo nacerá</b> (aunque sea el mes). Cuando nazca, se cambia por el nombre y la fecha de verdad.' });
+  }
   /* v4.45: añadir un bebé: primero, si ya ha nacido o está en camino */
   function abrirBebe(id) {
     const m = persona(id);
@@ -1469,11 +1500,7 @@
     $dlg.querySelectorAll('[data-bebe-ya]').forEach(function (b) {
       b.addEventListener('click', function () {
         const nacido = b.dataset.bebeYa === '1';
-        conQuien(function () {
-          abrirNuevaPersona(nacido ? '' : 'Bebé de ' + m.apodo, { hijoDe: m.id, familia: m.familia, jerarquia: GEN_HIJOS[m.jerarquia] || '', de: m.apodo, menu: 'Nada',
-            titulo: nacido ? 'Un bebé de ' + de : 'Un bebé en camino de ' + de,
-            ayuda: nacido ? 'Pon su nombre y, en el cumpleaños, el día que nació.' : 'De momento, un nombre provisional; en el cumpleaños, <b>cuándo nacerá</b> (aunque sea el mes). Cuando nazca, se cambia por el nombre y la fecha de verdad.' });
-        });
+        conQuien(function () { altaBebe(m, nacido); });
       });
     });
   }
@@ -2407,7 +2434,7 @@
     montarFormularioFamilia();
     if (pre) {
       const pon = function (id, v) { const el = $(id); if (el && v && Array.from(el.options).some(function (o) { return o.value === v; })) { el.value = v; el.dispatchEvent(new Event('change')); } };
-      pon('dlg-familia', pre.familia); pon('dlg-jerarquia', pre.jerarquia); pon('dlg-hijode', pre.hijoDe);
+      pon('dlg-familia', pre.familia); pon('dlg-jerarquia', pre.jerarquia); pon('dlg-hijode', pre.hijoDe); pon('dlg-pareja', pre.pareja);  // v4.48: la pareja
       $('dlg-titulo').textContent = pre.titulo || 'Añadir hijo o hija de ' + pre.de;
       if (pre.menu) { const m = Array.from($('dlg-menu').options).filter(function (o) { return etiquetaMenu(o.value) === pre.menu; })[0]; if (m) $('dlg-menu').value = m.value; }  // v4.45
       if (pre.ayuda) $dlg.querySelector('.dlg-cuerpo').insertAdjacentHTML('afterbegin', '<p class="ayuda aviso-bebe">' + pre.ayuda + '</p>');
