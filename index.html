@@ -362,6 +362,9 @@
   .proximas li:first-child { border-top: 0; }
   .proximas small { display: block; color: var(--color-texto-suave); font-weight: 700; font-size: 13px; }
   .ev-total { margin: 4px 0; }
+  .ev-yo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 12px 14px; margin: 6px 0; border-radius: var(--radio); background: #FFE7E0; border-left: 4px solid var(--color-accion); }
+  .ev-yo b { font-size: 17px; }
+  .ev-bots button.grande { width: auto; padding: 0 14px; height: 42px; font-size: 16px; }
   .ev-resumen { margin: 4px 0 0; }
   .ev-familia summary { list-style: none; display: grid; grid-template-columns: 1fr auto; grid-template-areas: "n v b" "r r r"; grid-template-columns: 1fr auto auto; gap: 0 10px; align-items: center; }
   .ev-familia summary::-webkit-details-marker { display: none; }
@@ -640,7 +643,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.50.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.51.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1080,8 +1083,10 @@
   }
 
   /* ---------- Pintar ---------- */
+  let eventoPorAbrir = '';  // v4.51: el del enlace #evento-…, en cuanto haya datos (también después de pedir la clave)
   function pintar() {
     if (!datos) return;
+    if (eventoPorAbrir && !$dlg.open) { const ide = eventoPorAbrir; eventoPorAbrir = ''; if (evento(ide) && !modoAbuela()) setTimeout(function () { abrirDetalleEvento(ide); }, 0); }
     const sencillo = modoAbuela();  // v4.35
     document.body.classList.toggle('modo-abuela', sencillo);
     $('salir-sencillo').hidden = !sencillo;
@@ -1560,6 +1565,12 @@
     return '<p class="evento-cuando">' + esc(fechaEvento(e)) + '</p>' +
       (e.lugar ? '<p>📍 <b>Dónde:</b> ' + esc(e.lugar) + '</p>' : '') +
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
+      (!pasado ? (function () {  // v4.51: lo primero, si vas tú
+        const yoP = yo && persona(yo), st = yoP ? estado(yoP) : '';
+        return '<div class="ev-yo"><b>' + (yoP ? '¿Vas, ' + esc(yoP.apodo) + '?' : '¿Vas tú?') + '</b><span class="ev-bots">' +
+          '<button type="button" class="ev-si grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|si" aria-pressed="' + (st === 'si') + '">✓ Voy</button>' +
+          '<button type="button" class="ev-no grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|no" aria-pressed="' + (st === 'no') + '">✗ No voy</button></span></div>';
+      })() : '') +
       '<p class="ev-total"><b>' + esc(resumenEvento(e)) + '</b></p>' +
       (modoAbuela() ? '' : '<p class="ayuda">✓ va · ✗ no puede · sin marcar, aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).</p>') +
       // v4.30: una sola lista: cada familia con sus números y, al tocar «Ver», quién es justo debajo
@@ -1588,6 +1599,8 @@
   /* Confirmar por alguien desde el detalle, sin cerrarlo: se ve ya y se guarda por detrás */
   function confirmarEnEvento(id, personaId, va) {
     conQuien(function () {
+      if (!personaId) { personaId = yo; if (!persona(personaId)) return; }  // v4.51: «¿Vas tú?» antes de saber quién eres
+      if (!$('dlg-ev-detalle')) abrirDetalleEvento(id);
       const e = evento(id);
       if (!e) return;
       const actual = e.van.indexOf(personaId) !== -1 ? true : (e.noVan.indexOf(personaId) !== -1 ? false : null);
@@ -3101,7 +3114,7 @@
   /* v4.28: el mensaje de un evento de la pestaña Eventos */
   function mensajeEv(id) {
     const e = evento(id) || { nombre: 'Evento', van: [], noVan: [], desde: hoy(), hasta: hoy(), cuando: 'DIA' };
-    const enlace = datos.url ? '\n\n👉 Dime si vas aquí: ' + datos.url.replace(/#.*$/, '') + '#eventos' : '';
+    const enlace = datos.url ? '\n\n👉 Di si vas aquí: ' + datos.url.replace(/#.*$/, '') + '#evento-' + e.id : '';  // v4.51: abre este evento
     return '🎉 *' + e.nombre + '*\n📅 ' + fechaEvento(e) + (e.lugar ? '\n📍 ' + e.lugar : '') + (e.texto ? '\n\n' + e.texto : '') + '\n\n' +
       (e.van.length ? '*Van ya (' + e.van.length + '):*\n' + nombresDe(e.van).map(function (n) { return '• ' + n; }).join('\n') : 'Aún no se ha apuntado nadie.') + enlace;
   }
@@ -3335,8 +3348,12 @@
       window.scrollTo(0, 0);
     });
   });
+  // v4.51: un enlace que abre un evento para apuntarse: #evento-<id>
+  const eventoEnlace = (location.hash.match(/^#evento-([A-Za-z0-9]+)$/) || [])[1];
+  eventoPorAbrir = eventoEnlace || '';
   function vistaInicial(cb) {
     if (/^#dia-/.test(location.hash)) { cb('semana'); return; }
+    if (eventoEnlace) { cb('eventos'); return; }
     if (hayServidor && google.script.url) google.script.url.getLocation(function (loc) { cb((loc.parameter && loc.parameter.vista) || loc.hash || 'semana'); });
     else cb(location.hash.replace('#', '') || 'semana');
   }
