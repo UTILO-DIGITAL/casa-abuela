@@ -433,16 +433,6 @@
   /* v2: aviso de última hora */
   .aviso-tarde { margin: 0; padding: 12px 14px; border-radius: var(--radio); background: var(--color-destacado-claro); font-weight: 700; }
 
-  /* v2: hoy y mañana, para la cocina */
-  .cocina { display: grid; gap: 20px; }
-  .cocina .dia-cab h3 { font-size: 26px; }
-  .cocina .dia-cab span { font-size: 17px; }
-  .cocina .comida-cab h4 { font-size: 17px; }
-  .cocina .p b { font-size: 18px; }
-  .cocina .alergias, .cocina .notas { font-size: 16px; }
-  .cocina .nota-dia { font-size: 18px; }
-  .cocina .sin-turno { font-size: 16px; }
-  .reloj { font-size: 15px; color: var(--color-texto-suave); margin: 0 0 12px; }
 
   /* v2: instalar en el móvil */
   details.instalar { margin-top: 24px; font-size: 15px; }
@@ -451,20 +441,14 @@
 
   @media (min-width: 760px) {
     .navegador { margin: 0 0 16px; }
-    .cocina { grid-template-columns: 1fr 1fr; align-items: start; }
   }
 
   /* v3: servicio, abuela, compartir, imprimir, buscador */
   .g-servicio { background: #fff; color: var(--color-texto); box-shadow: inset 0 0 0 1px var(--color-linea); }
   .servicio-linea { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; color: var(--color-texto-suave); }
   .nadie.suave { border-color: var(--color-linea); color: var(--color-texto-suave); cursor: default; }
-  /* v4.12.8: lo de la cocina, con borde y sin relleno, para que no se confunda con las tarjetas de la gente */
-  .cocinar { margin: 0; padding: 8px 12px; border-radius: calc(var(--radio) / 2); background: #fff; border: 2px solid var(--color-principal-oscuro); color: var(--color-principal-oscuro); font-weight: 800; }
-  .cocinar small { display: block; font-weight: 700; color: var(--color-texto-suave); }
-  .abuela-come { margin: 0; font-weight: 800; color: var(--color-principal-oscuro); }
   .nota-servicio { margin: 0; padding: 8px 14px; background: var(--color-principal-claro); font-weight: 800; }
   .nota-servicio span { font-weight: 600; color: var(--color-texto-suave); }
-  .cocina .cocinar { font-size: 17px; }
   .herramientas { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: -4px 0 16px; }
   .herramientas button { min-height: 36px; padding: 4px 12px; border-radius: var(--radio); border: 1px solid var(--color-linea); background: #fff; color: var(--color-texto); font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
   .herramientas svg { width: 18px; height: 18px; }
@@ -498,7 +482,6 @@
     <p id="subtitulo">Quién viene a comer y a cenar</p>
     <nav class="vistas" aria-label="Vistas">
       <a href="#semana" data-vista="semana">Semana</a>
-      <a href="#cocina" data-vista="cocina">Hoy y mañana</a>
       <a href="#personas" data-vista="personas">Personas</a>
       <a href="#huecos" data-vista="huecos">Huecos</a>
     </nav>
@@ -532,10 +515,6 @@
     <div id="huecos-lista"><p class="vacio">Cargando…</p></div>
   </section>
 
-  <section id="vista-cocina" hidden>
-    <p id="reloj" class="reloj"></p>
-    <div id="cocina" class="cocina"><p class="vacio">Cargando…</p></div>
-  </section>
 
   <p id="quien-soy" class="quien-soy" hidden></p>
   <p id="huerfanos" class="huerfanos" hidden></p>
@@ -552,7 +531,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.25.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.26.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -939,7 +918,6 @@
     if (!datos) return;
     pintarNavegador();
     pintarSemana();
-    pintarCocina();
     pintarQuienSoy();
     pintarMisProximas();
     pintarHuerfanos();
@@ -988,7 +966,7 @@
   function pintarHuerfanos() {
     const h = datos.huerfanos || [];
     const $h = $('huerfanos');
-    $h.hidden = !h.length || vista === 'cocina';
+    $h.hidden = !h.length;
     if (!h.length) return;
     $h.innerHTML = 'Hay comidas apuntadas a ' + h.map(function (id) { return '<b>' + esc(id) + '</b>'; }).join(', ') +
       ', que ya no está en la lista de PERSONAS. Si le habéis cambiado el apodo o la jerarquía, poned en la pestaña MESA_ALIAS del Excel el nombre antiguo y el nuevo, y vuelve a salir todo.';
@@ -1018,16 +996,15 @@
 
   function bloqueDia(fecha, opciones) {
     const h = hoy();
-    const grande = !!opciones.grande;
     const pasado = fecha < h;
     const nd = notaDia(fecha);
     const sinTodo = TURNOS.every(function (t) { return sinTurno(fecha, t.id) !== null; });
-    const plegable = pasado && !grande;
+    const plegable = pasado;
     const abierto = abiertos.has(fecha);
     let html = '<article class="dia' + (fecha === h ? ' hoy' : '') + (pasado ? ' pasado' : '') + (abierto ? ' abierto' : '') + (sinTodo ? ' sin' : '') + '">';
     html += '<div class="dia-cab"><h3>' + DIAS[dow(fecha)] + '</h3><span>' + (fecha === h ? 'Hoy' : ddmm(fecha)) + '</span>' +
       (plegable ? '<button type="button" class="mini solo-movil" data-plegar="' + fecha + '" aria-expanded="' + abierto + '">' + (abierto ? 'Ocultar' : 'Ver') + '</button>' : '') +
-      (!grande ? '<button type="button" class="mini' + (plegable && !abierto ? ' solo-escritorio' : '') + '" data-dia="' + fecha + '" aria-label="Notas del ' + diaLargo(fecha).toLowerCase() + '">Nota</button>' : '') + '</div>';
+      ('<button type="button" class="mini' + (plegable && !abierto ? ' solo-escritorio' : '') + '" data-dia="' + fecha + '" aria-label="Notas del ' + diaLargo(fecha).toLowerCase() + '">Nota</button>') + '</div>';
     const cumples = textoCumples(fecha);
     if (cumples.length) html += '<p class="nota-dia cumple">' + cumples.map(esc).join('<br>') + '</p>';
     const recuerdos = textoRecuerdos(fecha);
@@ -1050,24 +1027,16 @@
       const motivo = sinTurno(fecha, t.id);
       const datosTurno = ' data-anadir data-fecha="' + fecha + '" data-turno="' + t.id + '"';
       // v4.6: sin nadie, un solo botón «Falta alguien» con el icono, en la línea del turno
-      const faltaAlguien = motivo === null && !grande && !comp.length;
+      const faltaAlguien = motivo === null && !comp.length;
       html += '<div class="comida' + (motivo !== null ? ' no-hace-falta' : '') + '"><div class="comida-cab"><h4>' + t.nombre + '</h4>' +
         (faltaAlguien ? '<button type="button" class="nadie con-icono"' + datosTurno + ' aria-label="Falta alguien. Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '">' + ICONO_MAS + 'Falta alguien</button>'
           : motivo === null ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div>';
-      if (grande && t.id !== 'DORMIR' && !(ft && !ids.length)) {
-        const r = raciones(ids, fecha, t.id);
-        html += '<p class="cocinar">Cocinar para ' + r.total + '<small>' + esc(r.detalle) + '</small></p>';
-        if (!ft) abuelas().forEach(function (a) {
-          const come = [etiquetaMenu(a.menu) !== 'Entero' ? 'menú ' + etiquetaMenu(a.menu).toLowerCase() : '', a.alergias].filter(Boolean).join(' · ');
-          if (come) html += '<p class="abuela-come">' + esc(a.apodo) + ': ' + esc(come) + '</p>';
-        });
-      } else if (!grande && cuenta(ids, t.id, fecha)) {
+      if (cuenta(ids, t.id, fecha)) {
         html += '<span class="cuantos">' + cuenta(ids, t.id, fecha) + '</span>';
       }
       if (ft) html += '<p class="sin-turno">La abuela no está' + (ids.length ? ': avisad a quien va.' : '.') + '</p>';
       else if (motivo !== null) html += '<p class="sin-turno">No hace falta que vaya nadie' + (motivo ? ': ' + esc(motivo) : '.') + '</p>';
       if (comp.length) html += '<div class="gente">' + comp.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
-      else if (motivo === null && grande) html += '<div><span class="nadie suave">Aún sin nadie</span></div>';
       if (serv.length) html += '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
       const al = t.id === 'DORMIR' ? [] : ids.map(persona).filter(function (p) { return p && p.alergias; });
       if (al.length) html += '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>';
@@ -1084,19 +1053,10 @@
     $('semana-grande').innerHTML = html;
   }
 
-  function pintarCocina() {
-    const h = hoy();
-    const d1 = primerLaborable(h < datos.config.inicio ? datos.config.inicio : h);
-    const d2 = siguienteLaborable(d1);
-    $('reloj').textContent = d1 === h ? 'Hoy es ' + diaLargo(h).toLowerCase() + '. Se actualiza solo.' : 'El calendario empieza el ' + diaLargo(d1).toLowerCase() + '.';
-    $('cocina').innerHTML = [d1, d2].map(function (f) { return bloqueDia(f, { grande: true }); }).join('');
-  }
-
   function pintarQuienSoy() {
     const $q = $('quien-soy');
     const p = yo && persona(yo);
     const ed = !p && yo && editor(yo);
-    $q.hidden = vista === 'cocina';
     const comidaAbuela = '';
     $q.innerHTML = ed
       ? 'Los cambios se guardan a nombre de <b>' + esc(ed.apodo) + '</b>.<span class="acciones-yo">' + comidaAbuela + '<button type="button" class="enlace" data-no-soy>No soy yo</button></span>'
@@ -2355,7 +2315,7 @@
       (hayNombre() ? '<fieldset><legend>Nombre completo</legend><div class="dos dos-iguales">' +
         '<label class="campo" for="dlg-nombre">Nombre<input id="dlg-nombre" type="text" maxlength="40" autocomplete="off" value="' + esc(a.nombre || '') + '"></label>' +
         '<label class="campo" for="dlg-apellido">Apellido<input id="dlg-apellido" type="text" maxlength="40" autocomplete="off" value="' + esc(a.apellido || '') + '"></label></div></fieldset>' : '') +
-      '<fieldset><legend>Lo que come</legend><p class="ayuda">Sale en cada comida y cena de «Hoy y mañana» y en la hoja para imprimir, para quien cocina.</p>' +
+      '<fieldset><legend>Lo que come</legend><p class="ayuda">Sale en el mensaje y en la hoja para imprimir, para quien cocina.</p>' +
       '<label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + opcionesMenu(a.menu) + '</select></label>' +
       '<label class="campo" for="dlg-alergias">Dieta, alergias o cómo se lo preparan<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Por ejemplo: sin sal, todo blando" value="' + esc(a.alergias) + '"></label></fieldset>' +
       '<fieldset><legend>Cumpleaños</legend><div class="tres">' +
@@ -2591,10 +2551,10 @@
   }
 
   /* ---------- Vistas ---------- */
-  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', cocina: 'Quién viene hoy y mañana', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
+  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
   function ponerVista(v) {
     vista = SUBTITULOS[v] ? v : 'semana';
-    ['semana', 'cocina', 'personas', 'huecos'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
+    ['semana', 'personas', 'huecos'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
     $('subtitulo').textContent = SUBTITULOS[vista];
     document.querySelectorAll('nav.vistas a').forEach(function (a) {
       if (a.dataset.vista === vista) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
