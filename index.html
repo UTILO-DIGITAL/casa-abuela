@@ -425,6 +425,7 @@
   .ev-barra { grid-area: g; display: flex; height: 7px; margin: 4px 0 2px; border-radius: 4px; overflow: hidden; background: var(--color-linea); }
   .ev-barra i { display: block; height: 100%; }
   .ev-barra .si { background: var(--color-principal); }
+  .ev-barra-total { grid-area: auto; display: flex; height: 10px; margin: 0 0 4px; border-radius: 5px; }
   .ev-barra .no { background: var(--color-error); }
   .ev-familia[open] summary { position: sticky; top: -16px; z-index: 2; background: var(--color-fondo); box-shadow: 0 6px 8px -8px rgba(0, 0, 0, .25); padding-top: 6px; }
   button.principal.boton-evento { background: var(--color-accion); border-color: var(--color-accion); color: #fff; }
@@ -717,7 +718,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.63.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.64.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1770,6 +1771,12 @@
     const g = genteEvento(e);
     return { van: e.van.length, noVan: e.noVan.length, faltan: g.filter(function (p) { return e.van.indexOf(p.id) === -1 && e.noVan.indexOf(p.id) === -1; }).length };
   }
+  /* v4.64: la barra del evento entero: verde los que van, rojo los que no pueden, gris los que faltan */
+  function barraEvento(e) {
+    const c = cuentaEvento(e), t = c.van + c.noVan + c.faltan;
+    if (!t) return '';
+    return '<span class="ev-barra ev-barra-total" role="img" aria-label="' + c.van + ' van, ' + c.noVan + ' no pueden, ' + c.faltan + ' sin contestar"><i class="si" style="width:' + (c.van / t * 100) + '%"></i><i class="no" style="width:' + (c.noVan / t * 100) + '%"></i></span>';
+  }
   function resumenEvento(e) {
     const c = cuentaEvento(e);
     return [c.van === 1 ? 'Va 1' : 'Van ' + c.van, c.noVan ? (c.noVan === 1 ? 'no puede 1' : 'no pueden ' + c.noVan) : '', c.faltan ? c.faltan + ' sin contestar' : ''].filter(Boolean).join(' · ');
@@ -1781,7 +1788,7 @@
       '<p class="evento-cuando">' + esc(fechaEvento(e)) + '</p>' +
       (e.lugar ? '<p class="evento-gente con-icono-txt">' + ICONO_SITIO + esc(e.lugar) + '</p>' : '') +
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
-      '<p class="evento-gente"><b>' + esc(resumenEvento(e)) + '</b></p>' +
+      '<p class="evento-gente"><b>' + esc(resumenEvento(e)) + '</b></p>' + barraEvento(e) +
       (function () { const l = porFamiliaEvento(e).filter(function (x) { return x.van; }); return l.length ? '<p class="evento-gente"><span>' + esc(l.map(function (x) { return cortoFamilia(x.f) + ' ' + x.van; }).join(' · ')) + '</span></p>' : ''; })() +
       '<div class="evento-botones">' + (pasado || modoAbuela() ? '' :
         '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? 'Voy ✓' : 'Voy') + '</button>' +
@@ -1812,7 +1819,7 @@
           '<button type="button" class="ev-si grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|si" aria-pressed="' + (st === 'si') + '">✓ Voy</button>' +
           '<button type="button" class="ev-no grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|no" aria-pressed="' + (st === 'no') + '">✗ No voy</button></span></div>';
       })() : '') +
-      '<p class="ev-total"><b>' + esc(resumenEvento(e)) + '</b></p>' +
+      '<p class="ev-total"><b>' + esc(resumenEvento(e)) + '</b></p>' + barraEvento(e) +
       (modoAbuela() ? '' : '<p class="ayuda">✓ va · ✗ no puede · sin marcar, aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).</p>') +
       // v4.30: una sola lista: cada familia con sus números y, al tocar «Ver», quién es justo debajo
       '<div class="ev-resumen">' + porFamiliaEvento(e).map(function (x) {
