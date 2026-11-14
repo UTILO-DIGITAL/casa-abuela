@@ -333,6 +333,7 @@
   .arbol-persona.soy-yo .arbol-zona { stroke: var(--color-accion); stroke-width: 2.5; }
   .arbol-nombre { font-family: var(--letra-texto); font-weight: 800; font-size: 15px; fill: var(--color-texto); }
   .arbol-dato { font-family: var(--letra-texto); font-weight: 600; font-size: 12.5px; fill: var(--color-texto-suave); }
+  .arbol-fechas { font-family: var(--letra-texto); font-weight: 600; font-size: 11px; fill: var(--color-texto-suave); }
   .arbol-persona.muerto .arbol-nombre { fill: var(--color-texto-suave); }
   /* v4.14: pestaña Huecos */
   .huecos-resumen { margin: 0 0 16px; font-size: 18px; font-weight: 800; }
@@ -551,7 +552,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.24.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.25.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1300,11 +1301,17 @@
       }
       return enCamino(p) ? 'en camino' : edadTexto(p);  // v4.24
     };
+    // v4.25: en cada pareja, los años del noviazgo y de la boda («novios 1983 · boda 1987»)
+    const fechasN = function (n) {
+      if (n.cabezas.length < 2) return '';
+      const p = n.cabezas[0], ano = function (c) { return c ? c.slice(6, 10) : ''; };
+      return [p.novios ? 'novios ' + ano(p.novios) : '', p.boda ? 'boda ' + ano(p.boda) : ''].filter(Boolean).join(' · ');
+    };
     // Medidas ajustadas al contenido: el ancho, por lo largo del nombre; el alto, con o sin la línea de la edad
-    const PAD = 12, GX = 14, GY = 44;
+    const PAD = 12, GX = 14, GY = 44, LF = 20;
     const altoP = function (p) { return datoDe(p) ? 44 : 28; };
-    const anchoCaja = function (n) { return n.bw || (n.bw = Math.max(96, Math.round(n.cabezas.reduce(function (m, p) { return Math.max(m, nombreDe(p).length * 8.4, datoDe(p).length * 6.8); }, 0)) + 2 * PAD)); };
-    const alto = function (n) { return n.cabezas.length > 1 ? 6 + altoP(n.cabezas[0]) + 12 + altoP(n.cabezas[1]) + 6 : 6 + altoP(n.cabezas[0]) + 6; };
+    const anchoCaja = function (n) { return n.bw || (n.bw = Math.max(96, Math.round(n.cabezas.reduce(function (m, p) { return Math.max(m, nombreDe(p).length * 8.4, datoDe(p).length * 6.8); }, fechasN(n).length * 6.4)) + 2 * PAD)); };
+    const alto = function (n) { return n.cabezas.length > 1 ? 6 + altoP(n.cabezas[0]) + 12 + (fechasN(n) ? LF : 0) + altoP(n.cabezas[1]) + 6 : 6 + altoP(n.cabezas[0]) + 6; };
     const ancho = function (n) { return n.w || (n.w = Math.max(anchoCaja(n), n.hijos.reduce(function (t, h) { return t + ancho(h); }, 0) + GX * Math.max(0, n.hijos.length - 1))); };
     let H = 0;
     const situa = function (n, x, y) {
@@ -1333,7 +1340,9 @@
         dentro += '<path class="arbol-raya" d="M' + PAD + ' ' + yr + 'H' + (bw - PAD) + '"/>';
         if (n.casados) dentro += '<g class="arbol-anillo" transform="translate(' + (bw / 2 - 10) + ',' + (yr - 10) + ')"><rect width="20" height="20" rx="10"/>' +
           '<g transform="translate(2.5,2.5) scale(0.62)"><circle cx="12" cy="15" r="6"/><path d="M12 3.5l2.5 2.5L12 8.5 9.5 6z"/></g><title>Casados</title></g>';
-        dentro += persona_(n.cabezas[1], yr + 6, bw);
+        const fn = fechasN(n);
+        if (fn) dentro += '<text x="' + (bw / 2) + '" y="' + (yr + 6 + 16) + '" text-anchor="middle" class="arbol-fechas">' + esc(fn) + '</text>';
+        dentro += persona_(n.cabezas[1], yr + 6 + (fn ? LF : 0), bw);
       }
       cajas += '<g transform="translate(' + x + ',' + y + ')"><rect class="arbol-caja ' + (n.raiz ? 'raiz' : '') + (n.cabezas.every(esFallecido) ? ' muerto' : '') + '" width="' + bw + '" height="' + h + '" rx="12"/>' + dentro + '</g>';
       if (n.hijos.length) {
@@ -1472,7 +1481,8 @@
   /* v4.22: los hijos, del mayor al menor; quien no tiene el año de nacimiento, detrás y en el orden del Excel */
   function porNacimiento(lista) {
     const clave = function (p) { const c = p.cumple || ''; return c.length >= 10 && Number(c.slice(6, 10)) ? c.slice(6, 10) + c.slice(3, 5) + c.slice(0, 2) : ''; };
-    return lista.map(function (p, i) { return { p: p, i: i, k: clave(p) }; }).sort(function (a, b) {
+    return lista.map(function (p, i) { return { p: p, i: i, k: clave(p), c: enCamino(p) }; }).sort(function (a, b) {
+      if (a.c !== b.c) return a.c ? 1 : -1;  // v4.25: quien está en camino, el último
       if (a.k && b.k) return a.k < b.k ? -1 : a.k > b.k ? 1 : a.i - b.i;
       if (a.k || b.k) return a.k ? -1 : 1;
       return a.i - b.i;
