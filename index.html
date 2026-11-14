@@ -312,6 +312,12 @@
   .evento-titulo span { font-size: 14px; font-weight: 700; color: var(--color-texto-suave); }
   .evento-texto { margin: 0; font-size: 15px; font-weight: 600; white-space: pre-line; }
   .evento-dia button.mini { justify-self: start; margin-left: 0; }
+  /* v4.35: el modo sencillo de la abuela: solo para mirar */
+  .modo-abuela nav.vistas a[data-vista="personas"], .modo-abuela nav.vistas a[data-vista="huecos"], .modo-abuela .eventos-barra, .modo-abuela #quien-soy, .modo-abuela #mis-proximas, .modo-abuela .nav-herr, .modo-abuela .instalar,
+  .modo-abuela .utilo, .modo-abuela #huerfanos, .modo-abuela .paso { display: none !important; }
+  .modo-abuela .p { cursor: default; }
+  .modo-abuela .nadie.suave { border: 0; background: none; padding: 0; min-height: 0; color: var(--color-texto-suave); font-weight: 700; }
+  .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
   .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
   .turno-evento svg { width: 16px; height: 16px; flex: none; color: var(--color-accion); }
   /* v4.28: la pestaña Eventos */
@@ -580,7 +586,8 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.34.0</footer>
+  <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
+  <footer>Hecho con cariño por Utilo · v4.35.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -745,6 +752,8 @@
   /* ---------- Personas ---------- */
   function persona(id) { return datos.personas.find(function (p) { return p.id === id; }); }
   function editor(id) { return (datos.editores || []).find(function (p) { return p.id === id; }); }
+  /* v4.35: en el móvil de la abuela, la web es solo para mirar */
+  function modoAbuela() { const e = yo && datos && editor(yo); return !!(e && !e.fallecio); }
   function quienEs(id) { return id ? (persona(id) || editor(id)) : null; }
   function esServicio(p) { return !!p && p.familia === 'Servicio'; }
   function generacion(p) { return GENERACIONES.find(function (g) { return p && g.clave === p.jerarquia; }) || GENERACIONES[GENERACIONES.length - 1]; }
@@ -1012,6 +1021,10 @@
   /* ---------- Pintar ---------- */
   function pintar() {
     if (!datos) return;
+    const sencillo = modoAbuela();  // v4.35
+    document.body.classList.toggle('modo-abuela', sencillo);
+    $('salir-sencillo').hidden = !sencillo;
+    if (sencillo && vista !== 'semana' && vista !== 'eventos') { ponerVista('semana'); return; }  // v4.35: la Semana y los Eventos, para mirar
     pintarNavegador();
     pintarSemana();
     pintarEventos();
@@ -1101,7 +1114,7 @@
     let html = '<article class="dia' + (fecha === h ? ' hoy' : '') + (pasado ? ' pasado' : '') + (abierto ? ' abierto' : '') + (sinTodo ? ' sin' : '') + '">';
     html += '<div class="dia-cab"><h3>' + DIAS[dow(fecha)] + '</h3><span>' + (fecha === h ? 'Hoy' : ddmm(fecha)) + '</span>' +
       (plegable ? '<button type="button" class="mini solo-movil" data-plegar="' + fecha + '" aria-expanded="' + abierto + '">' + (abierto ? 'Ocultar' : 'Ver') + '</button>' : '') +
-      ('<button type="button" class="mini' + (plegable && !abierto ? ' solo-escritorio' : '') + '" data-dia="' + fecha + '" aria-label="Notas del ' + diaLargo(fecha).toLowerCase() + '">Nota</button>') + '</div>';
+      (modoAbuela() ? '' : '<button type="button" class="mini' + (plegable && !abierto ? ' solo-escritorio' : '') + '" data-dia="' + fecha + '" aria-label="Notas del ' + diaLargo(fecha).toLowerCase() + '">Nota</button>') + '</div>';
     const cumples = textoCumples(fecha);
     if (cumples.length) html += '<p class="nota-dia cumple">' + cumples.map(esc).join('<br>') + '</p>';
     const recuerdos = textoRecuerdos(fecha);
@@ -1111,7 +1124,7 @@
     // v4.15: un evento puntual (la castañada…), destacado y con su botón para compartirlo
     if (nd && nd.evento) html += '<div class="evento-dia"><p class="evento-titulo">' + ICONO_EVENTO + '<b>' + esc(nd.evento) + '</b><span>' + (nd.eventoTurno === 'DORMIR' ? 'noche' : etiquetaTurno(nd.eventoTurno).toLowerCase()) + '</span></p>' +
       (nd.eventoTexto ? '<p class="evento-texto">' + esc(nd.eventoTexto) + '</p>' : '') +
-      '<button type="button" class="mini" data-compartir-evento="' + fecha + '">Compartir</button></div>';
+      (modoAbuela() ? '' : '<button type="button" class="mini" data-compartir-evento="' + fecha + '">Compartir</button>') + '</div>';
     eventosDe(fecha).forEach(function (e) {  // v4.28: los de la pestaña Eventos, en cada día que duran
       html += '<div class="evento-dia"><p class="evento-titulo">' + ICONO_EVENTO + '<b>' + esc(e.nombre) + '</b><span>' + esc(turnosEvTexto(e, fecha)) + '</span></p>' +
         (e.van.length ? '<p class="evento-texto">' + (e.van.length === 1 ? 'Va ' : 'Van ' + e.van.length + ': ') + esc(nombresDe(e.van).join(', ')) + '</p>' : '') +
@@ -1131,7 +1144,8 @@
       // v4.6: sin nadie, un solo botón «Falta alguien» con el icono, en la línea del turno
       const faltaAlguien = motivo === null && !comp.length;
       html += '<div class="comida' + (motivo !== null ? ' no-hace-falta' : '') + '"><div class="comida-cab"><h4>' + t.nombre + '</h4>' +
-        (faltaAlguien ? '<button type="button" class="nadie con-icono"' + datosTurno + ' aria-label="Falta alguien. Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '">' + ICONO_MAS + 'Falta alguien</button>'
+        (faltaAlguien && modoAbuela() ? '<span class="nadie suave">Nadie apuntado</span>' : motivo === null && modoAbuela() ? '' :
+          faltaAlguien ? '<button type="button" class="nadie con-icono"' + datosTurno + ' aria-label="Falta alguien. Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '">' + ICONO_MAS + 'Falta alguien</button>'
           : motivo === null ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div>';
       if (cuenta(ids, t.id, fecha)) {
         html += '<span class="cuantos">' + cuenta(ids, t.id, fecha) + '</span>';
@@ -1188,6 +1202,23 @@
       : '<p>No tienes nada apuntado a partir de hoy. Toca el icono de la persona con el más en la comida o la cena que quieras.</p>');
   }
 
+  /* v4.35: salir del modo sencillo: con la clave de la familia, para que no se salga sin querer */
+  function salirSencillo() {
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Salir del modo sencillo</h2></div>' +
+      '<div class="dlg-cuerpo"><p class="ayuda">Para volver a la web completa, escribe la clave de la familia.</p>' +
+      '<label class="campo" for="dlg-salir-clave">Clave<input id="dlg-salir-clave" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>' +
+      pie('Salir'));
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    const n = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
+    const salir = function () {
+      if (leerClave() && n($('dlg-salir-clave').value) !== n(leerClave())) { errorDialogo('Esa clave no es.'); return; }
+      yo = ''; guardarYo('');
+      cerrarDialogo(); pintar();
+    };
+    $('dlg-guardar').addEventListener('click', salir);
+    $('dlg-salir-clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') salir(); });
+  }
+
   /* ---------- v4.28: Pestaña Eventos ---------- */
   /* v4.28: quién va, por familias: los de la familia (sin el servicio, ni quien ha fallecido o está en camino) */
   function genteEvento(e) {
@@ -1220,7 +1251,7 @@
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
       '<p class="evento-gente"><b>' + esc(resumenEvento(e)) + '</b></p>' +
       (function () { const l = porFamiliaEvento(e).filter(function (x) { return x.van; }); return l.length ? '<p class="evento-gente"><span>' + esc(l.map(function (x) { return cortoFamilia(x.f) + ' ' + x.van; }).join(' · ')) + '</span></p>' : ''; })() +
-      '<div class="evento-botones">' + (pasado ? '' :
+      '<div class="evento-botones">' + (pasado || modoAbuela() ? '' :
         '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? 'Voy ✓' : 'Voy') + '</button>' +
         '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '" aria-pressed="' + noVoy + '">' + (noVoy ? 'No voy ✓' : 'No voy') + '</button>') +
       '<button type="button" class="principal" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></div></article>';
@@ -1230,7 +1261,7 @@
     const g = genteEvento(e), porFam = {}, orden = [];
     g.forEach(function (p) { const f = familiaDe(p); if (!porFam[f]) { porFam[f] = []; orden.push(f); } porFam[f].push(p); });
     const estado = function (p) { return e.van.indexOf(p.id) !== -1 ? 'si' : e.noVan.indexOf(p.id) !== -1 ? 'no' : ''; };
-    const pasado = e.hasta < hoy();
+    const pasado = e.hasta < hoy() || modoAbuela();  // v4.35: en el modo sencillo, solo para mirar
     // v4.28: dentro de cada familia, por núcleos: los padres y, debajo y metidos, sus hijos (y los hijos de sus hijos)
     const enOrden = function (gente) {
       const ids = {}, hijosDe = {}, hecho = {}, out = [];
@@ -1258,7 +1289,7 @@
       (e.lugar ? '<p>📍 <b>Dónde:</b> ' + esc(e.lugar) + '</p>' : '') +
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
       '<p class="ev-total"><b>' + esc(resumenEvento(e)) + '</b></p>' +
-      '<p class="ayuda">✓ va · ✗ no puede · sin marcar, aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).</p>' +
+      (modoAbuela() ? '' : '<p class="ayuda">✓ va · ✗ no puede · sin marcar, aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).</p>') +
       // v4.30: una sola lista: cada familia con sus números y, al tocar «Ver», quién es justo debajo
       '<div class="ev-resumen">' + porFamiliaEvento(e).map(function (x) {
         return '<details class="ev-familia" data-fam="' + esc(x.f) + '"' + (abiertasEv[x.f] ? ' open' : '') + '><summary>' +
@@ -1275,12 +1306,12 @@
     const e = evento(id);
     if (!e) return;
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(e.nombre) + '</h2></div><div class="dlg-cuerpo" id="dlg-ev-detalle" data-ev="' + esc(e.id) + '">' + htmlDetalleEvento(e) + '</div>' +
-      '<div class="dlg-pie"><div class="botones"><button type="button" class="accion" id="dlg-ev-compartir">Compartir</button>' +
-      '<button type="button" class="accion" id="dlg-ev-cambiar">Cambiar el evento</button>' +
+      '<div class="dlg-pie"><div class="botones">' + (modoAbuela() ? '' : '<button type="button" class="accion" id="dlg-ev-compartir">Compartir</button>' +
+      '<button type="button" class="accion" id="dlg-ev-cambiar">Cambiar el evento</button>') +
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
-    $('dlg-ev-compartir').addEventListener('click', function () { abrirCompartir('ev:' + id); });
-    $('dlg-ev-cambiar').addEventListener('click', function () { abrirEvento(evento(id)); });
+    if ($('dlg-ev-compartir')) $('dlg-ev-compartir').addEventListener('click', function () { abrirCompartir('ev:' + id); });
+    if ($('dlg-ev-cambiar')) $('dlg-ev-cambiar').addEventListener('click', function () { abrirEvento(evento(id)); });
   }
   /* Confirmar por alguien desde el detalle, sin cerrarlo: se ve ya y se guarda por detrás */
   function confirmarEnEvento(id, personaId, va) {
@@ -1411,8 +1442,10 @@
   }
   $('ev-anadir').addEventListener('click', function () { abrirEvento(null); });
   document.addEventListener('click', function (ev) {
+    if (ev.target.closest('[data-salir-sencillo]')) { salirSencillo(); return; }
     const b = ev.target.closest('[data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p]');
     if (!b) return;
+    if (modoAbuela() && !b.dataset.evVer) return;  // v4.35: en el modo sencillo, solo ver
     if (b.dataset.evVoy) apuntarEv(b.dataset.evVoy, true);
     else if (b.dataset.evNovoy) apuntarEv(b.dataset.evNovoy, false);
     else if (b.dataset.evVer) abrirDetalleEvento(b.dataset.evVer);
@@ -2898,6 +2931,7 @@
   document.addEventListener('click', function (e) {
     const el = e.target.closest('[data-persona], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
+    if (modoAbuela() && !el.hasAttribute('data-semana') && !el.hasAttribute('data-plegar') && !el.hasAttribute('data-paso-dia')) return;  // v4.35: solo para mirar
     if (el.hasAttribute('data-semana')) {
       const paso = Number(el.dataset.semana);
       irADia(paso === 0 ? diaInicial() : sumar(diaFoco, paso * 7));
