@@ -578,7 +578,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.30.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.32.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -784,7 +784,14 @@
   /* v4.13.7: las notas ya no dicen quién ni cuándo (se guarda en el Excel, pero en pantalla era ruido) */
   /* La abuela fuera: por comida, cena o noche */
   const CAMPO_FUERA = { COMIDA: 'fueraComida', CENA: 'fueraCena', DORMIR: 'fueraDormir' };
-  function fueraTurno(fecha, turno) { const nd = notaDia(fecha); return !!(nd && nd[CAMPO_FUERA[turno]]); }
+  /* v4.31: un evento cubre la comida, la cena o la noche (todo el día: comida y cena, y las noches si dura más de un día) */
+  function eventoEn(fecha, turno) {
+    return (datos.eventos || []).filter(function (e) {
+      return e.desde <= fecha && fecha <= e.hasta && (e.cuando === turno || (e.cuando === 'DIA' && (turno !== 'DORMIR' || fecha < e.hasta)));
+    })[0] || null;
+  }
+  // v4.31: la abuela siempre va a los eventos: en ese turno no está en casa (como si se marcara «la abuela no está»)
+  function fueraTurno(fecha, turno) { const nd = notaDia(fecha); return !!(nd && nd[CAMPO_FUERA[turno]]) || !!eventoEn(fecha, turno); }
   function fuera(fecha) { const nd = notaDia(fecha); return nd && (nd.fueraComida || nd.fueraCena || nd.fueraDormir) ? nd : null; }
   function fueraTodo(fecha) { return TURNOS.every(function (t) { return fueraTurno(fecha, t.id); }); }
   function textoFuera(fecha) {
@@ -794,6 +801,7 @@
   }
 
   function sinTurno(fecha, turno) {
+    if (eventoEn(fecha, turno)) return '';  // v4.31: la abuela está en un evento
     const nd = notaDia(fecha);
     if (!nd) return null;
     if (nd[CAMPO_FUERA[turno]]) return '';
@@ -1118,7 +1126,8 @@
       if (cuenta(ids, t.id, fecha)) {
         html += '<span class="cuantos">' + cuenta(ids, t.id, fecha) + '</span>';
       }
-      if (ft) html += '<p class="sin-turno">La abuela no está' + (ids.length ? ': avisad a quien va.' : '.') + '</p>';
+      const evT = ft && eventoEn(fecha, t.id);  // v4.31
+      if (ft) html += '<p class="sin-turno">' + (evT ? 'La abuela está en ' + esc(evT.nombre) : 'La abuela no está') + (ids.length ? ': avisad a quien va.' : '.') + '</p>';
       else if (motivo !== null) html += '<p class="sin-turno">No hace falta que vaya nadie' + (motivo ? ': ' + esc(motivo) : '.') + '</p>';
       if (comp.length) html += '<div class="gente">' + comp.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
       if (serv.length) html += '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
@@ -1399,6 +1408,7 @@
     if (hayCasados() && parejaDe(p) && !p.casados) f.push('si están casados');
     if (!p.menu) f.push('menú');
     if (!p.cumple && p.familia !== 'Otros') f.push('cumpleaños');  // v4.7: a los de fuera de la familia no se les pide
+    else if (p.cumple && deFamilia && !Number(p.cumple.slice(6, 10))) f.push('el año de nacimiento');  // v4.32: sin año no hay edad
     return f;
   }
   function pintarPersonas() {
@@ -1643,7 +1653,7 @@
     return [come, p.alergias ? 'no come: ' + p.alergias : ''].filter(Boolean).join(' · ');
   }
   /* v4.12.4: lo que falta, en corto: «falta: cumpleaños», «falta: cumpleaños y apellido» o «faltan varias cosas» */
-  const CORTO = { 'un apodo que no se repita': 'apodo', 'si es hombre o mujer': 'hombre o mujer', 'de quién es hijo o hija': 'padres', 'si están casados': 'si están casados' };
+  const CORTO = { 'el año de nacimiento': 'año de nacimiento', 'un apodo que no se repita': 'apodo', 'si es hombre o mujer': 'hombre o mujer', 'de quién es hijo o hija': 'padres', 'si están casados': 'si están casados' };
   function faltaCorto(p) {
     const f = falta(p).map(function (x) { return CORTO[x] || x; });
     return f.length > 2 ? 'faltan varias cosas' : 'falta: ' + lista(f);
@@ -1665,7 +1675,10 @@
     if (!mes) return 'menos de un año';
     const m = (Number(h.slice(0, 4)) - Number(c.slice(6, 10))) * 12 + Number(h.slice(5, 7)) - mes - (Number(h.slice(8, 10)) < dia ? 1 : 0);
     if (m < 0) return '';
-    return m === 0 ? 'menos de un mes' : (m === 1 ? '1 mes' : m + ' meses');
+    if (m > 0) return m === 1 ? '1 mes' : m + ' meses';
+    if (!Number(c.slice(0, 2))) return 'menos de un mes';
+    const dias = Math.round((aUTC(h) - aUTC(c.slice(6, 10) + '-' + c.slice(3, 5) + '-' + c.slice(0, 2))) / 86400000);  // v4.32: el primer mes, en días
+    return dias <= 0 ? 'recién nacido' : (dias === 1 ? '1 día' : dias + ' días');
   }
   function cajaAbuelos() {
     const ellos = (datos.editores || []).filter(function (e) { return e.jerarquia === 'Abuelos'; });
@@ -2740,7 +2753,8 @@
     }
     const bloques = (tipo === 'semana' ? dias : [tipo]).map(function (f) {
       let b = '📅 *' + diaLargo(f) + '*';
-      if (fueraTodo(f)) return b + '\n🧳 La abuela no está' + (fuera(f).motivoFuera ? ' (' + fuera(f).motivoFuera + ')' : '') + '.';
+      const evDia = eventoEn(f, 'COMIDA') || eventoEn(f, 'CENA');  // v4.31
+      if (fueraTodo(f)) return b + (evDia ? '\n🎉 La abuela está en ' + evDia.nombre + '.' : '\n🧳 La abuela no está' + ((fuera(f) || {}).motivoFuera ? ' (' + fuera(f).motivoFuera + ')' : '') + '.');
       textoCumples(f).forEach(function (c) { b += '\n🎂 ' + c; });
       textoRecuerdos(f).forEach(function (c) { b += '\n🕯️ ' + c; });
       textoAniversarios(f).forEach(function (c) { b += '\n💍 ' + c; });
@@ -2751,7 +2765,7 @@
         const ids = idsDe(f, t.id), comp = compania(ids, t.id), serv = servicioDe(ids, t.id), motivo = sinTurno(f, t.id);
         const total = comp.length + acompanantesDe(comp, f, t.id);
         b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (total > 1 ? ' (' + total + ')' : '');
-        if (fueraTurno(f, t.id)) b += '\n🧳 La abuela no está';
+        if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? '\n🎉 La abuela está en ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
         else if (motivo !== null && !comp.length) { b += '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.'; return; }
         else if (!comp.length) b += '\n⚠️ Falta alguien';
         comp.concat(serv).forEach(function (id) {
@@ -2809,7 +2823,7 @@
       return '<tr><th scope="row">' + diaLargo(f) + (extra.length ? '<br><small>' + extra.map(esc).join('<br>') + '</small>' : '') + '</th>' + TURNOS.map(function (t) {
         const ids = idsDe(f, t.id), comp = compania(ids, t.id), serv = servicioDe(ids, t.id), motivo = sinTurno(f, t.id);
         const al = t.id === 'DORMIR' ? [] : ids.map(persona).filter(function (p) { return p && p.alergias; });
-        if (fueraTurno(f, t.id) && !comp.length) return '<td>La abuela no está</td>';
+        if (fueraTurno(f, t.id) && !comp.length) return '<td>' + (eventoEn(f, t.id) ? 'La abuela está en ' + esc(eventoEn(f, t.id).nombre) : 'La abuela no está') + '</td>';
         return '<td>' + (motivo !== null && !comp.length ? 'No hace falta nadie' + (motivo ? ': ' + esc(motivo) : '')
           : (comp.length ? comp.map(function (id) { return esc(persona(id).apodo); }).join(', ') : '____________')) +
           (serv.length ? '<br>Servicio: ' + serv.map(function (id) { return esc(persona(id).apodo); }).join(', ') : '') +
