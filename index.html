@@ -388,6 +388,7 @@
   .aj-hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; font-size: 14px; max-height: 60vh; overflow: auto; }
   .aj-hist li { padding: 7px 0; border-top: 1px solid var(--color-linea); }
   .aj-hist small { display: block; color: var(--color-texto-suave); font-weight: 700; font-size: 12px; }
+  .comida.ya-paso .comida-cab h4 { color: var(--color-texto-suave); }
   .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
   .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
   .turno-evento svg { width: 16px; height: 16px; flex: none; color: var(--color-accion); }
@@ -420,6 +421,16 @@
   .ev-fam-nombre { grid-area: n; }
   .ev-familia .ev-van { grid-area: v; font-weight: 800; color: var(--color-principal-oscuro); white-space: nowrap; }
   .ev-familia .ev-resto { grid-area: r; font-size: 13px; color: var(--color-texto-suave); font-weight: 600; }
+  .ev-familia summary { grid-template-areas: "n v b" "g g g" "r r r"; }
+  .ev-barra { grid-area: g; display: flex; height: 7px; margin: 4px 0 2px; border-radius: 4px; overflow: hidden; background: var(--color-linea); }
+  .ev-barra i { display: block; height: 100%; }
+  .ev-barra .si { background: var(--color-principal); }
+  .ev-barra .no { background: var(--color-error); }
+  .ev-familia[open] summary { position: sticky; top: -16px; z-index: 2; background: var(--color-fondo); box-shadow: 0 6px 8px -8px rgba(0, 0, 0, .25); padding-top: 6px; }
+  button.principal.boton-evento { background: var(--color-accion); border-color: var(--color-accion); color: #fff; }
+  .evento-card[data-ev-ver] { cursor: pointer; }
+  .impreso { margin: 0 0 8px; font-size: 12px; color: #555; }
+  #dlg-titulo:focus { outline: none; }  /* el foco va al título solo para que no se abra ningún desplegable */
   .ev-familia .ev-ver { grid-area: b; margin: 0; padding: 3px 12px; border: 2px solid var(--color-principal-oscuro); border-radius: 999px; font-size: 13px; font-weight: 800; color: var(--color-principal-oscuro); background: #fff; }
   .ev-familia .ev-ver::after { content: 'Ver'; }
   .ev-familia[open] .ev-ver::after { content: 'Ocultar'; }
@@ -676,7 +687,7 @@
   </section>
 
   <section id="vista-eventos" hidden>
-    <div class="eventos-barra"><button type="button" class="principal" id="ev-anadir">Añadir evento</button></div>
+    <div class="eventos-barra"><button type="button" class="principal boton-evento" id="ev-anadir">Añadir evento</button></div>
     <div id="eventos-lista"><p class="vacio">Cargando…</p></div>
   </section>
   <section id="vista-rellenar" hidden>
@@ -706,7 +717,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.62.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.63.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -943,6 +954,15 @@
     return 'La abuela no está ' + (q.length > 1 ? 'en ' : 'en ') + lista(q);
   }
 
+  /* v4.63: la comida o la cena ya ha pasado (2 horas después de su hora); la noche, cuando acaba el día */
+  function yaPaso(fecha, turno) {
+    const h = hoy();
+    if (fecha !== h) return fecha < h;
+    if (turno === 'DORMIR') return false;
+    const hora = turno === 'CENA' ? datos.config.horaCena : datos.config.horaComida;
+    const m = function (t) { return Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)); };
+    return m(ahoraLocal().slice(11, 16)) >= m(hora || '14:00') + 120;
+  }
   function sinTurno(fecha, turno) {
     if (eventoEn(fecha, turno)) return '';  // v4.31: la abuela está en un evento
     const nd = notaDia(fecha);
@@ -1182,7 +1202,7 @@
     for (let f = h < datos.config.inicio ? datos.config.inicio : h; f <= fin; f = sumar(f, 1)) {
       const huecos = [];
       TURNOS.forEach(function (t) {
-        if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id)) return;
+        if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id) || yaPaso(f, t.id)) return;  // v4.63: lo que ya pasó, no
         const ids = idsDe(f, t.id);
         const familia = ids.filter(function (id) { return !esServicio(persona(id)); });
         if (familia.length) return;
@@ -1280,9 +1300,11 @@
       const motivo = sinTurno(fecha, t.id);
       const datosTurno = ' data-anadir data-fecha="' + fecha + '" data-turno="' + t.id + '"';
       // v4.6: sin nadie, un solo botón «Falta alguien» con el icono, en la línea del turno
-      const faltaAlguien = motivo === null && !comp.length;
-      html += '<div class="comida' + (motivo !== null ? ' no-hace-falta' : '') + '"><div class="comida-cab"><h4>' + t.nombre + '</h4>' +
-        (faltaAlguien && modoAbuela() ? '<span class="nadie suave">Nadie apuntado</span>' : motivo === null && modoAbuela() ? '' :
+      const paso = yaPaso(fecha, t.id);  // v4.63
+      const faltaAlguien = motivo === null && !comp.length && !paso;
+      html += '<div class="comida' + (motivo !== null ? ' no-hace-falta' : '') + (paso ? ' ya-paso' : '') + '"><div class="comida-cab"><h4>' + t.nombre + '</h4>' +
+        (paso && motivo === null && !comp.length ? '<span class="nadie suave">Ya pasó · no fue nadie</span>' :
+          faltaAlguien && modoAbuela() ? '<span class="nadie suave">Nadie apuntado</span>' : motivo === null && modoAbuela() ? '' :
           faltaAlguien ? '<button type="button" class="nadie con-icono"' + datosTurno + ' aria-label="Falta alguien. Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '">' + ICONO_MAS + 'Falta alguien</button>'
           : motivo === null ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div>';
       if (cuenta(ids, t.id, fecha)) {
@@ -1755,7 +1777,7 @@
   function tarjetaEvento(e) {
     const h = hoy(), pasado = e.hasta < h;
     const voy = e.van.indexOf(yo) !== -1, noVoy = e.noVan.indexOf(yo) !== -1;
-    return '<article class="evento-card' + (pasado ? ' pasado' : '') + '" id="ev-' + esc(e.id) + '"><h3>' + ICONO_EVENTO + esc(e.nombre) + '</h3>' +
+    return '<article class="evento-card' + (pasado ? ' pasado' : '') + '" id="ev-' + esc(e.id) + '" data-ev-ver="' + esc(e.id) + '"><h3>' + ICONO_EVENTO + esc(e.nombre) + '</h3>' +
       '<p class="evento-cuando">' + esc(fechaEvento(e)) + '</p>' +
       (e.lugar ? '<p class="evento-gente con-icono-txt">' + ICONO_SITIO + esc(e.lugar) + '</p>' : '') +
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
@@ -1764,7 +1786,7 @@
       '<div class="evento-botones">' + (pasado || modoAbuela() ? '' :
         '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? 'Voy ✓' : 'Voy') + '</button>' +
         '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '" aria-pressed="' + noVoy + '">' + (noVoy ? 'No voy ✓' : 'No voy') + '</button>') +
-      '<button type="button" class="principal" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></div></article>';
+      '<button type="button" class="principal boton-evento" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></div></article>';
   }
   /* v4.28: el detalle de un evento: dónde, cuándo y quién va, por familias, con lo que falta por confirmar */
   function htmlDetalleEvento(e) {
@@ -1795,7 +1817,8 @@
       // v4.30: una sola lista: cada familia con sus números y, al tocar «Ver», quién es justo debajo
       '<div class="ev-resumen">' + porFamiliaEvento(e).map(function (x) {
         return '<details class="ev-familia" data-fam="' + esc(x.f) + '"' + (abiertasEv[x.f] ? ' open' : '') + '><summary>' +
-          '<b class="ev-fam-nombre">' + esc(cortoFamilia(x.f)) + '</b><span class="ev-van">' + (x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : '—') + '</span>' +
+          '<b class="ev-fam-nombre">' + esc(cortoFamilia(x.f)) + '</b><span class="ev-van">' + (x.van && x.van === x.gente.length ? '✓ van todos' : x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : '—') + '</span>' +
+          '<span class="ev-barra" aria-hidden="true"><i class="si" style="width:' + (x.van / x.gente.length * 100) + '%"></i><i class="no" style="width:' + (x.no / x.gente.length * 100) + '%"></i></span>' +
           '<span class="ev-resto">' + [x.no ? (x.no === 1 ? '1 no puede' : x.no + ' no pueden') : '', x.pend ? x.pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</span>' +
           '<span class="mini ev-ver" aria-hidden="true"></span></summary>' +
           '<ul>' + enOrden(x.gente).map(fila).join('') + '</ul></details>';
@@ -2975,6 +2998,9 @@
   function abrirDialogo(html) {
     $dlg.innerHTML = html;
     if (!$dlg.open) { if (typeof $dlg.showModal === 'function') $dlg.showModal(); else $dlg.setAttribute('open', ''); }
+    // v4.63: el foco, en el título (si no, el móvil abre solo el primer desplegable o la primera fecha)
+    const t = $dlg.querySelector('#dlg-titulo');
+    if (t) { t.setAttribute('tabindex', '-1'); try { t.focus({ preventScroll: true }); } catch (e) { t.focus(); } }
   }
   function cerrarDialogo() { if ($dlg.open) { if (typeof $dlg.close === 'function') $dlg.close(); else { $dlg.removeAttribute('open'); $dlg.innerHTML = ''; } } }
   function errorDialogo(t) { const e = $('dlg-error'); if (e) { e.textContent = t; e.hidden = false; } }
@@ -3375,7 +3401,7 @@
         if (f < hoy()) return;
         const faltan = [];
         TURNOS.forEach(function (t) {
-          if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id)) return;
+          if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id) || yaPaso(f, t.id)) return;  // v4.63
           const ids = idsDe(f, t.id);
           if (ids.some(function (id) { return !esServicio(persona(id)); })) return;
           faltan.push((t.id === 'DORMIR' ? 'noche' : t.nombre.toLowerCase()) + (ids.length ? ' (solo el servicio)' : ''));
@@ -3400,7 +3426,7 @@
         b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (total > 1 ? ' (' + total + ')' : '');
         if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? ' 🎉 ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
         else if (motivo !== null && !comp.length) { b += '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.'; return; }
-        else if (!comp.length) b += '\n⚠️ Falta alguien';
+        else if (!comp.length) b += yaPaso(f, t.id) ? '\nNo fue nadie.' : '\n⚠️ Falta alguien';  // v4.63
         comp.concat(serv).forEach(function (id) {
           const a = apunte(f, t.id, id);
           b += '\n• ' + apodo(id) + (a && a.acompanantes ? ' +' + a.acompanantes : '') + (serv.indexOf(id) !== -1 ? ' (servicio)' : '') + (a && a.nota ? ' _(' + a.nota + ')_' : '');
@@ -3484,7 +3510,7 @@
       const c = [etiquetaMenu(a.menu) !== 'Entero' ? 'menú ' + etiquetaMenu(a.menu).toLowerCase() : '', a.alergias].filter(Boolean).join(' · ');
       return c ? '<p>' + esc(a.apodo) + ': ' + esc(c) + '</p>' : '';
     }).join('');
-    $('impresion').innerHTML = '<h1>Casa Abuela · semana del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '</h1>' + come +
+    $('impresion').innerHTML = '<h1>Casa Abuela · semana del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '</h1>' + '<p class="impreso">Impreso el ' + diaLargo(hoy()).toLowerCase() + ' a las ' + ahoraLocal().slice(11, 16) + '</p>' +  // v4.63 come +
       '<table><thead><tr><th>Día</th><th>Comida (' + datos.config.horaComida + ')</th><th>Cena (' + datos.config.horaCena + ')</th><th>Dormir</th></tr></thead><tbody>' + filas + '</tbody></table>' +
       '<p class="pie">Impreso el ' + ddmm(hoy()) + '. Lo que esté en la web manda sobre esta hoja.</p>';
     window.print();
