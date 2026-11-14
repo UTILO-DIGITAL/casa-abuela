@@ -325,6 +325,10 @@
   .rf-familias small { font-weight: 700; color: var(--color-texto-suave); }
   .rf-persona { padding: 12px 14px; margin: 0 0 12px; border-radius: var(--radio); background: #fff; border: 1px solid var(--color-linea); display: grid; gap: 8px; }
   .rf-persona h3 { margin: 0; font-size: 18px; }
+  .rf-hecha { padding: 6px 14px; background: none; }
+  .rf-hecha h3 { font-size: 16px; }
+  .rf-ok { font-size: 13px; color: var(--color-principal-oscuro); margin-left: 6px; }
+  .rf-contexto { margin: -4px 0 0; font-size: 14px; color: var(--color-texto-suave); font-weight: 600; }
   .rf-persona h3 small { font-weight: 600; color: var(--color-texto-suave); font-size: 14px; margin-left: 6px; }
   .rf-guardar { position: sticky; bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; padding: 10px 0; }
   .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
@@ -620,7 +624,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.42.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.43.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1255,6 +1259,22 @@
     $('dlg-salir-clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') salir(); });
   }
 
+  /* v4.28 (v4.42, para todos): por núcleos: los padres y, debajo y metidos, sus hijos (y los hijos de sus hijos) */
+  function ordenPorNucleos(gente) {
+    const ids = {}, hijosDe = {}, hecho = {}, out = [];
+    gente.forEach(function (p) { ids[p.id] = p; });
+    gente.forEach(function (p) { if (p.hijoDe && ids[p.hijoDe]) (hijosDe[p.hijoDe] = hijosDe[p.hijoDe] || []).push(p); });
+    const pon = function (p, nivel) {
+      if (hecho[p.id]) return;
+      hecho[p.id] = true; out.push({ p: p, nivel: nivel });
+      const pa = parejaDe(p);
+      if (pa && ids[pa.id] && !hecho[pa.id]) { hecho[pa.id] = true; out.push({ p: pa, nivel: nivel }); }
+      porNacimiento((hijosDe[p.id] || []).concat(pa ? hijosDe[pa.id] || [] : [])).forEach(function (h) { pon(h, nivel + 1); });
+    };
+    gente.filter(function (p) { return !p.hijoDe || !ids[p.hijoDe]; }).forEach(function (p) { const pa = parejaDe(p); if (!(pa && pa.hijoDe && ids[pa.hijoDe])) pon(p, 0); });
+    gente.forEach(function (p) { pon(p, 0); });
+    return out;
+  }
   /* ---------- v4.40: Rellenar lo que falta (por familia, para el grupo) ---------- */
   let rfFamilia = '', rfSucio = true;
   function rfGente(f) {
@@ -1268,7 +1288,9 @@
     if (!p.apellido) f.push('apellido');
     if (!p.menu) f.push('menu');
     const pa = parejaDe(p);
-    if (pa && p.casados === 'Sí' && (!p.boda || !Number(p.boda.slice(6, 10))) && (!esDeFuera(p) || esDeFuera(pa) && p.id < pa.id)) f.push('boda');
+    const lleva = pa && (!esDeFuera(p) || esDeFuera(pa) && p.id < pa.id);  // las fechas de la pareja, en la tarjeta del de sangre
+    if (lleva && !p.novios) f.push('novios');  // v4.42
+    if (lleva && p.casados === 'Sí' && (!p.boda || !Number(p.boda.slice(6, 10)))) f.push('boda');
     return f;
   }
   function pintarRellenar() {
@@ -1285,27 +1307,39 @@
       return;
     }
     const gente = rfGente(rfFamilia);
-    const conFalta = gente.filter(function (p) { return rfFalta(p).length; });
-    const completos = gente.filter(function (p) { return !rfFalta(p).length; });
+    const orden = ordenPorNucleos(gente);
+    const hayFalta = gente.some(function (p) { return rfFalta(p).length; });
+    const contexto = function (p) {
+      const padre = p.hijoDe && quienEs(p.hijoDe), otro = padre && parejaDe(padre), pa = parejaDe(p);
+      if (padre) return (p.sexo === 'Mujer' ? 'Hija de ' : p.sexo === 'Hombre' ? 'Hijo de ' : 'Hijo o hija de ') + padre.apodo + (otro ? ' y ' + otro.apodo : '');
+      if (pa) return 'Pareja de ' + pa.apodo;
+      return '';
+    };
+    let k = 0;
     $r.innerHTML = '<p><button type="button" class="enlace" data-rf-fam="">← Elegir otra familia</button></p>' +
       '<h2>' + esc(nombreFamilia(rfFamilia)) + '</h2>' +
-      (conFalta.length ? '<p class="ayuda">Rellena lo que sepas; lo que no, déjalo en blanco. Del cumpleaños, si sabes el año, mejor: así sale la edad.</p>' : '<p>¡Esta familia está completa! Si quieres, añade santos o bautizos desde la ficha de cada uno en Personas.</p>') +
-      conFalta.map(function (p, k) {
-        const f = rfFalta(p);
-        const pa = parejaDe(p);
-        let h = '<div class="rf-persona" data-rf="' + k + '" data-id="' + esc(p.id) + '"><h3>' + esc(p.apodo) + '<small>' + esc([p.nombre, p.apellido].filter(Boolean).join(' ')) + '</small></h3>';
-        if (f.indexOf('cumple') !== -1) h += campoFechaPareja('rf' + k + 'c', 'Cumpleaños', p.cumple || '', 0);
+      (hayFalta ? '<p class="ayuda">Rellena lo que sepas; lo que no, déjalo en blanco. Del cumpleaños, si sabes el año, mejor: así sale la edad.</p>' : '<p>¡Esta familia está completa! Si quieres, añade santos o bautizos desde la ficha de cada uno en Personas.</p>') +
+      orden.map(function (x) {
+        const p = x.p, f = rfFalta(p), pa = parejaDe(p);
+        const sangria = ' style="margin-left:' + (x.nivel * 16) + 'px"';
+        const cab = '<h3>' + esc(p.apodo) + '<small>' + esc([p.nombre, p.apellido].filter(Boolean).join(' ')) + '</small></h3>' +
+          (contexto(p) ? '<p class="rf-contexto">' + esc(contexto(p)) + '</p>' : '');
+        if (!f.length) return '<div class="rf-persona rf-hecha"' + sangria + '>' + cab.replace('</h3>', ' <span class="rf-ok">✓ completo</span></h3>') + '</div>';
+        const kk = k++;
+        let h = '<div class="rf-persona"' + sangria + ' data-rf="' + kk + '" data-id="' + esc(p.id) + '">' + cab;
+        if (f.indexOf('cumple') !== -1) h += campoFechaPareja('rf' + kk + 'c', 'Cumpleaños', p.cumple || '', 0);
         if (f.indexOf('sexo') !== -1 || f.indexOf('apellido') !== -1) h += '<div class="dos dos-iguales">' +
-          (f.indexOf('sexo') !== -1 ? '<label class="campo" for="dlg-rf' + k + 'sexo">Es<select id="dlg-rf' + k + 'sexo"><option value="">Sin decir</option><option>Hombre</option><option>Mujer</option></select></label>' : '') +
-          (f.indexOf('apellido') !== -1 ? '<label class="campo" for="dlg-rf' + k + 'ap">Apellido<input id="dlg-rf' + k + 'ap" type="text" maxlength="40" autocomplete="off"></label>' : '') + '</div>';
-        if (f.indexOf('menu') !== -1) h += '<div class="dos dos-iguales"><label class="campo" for="dlg-rf' + k + 'menu">Menú<select id="dlg-rf' + k + 'menu"><option value="">Sin decir</option>' + opcionesMenu('') + '</select></label>' +
-          '<label class="campo" for="dlg-rf' + k + 'al">Alergias o lo que no come<input id="dlg-rf' + k + 'al" type="text" maxlength="100" autocomplete="off" placeholder="Nada" value="' + esc(p.alergias || '') + '"></label></div>';
-        if (f.indexOf('boda') !== -1) h += campoFechaPareja('rf' + k + 'b', 'Boda con ' + esc(pa.apodo), p.boda || '', 0);
-        h += '<div class="rf-otras" id="dlg-rf' + k + 'otras"></div><button type="button" class="enlace" data-rf-otra="' + k + '">+ Añadir otra fecha (santo, bautizo…)</button></div>';
+          (f.indexOf('sexo') !== -1 ? '<label class="campo" for="dlg-rf' + kk + 'sexo">Es<select id="dlg-rf' + kk + 'sexo"><option value="">Sin decir</option><option>Hombre</option><option>Mujer</option></select></label>' : '') +
+          (f.indexOf('apellido') !== -1 ? '<label class="campo" for="dlg-rf' + kk + 'ap">Apellido<input id="dlg-rf' + kk + 'ap" type="text" maxlength="40" autocomplete="off"></label>' : '') + '</div>';
+        if (f.indexOf('menu') !== -1) h += '<div class="dos dos-iguales"><label class="campo" for="dlg-rf' + kk + 'menu">Menú<select id="dlg-rf' + kk + 'menu"><option value="">Sin decir</option>' + opcionesMenu('') + '</select></label>' +
+          '<label class="campo" for="dlg-rf' + kk + 'al">Alergias o lo que no come<input id="dlg-rf' + kk + 'al" type="text" maxlength="100" autocomplete="off" placeholder="Nada" value="' + esc(p.alergias || '') + '"></label></div>';
+        if (f.indexOf('novios') !== -1 || f.indexOf('boda') !== -1) h += '<p class="et-fecha">Con ' + esc(pa.apodo) + '</p>' +
+          (f.indexOf('novios') !== -1 ? campoFechaPareja('rf' + kk + 'n', 'Empezaron a salir', p.novios || '', 0) : '') +
+          (f.indexOf('boda') !== -1 ? campoFechaPareja('rf' + kk + 'b', 'Boda', p.boda || '', 0) : '');
+        h += '<div class="rf-otras" id="dlg-rf' + kk + 'otras"></div><button type="button" class="enlace" data-rf-otra="' + kk + '">+ Añadir otra fecha (santo, bautizo…)</button></div>';
         return h;
       }).join('') +
-      (completos.length ? '<p class="ayuda">Ya completos: ' + esc(completos.map(function (p) { return p.apodo; }).join(', ')) + '.</p>' : '') +
-      (conFalta.length ? '<div class="rf-guardar"><button type="button" class="principal" id="rf-guardar">Guardar todo</button></div>' : '');
+      (hayFalta ? '<div class="rf-guardar"><button type="button" class="principal" id="rf-guardar">Guardar todo</button></div>' : '');
     montarRellenar();
   }
   function montarRellenar() {
@@ -1321,7 +1355,7 @@
     if (!g) return;
     g.addEventListener('click', function () {
       const lista = [];
-      const cartas = Array.from($('rellenar').querySelectorAll('.rf-persona'));
+      const cartas = Array.from($('rellenar').querySelectorAll('.rf-persona[data-rf]'));
       for (let c = 0; c < cartas.length; c++) {
         const carta = cartas[c], k = carta.dataset.rf, p = persona(carta.dataset.id), cambios = {};
         if ($('dlg-rf' + k + 'cdia')) {
@@ -1333,6 +1367,11 @@
         if ($('dlg-rf' + k + 'ap') && $('dlg-rf' + k + 'ap').value.trim()) cambios.apellido = $('dlg-rf' + k + 'ap').value.trim();
         if ($('dlg-rf' + k + 'menu') && $('dlg-rf' + k + 'menu').value) cambios.menu = $('dlg-rf' + k + 'menu').value;
         if ($('dlg-rf' + k + 'al') && $('dlg-rf' + k + 'al').value.trim() !== (p.alergias || '')) cambios.alergias = $('dlg-rf' + k + 'al').value.trim();
+        if ($('dlg-rf' + k + 'ndia')) {  // v4.42
+          const r = leerFechaPareja('rf' + k + 'n', 'cuándo empezaron a salir ' + p.apodo + ' y su pareja', 0);
+          if (r.error) { aviso(r.error, 8000); carta.scrollIntoView({ block: 'center' }); return; }
+          if (r.valor && r.valor !== (p.novios || '')) cambios.novios = r.valor;
+        }
         if ($('dlg-rf' + k + 'bdia')) {
           const r = leerFechaPareja('rf' + k + 'b', 'la boda de ' + p.apodo, 0);
           if (r.error) { aviso(r.error, 8000); carta.scrollIntoView({ block: 'center' }); return; }
@@ -1409,21 +1448,7 @@
     const estado = function (p) { return e.van.indexOf(p.id) !== -1 ? 'si' : e.noVan.indexOf(p.id) !== -1 ? 'no' : ''; };
     const pasado = e.hasta < hoy() || modoAbuela();  // v4.35: en el modo sencillo, solo para mirar
     // v4.28: dentro de cada familia, por núcleos: los padres y, debajo y metidos, sus hijos (y los hijos de sus hijos)
-    const enOrden = function (gente) {
-      const ids = {}, hijosDe = {}, hecho = {}, out = [];
-      gente.forEach(function (p) { ids[p.id] = p; });
-      gente.forEach(function (p) { if (p.hijoDe && ids[p.hijoDe]) (hijosDe[p.hijoDe] = hijosDe[p.hijoDe] || []).push(p); });
-      const pon = function (p, nivel) {
-        if (hecho[p.id]) return;
-        hecho[p.id] = true; out.push({ p: p, nivel: nivel });
-        const pa = parejaDe(p);
-        if (pa && ids[pa.id] && !hecho[pa.id]) { hecho[pa.id] = true; out.push({ p: pa, nivel: nivel }); }
-        porNacimiento((hijosDe[p.id] || []).concat(pa ? hijosDe[pa.id] || [] : [])).forEach(function (h) { pon(h, nivel + 1); });
-      };
-      gente.filter(function (p) { return !p.hijoDe || !ids[p.hijoDe]; }).forEach(function (p) { const pa = parejaDe(p); if (!(pa && pa.hijoDe && ids[pa.hijoDe])) pon(p, 0); });
-      gente.forEach(function (p) { pon(p, 0); });
-      return out;
-    };
+    const enOrden = ordenPorNucleos;
     const fila = function (x) {
       const p = x.p, st = estado(p);
       return '<li class="ev-fila" style="padding-left:' + (x.nivel * 18) + 'px"><span class="ev-nombre">' + esc(p.apodo) + '</span>' +
