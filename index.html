@@ -2468,6 +2468,14 @@
       ['Come', m === 'Entero' ? 'Entero' : (m === 'Medio' ? 'La mitad' : (m === 'Nada' ? 'No come' : (m || 'Sin anotar')))],
       p.alergias ? ['No come', p.alergias] : null,
     ].filter(Boolean);
+    // v4.38: con quién está casado y cuándo, y sus otras fechas (bautizo, santo…)
+    const pa = parejaDe(p);
+    if (pa) {
+      const cuando = function (c) { return (Number(c.slice(0, 2)) ? 'el ' : 'en ') + fechaTexto(c); };
+      const casado = p.casados === 'Sí';
+      l.push([casado ? (p.sexo === 'Mujer' ? 'Casada con' : 'Casado con') : 'Pareja', pa.apodo + (p.boda ? (bodaQueViene(p.boda) ? ' · se casan ' : ' · se casaron ') + cuando(p.boda) : '')]);
+    }
+    (p.fechas || []).forEach(function (x) { l.push([x.que, fechaTexto(x.fecha)]); });
     return '<dl class="basico">' + l.map(function (b) { return '<div' + (b[0] === 'No come' ? ' class="alergia"' : '') + '><dt>' + b[0] + '</dt><dd>' + esc(b[1]) + '</dd></div>'; }).join('') + '</dl>';
   }
   /* v4.36: en el modo sencillo, al tocar a alguien: solo para mirar */
