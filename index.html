@@ -1173,6 +1173,7 @@
 
   function pintarQuienSoy() {
     const $q = $('quien-soy');
+    $q.hidden = false;  // v4.35: se había quedado escondido al quitar «Hoy y mañana» (en el modo sencillo lo esconde el estilo)
     const p = yo && persona(yo);
     const ed = !p && yo && editor(yo);
     const comidaAbuela = '';
