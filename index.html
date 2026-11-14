@@ -474,6 +474,11 @@
   .nucleo-cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0 0 8px; }
   .nucleo-cab:has(.bebe-mas) { flex-wrap: nowrap; align-items: flex-start; }  /* v4.52: el botón no salta de línea */
   .nucleo-cab:has(.bebe-mas) h4 { min-width: 0; }
+  .bebe-mas, .campana, #per-arbol-btn { display: inline-flex; align-items: center; gap: 6px; }
+  .bebe-mas svg, .campana svg { width: 16px; height: 16px; flex: none; }
+  #per-arbol-btn svg { width: 20px; height: 20px; flex: none; }
+  .con-icono-txt { display: flex; align-items: center; gap: 6px; }
+  .con-icono-txt svg { width: 17px; height: 17px; flex: none; color: var(--color-accion); }
   .nucleo-cab .bebe-mas { margin-left: auto; flex: none; align-self: flex-start; padding: 2px 8px; min-height: 30px; font-size: 13px; }
   .nucleo-cab.solo-bebe { justify-content: flex-end; margin: -4px 0 4px; }
   .nucleo-cab h4 { margin: 0; font-family: var(--letra-titulos); font-weight: 600; font-size: 18px; color: var(--color-principal-oscuro); }
@@ -646,7 +651,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.55.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.56.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -675,6 +680,11 @@
   const SVG = function (d) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
   const FLECHA_IZQ = SVG('<path d="M15 18l-6-6 6-6"/>');
   const FLECHA_DER = SVG('<path d="M9 6l6 6-6 6"/>');
+  // v4.56: iconos de línea en vez de emojis
+  const ICONO_ARBOL = SVG('<circle cx="12" cy="5" r="2.5"/><circle cx="5.5" cy="19" r="2.5"/><circle cx="18.5" cy="19" r="2.5"/><path d="M12 7.5V12M5.5 16.5V14h13v2.5M12 12v2"/>');
+  const ICONO_LISTA = SVG('<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/>');
+  const ICONO_CAMPANA = SVG('<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>');
+  const ICONO_SITIO = SVG('<path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>');
   const ICONO_MAS = SVG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M19 8v6M16 11h6"/>');
   const ICONO_COMPARTIR = SVG('<path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 14v5h14v-5"/>');
   const ICONO_EVENTO = SVG('<path d="M12 3l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.3 6.8 19l1-5.8-4.2-4.1 5.8-.8z"/>');
@@ -1184,7 +1194,7 @@
     let html = '<article class="dia' + (fecha === h ? ' hoy' : '') + (pasado ? ' pasado' : '') + (abierto ? ' abierto' : '') + (sinTodo ? ' sin' : '') + '">';
     html += '<div class="dia-cab"><h3>' + DIAS[dow(fecha)] + '</h3><span>' + (fecha === h ? 'Hoy' : ddmm(fecha)) + '</span>' +
       (plegable ? '<button type="button" class="mini solo-movil" data-plegar="' + fecha + '" aria-expanded="' + abierto + '">' + (abierto ? 'Ocultar' : 'Ver') + '</button>' : '') +
-      (modoAbuela() && !pasado ? '<button type="button" class="mini campana" data-preguntar="' + fecha + '" aria-label="Copiar quién viene el ' + diaLargo(fecha).toLowerCase() + '">🔔 ¿Quién viene?</button>' : '') +  // v4.38
+      (modoAbuela() && !pasado ? '<button type="button" class="mini campana" data-preguntar="' + fecha + '" aria-label="Copiar quién viene el ' + diaLargo(fecha).toLowerCase() + '">' + ICONO_CAMPANA + '¿Quién viene?</button>' : '') +  // v4.38
       (modoAbuela() ? '' : '<button type="button" class="mini' + (plegable && !abierto ? ' solo-escritorio' : '') + '" data-dia="' + fecha + '" aria-label="Notas del ' + diaLargo(fecha).toLowerCase() + '">Nota</button>') + '</div>';
     const cumples = textoCumples(fecha);
     if (cumples.length) html += '<p class="nota-dia cumple">' + cumples.map(esc).join('<br>') + '</p>';
@@ -1541,7 +1551,7 @@
     const voy = e.van.indexOf(yo) !== -1, noVoy = e.noVan.indexOf(yo) !== -1;
     return '<article class="evento-card' + (pasado ? ' pasado' : '') + '" id="ev-' + esc(e.id) + '"><h3>' + ICONO_EVENTO + esc(e.nombre) + '</h3>' +
       '<p class="evento-cuando">' + esc(fechaEvento(e)) + '</p>' +
-      (e.lugar ? '<p class="evento-gente">📍 ' + esc(e.lugar) + '</p>' : '') +
+      (e.lugar ? '<p class="evento-gente con-icono-txt">' + ICONO_SITIO + esc(e.lugar) + '</p>' : '') +
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
       '<p class="evento-gente"><b>' + esc(resumenEvento(e)) + '</b></p>' +
       (function () { const l = porFamiliaEvento(e).filter(function (x) { return x.van; }); return l.length ? '<p class="evento-gente"><span>' + esc(l.map(function (x) { return cortoFamilia(x.f) + ' ' + x.van; }).join(' · ')) + '</span></p>' : ''; })() +
@@ -1566,7 +1576,7 @@
           '<button type="button" class="ev-no" data-ev-p="' + esc(e.id) + '|' + esc(p.id) + '|no" aria-pressed="' + (st === 'no') + '" aria-label="' + esc(p.apodo) + ' no puede" title="No puede">✗</button></span>') + '</li>';
     };
     return '<p class="evento-cuando">' + esc(fechaEvento(e)) + '</p>' +
-      (e.lugar ? '<p>📍 <b>Dónde:</b> ' + esc(e.lugar) + '</p>' : '') +
+      (e.lugar ? '<p class="con-icono-txt">' + ICONO_SITIO + '<span><b>Dónde:</b> ' + esc(e.lugar) + '</span></p>' : '') +
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
       (!pasado ? (function () {  // v4.51: lo primero, si vas tú
         const yoP = yo && persona(yo), st = yoP ? estado(yoP) : '';
@@ -1785,7 +1795,7 @@
     pintarFiltros();
     // v4.16: el árbol genealógico, en lugar de la lista
     $('per-arbol-btn').setAttribute('aria-pressed', String(vistaArbol));
-    $('per-arbol-btn').textContent = vistaArbol ? '☰ Lista' : '🌳 Árbol';  // v4.55: botón flotante
+    $('per-arbol-btn').innerHTML = vistaArbol ? ICONO_LISTA + 'Lista' : ICONO_ARBOL + 'Árbol';  // v4.55: botón flotante; v4.56: con iconos de línea
     if (vistaArbol) {
       $('per-filtros').hidden = true; $('per-resultado').hidden = true; $('per-abuela').innerHTML = '';
       pintarArbol();
@@ -2103,7 +2113,7 @@
     const fp = cabezas.length === 2 && parejaDe(cabezas[0]) === cabezas[1] ? fechasPareja(cabezas[0]) : '';  // v4.21
     // v4.45: añadir un bebé a este núcleo (al de sangre de la pareja)
     const madre = cabezas.filter(function (p) { return !esDeFuera(p) && !esFallecido(p); })[0] || cabezas.filter(function (p) { return !esFallecido(p); })[0];
-    const bebe = madre && !modoAbuela() && GEN_HIJOS[madre.jerarquia] ? '<button type="button" class="mini bebe-mas" data-bebe="' + esc(madre.id) + '" aria-label="Añadir un bebé de ' + esc(madre.apodo) + '" title="Añadir un bebé">👶 +</button>' : '';
+    const bebe = madre && !modoAbuela() && GEN_HIJOS[madre.jerarquia] ? '<button type="button" class="mini bebe-mas" data-bebe="' + esc(madre.id) + '" aria-label="Añadir un bebé de ' + esc(madre.apodo) + '" title="Añadir un bebé">' + ICONO_MAS + 'Bebé</button>' : '';
     return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + (extra || '') + '</h4>' + anillo(estado) + bebe + '</div>' : (bebe ? '<div class="nucleo-cab solo-bebe">' + bebe + '</div>' : '')) +
       (fp ? '<p class="fechas-pareja' + (cabezas[0].boda && bodaQueViene(cabezas[0].boda) ? ' futuro' : '') + '">' + esc(fp) + '</p>' : '') +
       (cabezas.length ? '<ul class="per-filas">' + cabezas.map(filaCaja).join('') + '</ul>' : '') +
