@@ -60,7 +60,7 @@ const ctx = {
   ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, api_ };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, api_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -242,6 +242,46 @@ d = R.guardarPersona('(N) - Nacio', { fallecio: '06/2008' }, M_, V2);
 ver('y se le puede volver a poner fecha', (d.personas.find(p => p.id === '(N) - Nacio') || {}).fallecio === '00/06/2008');
 d = R.guardarPersona(M_, { cumple: '1952' }, M_, V2);
 ver('cumpleaños con solo el año', quien(M_).cumple === '00/00/1952');
+
+// ---------- v4.28: eventos ----------
+const JP_ = '(T+1) - Jordi P';
+ver('sin MESA_EVENTOS, ningún evento', Array.isArray(d.eventos) && d.eventos.length === 0);
+d = R.guardarEvento({ nombre: 'PortAventura', desde: '2026-12-19', hasta: '2026-12-20', cuando: 'DIA', texto: 'Salimos a las 9' }, M_, V2);
+const ev1 = (d.eventos || []).find(e => e.nombre === 'PortAventura') || {};
+ver('se crea la pestaña y el evento, de dos días', !!hojas.MESA_EVENTOS && ev1.desde === '2026-12-19' && ev1.hasta === '2026-12-20' && ev1.cuando === 'DIA' && ev1.texto === 'Salimos a las 9');
+d = R.apuntarEvento(ev1.id, M_, true, M_, V2);
+d = R.apuntarEvento(ev1.id, JP_, false, M_, V2);
+let evt = d.eventos.find(e => e.id === ev1.id);
+ver('quién va y quién no', evt.van.join() === M_ && evt.noVan.join() === JP_);
+d = R.apuntarEvento(ev1.id, JP_, true, M_, V2);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('cambiar de «no voy» a «voy»', evt.van.join() === M_ + ',' + JP_ && !evt.noVan.length);
+d = R.apuntarEvento(ev1.id, M_, null, M_, V2);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('y quitarse', evt.van.join() === JP_);
+d = R.guardarEvento({ id: ev1.id, nombre: 'PortAventura y Ferrari Land', desde: '2026-12-19', hasta: '2026-12-21', cuando: 'DIA' }, M_, V2);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('cambiar el evento no borra quién va', evt.nombre === 'PortAventura y Ferrari Land' && evt.hasta === '2026-12-21' && evt.van.join() === JP_);
+err = ''; try { R.guardarEvento({ nombre: 'X', desde: '2026-12-20', hasta: '2026-12-19' }, M_, V2); } catch (e) { err = e.message; }
+ver('el último día no puede ser antes', /antes del primero/.test(err));
+err = ''; try { R.guardarEvento({ nombre: '', desde: '2026-12-20' }, M_, V2); } catch (e) { err = e.message; }
+ver('sin nombre, no', /nombre del evento/.test(err));
+err = ''; try { R.guardarEvento({ nombre: 'Largo', desde: '2026-12-01', hasta: '2027-01-15' }, M_, V2); } catch (e) { err = e.message; }
+ver('un mes como mucho', /un mes/.test(err));
+err = ''; try { R.apuntarEvento(ev1.id, '(X) - Nadie', true, M_, V2); } catch (e) { err = e.message; }
+ver('apuntar a alguien que no está, no', /No encontramos/.test(err));
+d = R.borrarEvento(ev1.id, M_, V2);
+ver('borrar el evento', !d.eventos.some(e => e.id === ev1.id) && hojas.MESA_EVENTOS.filas.some(f => f[0] === ev1.id && f[9]));
+err = ''; try { R.apuntarEvento(ev1.id, M_, true, M_, V2); } catch (e) { err = e.message; }
+ver('y ya no se puede apuntar nadie', /ya no está/.test(err));
+
+d = R.guardarEvento({ nombre: 'Bautizo de Mercedes', desde: '1961-05-12', hasta: '1961-06-30', anual: true }, M_, V2);
+const bau = d.eventos.find(e => e.nombre === 'Bautizo de Mercedes') || {};
+ver('un día de cada año, aunque sea de hace mucho, y de un solo día', bau.anual === true && bau.desde === '1961-05-12' && bau.hasta === '1961-05-12');
+err = ''; try { R.apuntarEvento(bau.id, M_, true, M_, V2); } catch (e) { err = e.message; }
+ver('a un día de cada año no se apunta nadie', /no se apunta nadie/.test(err));
+err = ''; try { R.guardarEvento({ nombre: 'Futuro', desde: '2030-01-01', anual: true }, M_, V2); } catch (e) { err = e.message; }
+ver('un día de cada año tiene que haber pasado', /haber pasado/.test(err));
 
 // ---------- v4.17: la clave de la familia ----------
 ver('sin CLAVE en MESA_CONFIG, no se pide', R.api_('getDatos', [V2], undefined).ok === true);
