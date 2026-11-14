@@ -60,7 +60,7 @@ const ctx = {
   ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, api_ };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, guardarPersonas, api_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -306,6 +306,14 @@ err = ''; try { R.guardarPersona(M_, { fechas: [{ que: 'Santo', fecha: '31/02' }
 ver('pero que exista', /Santo/.test(err));
 d = R.guardarPersona(M_, { fechas: [] }, M_, V2);
 ver('y se pueden quitar todas', quien(M_).fechas.length === 0);
+
+// ---------- v4.40: rellenar lo que falta, varias personas de una vez ----------
+d = R.guardarPersonas([{ id: M_, cambios: { cumple: '07/03/1952' } }, { id: JP_, cambios: { apellido: 'Puig', sexo: 'Hombre' } }], M_, V2);
+ver('varias personas de una vez', quien(M_).cumple === '07/03/1952' && quien(JP_).apellido === 'Puig');
+err = ''; try { R.guardarPersonas([{ id: M_, cambios: { cumple: '31/02/1952' } }], M_, V2); } catch (e) { err = e.message; }
+ver('si una falla, dice quién', /^Mercedes: /.test(err));
+err = ''; try { R.guardarPersonas([], M_, V2); } catch (e) { err = e.message; }
+ver('sin nada, no', /nada que guardar/.test(err));
 
 // ---------- v4.17: la clave de la familia ----------
 ver('sin CLAVE en MESA_CONFIG, no se pide', R.api_('getDatos', [V2], undefined).ok === true);

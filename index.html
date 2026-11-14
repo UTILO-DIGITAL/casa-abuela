@@ -319,6 +319,15 @@
   .modo-abuela .utilo, .modo-abuela #huerfanos, .modo-abuela .paso { display: none !important; }
   .modo-abuela .nadie.suave { border: 0; background: none; padding: 0; min-height: 0; color: var(--color-texto-suave); font-weight: 700; }
   .dia-cab .campana { margin-left: auto; white-space: nowrap; }
+  /* v4.40: rellenar lo que falta */
+  .rf-familias { display: grid; gap: 10px; margin: 12px 0; }
+  .rf-familias button { text-align: left; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+  .rf-familias small { font-weight: 700; color: var(--color-texto-suave); }
+  .rf-persona { padding: 12px 14px; margin: 0 0 12px; border-radius: var(--radio); background: #fff; border: 1px solid var(--color-linea); display: grid; gap: 8px; }
+  .rf-persona h3 { margin: 0; font-size: 18px; }
+  .rf-persona h3 small { font-weight: 600; color: var(--color-texto-suave); font-size: 14px; margin-left: 6px; }
+  .rf-guardar { position: sticky; bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; padding: 10px 0; }
+  .modo-abuela #per-pedir { display: none !important; }
   .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
   .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
   .turno-evento svg { width: 16px; height: 16px; flex: none; color: var(--color-accion); }
@@ -370,6 +379,19 @@
   .arbol-barra button.icono { font-size: 22px; font-weight: 800; }
   .arbol-lienzo { overflow: auto; max-height: 74vh; border: 1px solid var(--color-linea); border-radius: var(--radio); background: var(--color-fondo); -webkit-overflow-scrolling: touch; }
   .arbol-lienzo svg { display: block; }
+  /* v4.41: el texto del árbol, encima del dibujo */
+  .arbol-tam { position: relative; overflow: hidden; }
+  .arbol-capa { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .arbol-et { position: absolute; box-sizing: border-box; padding: 5px 9px 0; border-radius: 9px; display: flex; flex-direction: column; cursor: default; font-family: var(--letra-texto); }
+  .arbol-et[data-persona], .arbol-et[data-comida-abuela] { cursor: pointer; }
+  .arbol-et[data-persona]:hover, .arbol-et[data-comida-abuela]:hover { background: rgba(14, 138, 122, .06); }
+  .arbol-et b { font-weight: 800; font-size: 15px; line-height: 19px; color: var(--color-texto); white-space: nowrap; }
+  .arbol-et span { font-weight: 600; font-size: 12.5px; line-height: 18px; color: var(--color-texto-suave); white-space: nowrap; }
+  .arbol-et.muerto b { color: var(--color-texto-suave); }
+  .arbol-et.futuro b, .arbol-et.futuro span { color: var(--color-futuro); }
+  .arbol-et.soy-yo { box-shadow: inset 0 0 0 2.5px var(--color-accion); }
+  .arbol-ano-et { position: absolute; height: 20px; line-height: 20px; font-family: var(--letra-texto); font-size: 11.5px; font-weight: 700; color: var(--color-principal-oscuro); text-align: right; pointer-events: none; }
+  .arbol-ano-et.futuro { color: var(--color-futuro); }
   .arbol-lineas path { fill: none; stroke: #CDBFAD; stroke-width: 2; stroke-linejoin: round; }
   .arbol-caja { fill: #fff; stroke: #E3D6C5; stroke-width: 1.5; filter: drop-shadow(0 1px 2px rgba(28, 43, 38, .10)); }
   .arbol-caja.raiz { fill: var(--color-principal-claro); stroke: var(--color-principal); }
@@ -564,6 +586,7 @@
       <button type="button" class="accion" id="per-filtros-btn" aria-expanded="false" aria-controls="per-filtros">Filtros</button>
       <button type="button" class="accion" id="per-arbol-btn" aria-pressed="false">Árbol</button>
       <button type="button" class="accion" data-nueva-persona>Añadir</button>
+      <button type="button" class="accion" id="per-pedir">Pedir lo que falta</button>
     </div>
     <div id="per-filtros" class="per-filtros-panel" hidden></div>
     <p id="per-resultado" class="per-resultado" hidden></p>
@@ -574,6 +597,9 @@
   <section id="vista-eventos" hidden>
     <div class="eventos-barra"><button type="button" class="principal" id="ev-anadir">Añadir evento</button></div>
     <div id="eventos-lista"><p class="vacio">Cargando…</p></div>
+  </section>
+  <section id="vista-rellenar" hidden>
+    <div id="rellenar"><p class="vacio">Cargando…</p></div>
   </section>
   <section id="vista-huecos" hidden>
     <div id="huecos-lista"><p class="vacio">Cargando…</p></div>
@@ -596,7 +622,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.39.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.41.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1033,10 +1059,11 @@
     const sencillo = modoAbuela();  // v4.35
     document.body.classList.toggle('modo-abuela', sencillo);
     $('salir-sencillo').hidden = !sencillo;
-    if (sencillo && vista === 'huecos') { ponerVista('semana'); return; }  // v4.35: la Semana, los Eventos y (v4.37) las Personas, para mirar
+    if (sencillo && (vista === 'huecos' || vista === 'rellenar')) { ponerVista('semana'); return; }  // v4.35: la Semana, los Eventos y (v4.37) las Personas, para mirar
     pintarNavegador();
     pintarSemana();
     pintarEventos();
+    if (vista === 'rellenar' && rfSucio) { rfSucio = false; pintarRellenar(); }  // v4.40: solo al entrar, al cambiar de familia o al guardar
     pintarQuienSoy();
     pintarMisProximas();
     pintarHuerfanos();
@@ -1229,6 +1256,137 @@
     $('dlg-guardar').addEventListener('click', salir);
     $('dlg-salir-clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') salir(); });
   }
+
+  /* ---------- v4.40: Rellenar lo que falta (por familia, para el grupo) ---------- */
+  let rfFamilia = '', rfSucio = true;
+  function rfGente(f) {
+    return datos.personas.filter(function (p) { return familiaDe(p) === f && !esServicio(p) && p.familia !== 'Otros' && !esFallecido(p) && !enCamino(p); });
+  }
+  function rfFalta(p) {
+    const f = [];
+    const c = p.cumple || '';
+    if (!c || !Number(c.slice(0, 2)) || !Number(c.slice(3, 5)) || !Number(c.slice(6, 10))) f.push('cumple');
+    if (!p.sexo) f.push('sexo');
+    if (!p.apellido) f.push('apellido');
+    if (!p.menu) f.push('menu');
+    const pa = parejaDe(p);
+    if (pa && p.casados === 'Sí' && (!p.boda || !Number(p.boda.slice(6, 10))) && (!esDeFuera(p) || esDeFuera(pa) && p.id < pa.id)) f.push('boda');
+    return f;
+  }
+  function pintarRellenar() {
+    const $r = $('rellenar');
+    if (!$r) return;
+    const familias = [];
+    datos.personas.forEach(function (p) { const f = familiaDe(p); if (!esServicio(p) && p.familia !== 'Otros' && familias.indexOf(f) === -1) familias.push(f); });
+    if (!rfFamilia) {
+      $r.innerHTML = '<p>Elige tu familia y rellena lo que sepas. Lo que pongas se guarda en la web de la abuela para todos.</p>' +
+        '<div class="rf-familias">' + familias.map(function (f) {
+          const n = rfGente(f).filter(function (p) { return rfFalta(p).length; }).length;
+          return '<button type="button" class="accion" data-rf-fam="' + esc(f) + '"><span>' + esc(nombreFamilia(f)) + '</span><small>' + (n ? (n === 1 ? 'falta algo de 1 persona' : 'falta algo de ' + n + ' personas') : 'completa ✓') + '</small></button>';
+        }).join('') + '</div>';
+      return;
+    }
+    const gente = rfGente(rfFamilia);
+    const conFalta = gente.filter(function (p) { return rfFalta(p).length; });
+    const completos = gente.filter(function (p) { return !rfFalta(p).length; });
+    $r.innerHTML = '<p><button type="button" class="enlace" data-rf-fam="">← Elegir otra familia</button></p>' +
+      '<h2>' + esc(nombreFamilia(rfFamilia)) + '</h2>' +
+      (conFalta.length ? '<p class="ayuda">Rellena lo que sepas; lo que no, déjalo en blanco. Del cumpleaños, si sabes el año, mejor: así sale la edad.</p>' : '<p>¡Esta familia está completa! Si quieres, añade santos o bautizos desde la ficha de cada uno en Personas.</p>') +
+      conFalta.map(function (p, k) {
+        const f = rfFalta(p);
+        const pa = parejaDe(p);
+        let h = '<div class="rf-persona" data-rf="' + k + '" data-id="' + esc(p.id) + '"><h3>' + esc(p.apodo) + '<small>' + esc([p.nombre, p.apellido].filter(Boolean).join(' ')) + '</small></h3>';
+        if (f.indexOf('cumple') !== -1) h += campoFechaPareja('rf' + k + 'c', 'Cumpleaños', p.cumple || '', 0);
+        if (f.indexOf('sexo') !== -1 || f.indexOf('apellido') !== -1) h += '<div class="dos dos-iguales">' +
+          (f.indexOf('sexo') !== -1 ? '<label class="campo" for="dlg-rf' + k + 'sexo">Es<select id="dlg-rf' + k + 'sexo"><option value="">Sin decir</option><option>Hombre</option><option>Mujer</option></select></label>' : '') +
+          (f.indexOf('apellido') !== -1 ? '<label class="campo" for="dlg-rf' + k + 'ap">Apellido<input id="dlg-rf' + k + 'ap" type="text" maxlength="40" autocomplete="off"></label>' : '') + '</div>';
+        if (f.indexOf('menu') !== -1) h += '<div class="dos dos-iguales"><label class="campo" for="dlg-rf' + k + 'menu">Menú<select id="dlg-rf' + k + 'menu"><option value="">Sin decir</option>' + opcionesMenu('') + '</select></label>' +
+          '<label class="campo" for="dlg-rf' + k + 'al">Alergias o lo que no come<input id="dlg-rf' + k + 'al" type="text" maxlength="100" autocomplete="off" placeholder="Nada" value="' + esc(p.alergias || '') + '"></label></div>';
+        if (f.indexOf('boda') !== -1) h += campoFechaPareja('rf' + k + 'b', 'Boda con ' + esc(pa.apodo), p.boda || '', 0);
+        h += '<div class="rf-otras" id="dlg-rf' + k + 'otras"></div><button type="button" class="enlace" data-rf-otra="' + k + '">+ Añadir otra fecha (santo, bautizo…)</button></div>';
+        return h;
+      }).join('') +
+      (completos.length ? '<p class="ayuda">Ya completos: ' + esc(completos.map(function (p) { return p.apodo; }).join(', ')) + '.</p>' : '') +
+      (conFalta.length ? '<div class="rf-guardar"><button type="button" class="principal" id="rf-guardar">Guardar todo</button></div>' : '');
+    montarRellenar();
+  }
+  function montarRellenar() {
+    let n = 0;
+    $('rellenar').querySelectorAll('[data-rf-otra]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        const k = b.dataset.rfOtra, i = n++;
+        $('dlg-rf' + k + 'otras').insertAdjacentHTML('beforeend', '<div class="otra-fecha" data-rfo="' + i + '"><label class="campo" for="dlg-rf' + k + 'o' + i + 'que">Qué es<input id="dlg-rf' + k + 'o' + i + 'que" type="text" maxlength="40" autocomplete="off" placeholder="Por ejemplo: santo o bautizo"></label>' +
+          campoFechaPareja('rf' + k + 'o' + i, '', '', 0) + '</div>');
+      });
+    });
+    const g = $('rf-guardar');
+    if (!g) return;
+    g.addEventListener('click', function () {
+      const lista = [];
+      const cartas = Array.from($('rellenar').querySelectorAll('.rf-persona'));
+      for (let c = 0; c < cartas.length; c++) {
+        const carta = cartas[c], k = carta.dataset.rf, p = persona(carta.dataset.id), cambios = {};
+        if ($('dlg-rf' + k + 'cdia')) {
+          const r = leerFecha('rf' + k + 'c', 'el cumpleaños de ' + p.apodo, 1900);
+          if (r.error) { aviso(r.error, 8000); carta.scrollIntoView({ block: 'center' }); return; }
+          if (r.valor && r.valor !== (p.cumple || '')) cambios.cumple = r.valor;
+        }
+        if ($('dlg-rf' + k + 'sexo') && $('dlg-rf' + k + 'sexo').value) cambios.sexo = $('dlg-rf' + k + 'sexo').value;
+        if ($('dlg-rf' + k + 'ap') && $('dlg-rf' + k + 'ap').value.trim()) cambios.apellido = $('dlg-rf' + k + 'ap').value.trim();
+        if ($('dlg-rf' + k + 'menu') && $('dlg-rf' + k + 'menu').value) cambios.menu = $('dlg-rf' + k + 'menu').value;
+        if ($('dlg-rf' + k + 'al') && $('dlg-rf' + k + 'al').value.trim() !== (p.alergias || '')) cambios.alergias = $('dlg-rf' + k + 'al').value.trim();
+        if ($('dlg-rf' + k + 'bdia')) {
+          const r = leerFechaPareja('rf' + k + 'b', 'la boda de ' + p.apodo, 0);
+          if (r.error) { aviso(r.error, 8000); carta.scrollIntoView({ block: 'center' }); return; }
+          if (r.valor && r.valor !== (p.boda || '')) cambios.boda = r.valor;
+        }
+        const otras = [];
+        const filas = Array.from(carta.querySelectorAll('[data-rfo]'));
+        for (let o = 0; o < filas.length; o++) {
+          const i = filas[o].dataset.rfo, que = $('dlg-rf' + k + 'o' + i + 'que').value.trim();
+          const r = leerFechaPareja('rf' + k + 'o' + i, que ? '«' + que + '» de ' + p.apodo : 'esa fecha', 0);
+          if (r.error) { aviso(r.error, 8000); carta.scrollIntoView({ block: 'center' }); return; }
+          if (!que && !r.valor) continue;
+          if (!que || !r.valor) { aviso('A cada fecha de ' + p.apodo + ', ponle qué es y la fecha.', 8000); carta.scrollIntoView({ block: 'center' }); return; }
+          otras.push({ que: que.replace(/[;:]/g, ' ').replace(/\s+/g, ' ').trim(), fecha: r.valor });
+        }
+        if (otras.length) cambios.fechas = (p.fechas || []).concat(otras);
+        if (Object.keys(cambios).length) lista.push({ id: p.id, cambios: cambios });
+      }
+      if (!lista.length) { aviso('No has rellenado nada todavía.'); return; }
+      conQuien(function () {
+        enSegundoPlano('guardarPersonas', [lista, yo, rango()], '¡Gracias! Guardado lo de ' + lista.length + (lista.length === 1 ? ' persona.' : ' personas.'), function () {
+          lista.forEach(function (x) { aplicarPersonaLocal(x.id, x.cambios); }); rfSucio = true;
+        });
+      });
+    });
+  }
+  /* El mensaje para el grupo grande, con el enlace */
+  function mensajeRellenar() {
+    const url = (datos.url || location.href).replace(/#.*$/, '') + '#rellenar';
+    const n = datos.personas.filter(function (p) { return !esServicio(p) && p.familia !== 'Otros' && !esFallecido(p) && !enCamino(p) && rfFalta(p).length; }).length;
+    return '👋 ¡Hola, familia!\n\nEn la web de la abuela nos faltan datos de ' + n + ' personas: sobre todo los cumpleaños con el año, y algún menú.\n\n' +
+      'Entrad aquí, elegid vuestra familia y rellenad lo que sepáis (la clave es la de siempre):\n👉 ' + url + '\n\n¡Gracias! 🙏';
+  }
+  $('per-pedir').addEventListener('click', function () {
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Pedir lo que falta</h2></div>' +
+      '<div class="dlg-cuerpo"><p class="ayuda">Copia el mensaje y pégalo en el grupo de la familia. El enlace lleva a una página donde cada uno elige su familia y rellena lo que sepa.</p>' +
+      '<label class="campo" for="dlg-texto">Mensaje (puedes cambiarlo)<textarea id="dlg-texto" rows="9"></textarea></label></div>' +
+      '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-copiar">Copiar el mensaje</button>' +
+      '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+    $('dlg-texto').value = mensajeRellenar();
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $('dlg-copiar').addEventListener('click', function () {
+      const t = $('dlg-texto'), hecho = function () { aviso('Mensaje copiado. Pégalo en el grupo.'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(hecho).catch(function () { t.select(); document.execCommand('copy'); hecho(); });
+      else { t.select(); document.execCommand('copy'); hecho(); }
+    });
+  });
+  document.addEventListener('click', function (ev) {
+    const b = ev.target.closest('[data-rf-fam]');
+    if (!b) return;
+    rfFamilia = b.dataset.rfFam; rfSucio = false; pintarRellenar(); window.scrollTo(0, 0);
+  });
 
   /* ---------- v4.28: Pestaña Eventos ---------- */
   /* v4.28: quién va, por familias: los de la familia (sin el servicio, ni quien ha fallecido o está en camino) */
@@ -1667,32 +1825,35 @@
     };
     situa(arbol, 20, 20);
     const W = ancho(arbol) + 40;
-    const persona_ = function (p, py, bw) {
+    // v4.41: los nombres y las edades, como texto normal encima del dibujo (Safari del iPhone deja de pintar el texto del SVG al deslizar)
+    let etiquetas = '';
+    const persona_ = function (p, py, bw, bx, by) {
       const clic = editor(p.id) ? (p.fallecio ? '' : ' data-comida-abuela') : ' data-persona="' + esc(p.id) + '"';
       const dato = datoDe(p);
-      return '<g class="arbol-persona' + (esFallecido(p) ? ' muerto' : '') + (enCamino(p) ? ' futuro' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic + '>' +
-        '<rect x="3" y="' + (py - 3) + '" width="' + (bw - 6) + '" height="' + (altoP(p) + 6) + '" rx="9" class="arbol-zona"/>' +
-        '<text x="' + PAD + '" y="' + (py + 19) + '" class="arbol-nombre">' + esc(nombreDe(p)) + '</text>' +
-        (dato ? '<text x="' + PAD + '" y="' + (py + 37) + '" class="arbol-dato">' + esc(dato) + '</text>' : '') + '</g>';
+      etiquetas += '<div class="arbol-et' + (esFallecido(p) ? ' muerto' : '') + (enCamino(p) ? ' futuro' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic +
+        ' style="left:' + (bx + 3) + 'px;top:' + (by + py - 3) + 'px;width:' + (bw - 6) + 'px;height:' + (altoP(p) + 6) + 'px">' +
+        '<b>' + esc(nombreDe(p)) + '</b>' + (dato ? '<span>' + esc(dato) + '</span>' : '') + '</div>';
+      return '';
     };
     let lineas = '', cajas = '';
     (function dibuja(n) {
       const bw = anchoCaja(n), h = alto(n), x = n.x - bw / 2, y = n.y;
-      let dentro = persona_(n.cabezas[0], 6, bw);
+      let dentro = persona_(n.cabezas[0], 6, bw, x, y);
       if (n.cabezas.length > 1) {
         const yr = 6 + altoP(n.cabezas[0]) + 6;
         dentro += '<path class="arbol-raya" d="M' + PAD + ' ' + yr + 'H' + (bw - PAD) + '"/>';
-        const l = pastillas(n);
+        const l = pastillas(n), bx0 = x;
         let px = bw / 2 - anchoPastillas(n) / 2;
         l.forEach(function (x) {
           const icono = x.icono === 'anillo' ? '<circle cx="12" cy="15" r="6"/><path d="M12 3.5l2.5 2.5L12 8.5 9.5 6z"/>' :
             '<path d="M12 20s-7-4.4-8.6-8.6C2.2 8.2 4.4 5.5 7.3 5.5c2 0 3.6 1.2 4.7 2.9 1.1-1.7 2.7-2.9 4.7-2.9 2.9 0 5.1 2.7 3.9 5.9C19 15.6 12 20 12 20z"/>';
           dentro += '<g class="arbol-anillo' + (x.futuro ? ' futuro' : '') + '" transform="translate(' + px + ',' + (yr - 10) + ')"><rect width="' + x.w + '" height="20" rx="10"/>' +
             '<g transform="translate(2.5,2.5) scale(0.62)">' + icono + '</g>' +
-            (x.ano ? '<text x="' + (x.w - 7) + '" y="14.5" text-anchor="end" class="arbol-ano">' + x.ano + '</text>' : '') + '<title>' + esc(x.titulo) + '</title></g>';
+            '<title>' + esc(x.titulo) + '</title></g>';
+          if (x.ano) etiquetas += '<span class="arbol-ano-et' + (x.futuro ? ' futuro' : '') + '" style="left:' + (bx0 + px + 18) + 'px;top:' + (y + yr - 10) + 'px;width:' + (x.w - 25) + 'px">' + x.ano + '</span>';
           px += x.w + 6;
         });
-        dentro += persona_(n.cabezas[1], yr + 6, bw);
+        dentro += persona_(n.cabezas[1], yr + 6, bw, x, y);
       }
       cajas += '<g transform="translate(' + x + ',' + y + ')"><rect class="arbol-caja ' + (n.raiz ? 'raiz' : '') + (n.cabezas.every(esFallecido) ? ' muerto' : '') + (n.cabezas.every(enCamino) ? ' futuro' : '') + '" width="' + bw + '" height="' + h + '" rx="12"/>' + dentro + '</g>';
       if (n.hijos.length) {
@@ -1703,8 +1864,10 @@
       }
     })(arbol);
     $('per-lista').innerHTML = '<div class="arbol-barra"><span>Árbol de la familia</span><button type="button" class="icono" data-zoom="-1" aria-label="Alejar">−</button><button type="button" class="icono" data-zoom="1" aria-label="Acercar">+</button></div>' +
-      '<div class="arbol-lienzo"><svg width="' + Math.round(W * arbolZoom) + '" height="' + Math.round(H * arbolZoom) + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Árbol genealógico de la familia">' +
-      '<g class="arbol-lineas">' + lineas + '</g>' + cajas + '</svg></div>' +
+      '<div class="arbol-lienzo"><div class="arbol-tam" style="width:' + Math.round(W * arbolZoom) + 'px;height:' + Math.round(H * arbolZoom) + 'px">' +
+      '<div class="arbol-capa" style="width:' + W + 'px;height:' + H + 'px' + (arbolZoom !== 1 ? ';transform:scale(' + arbolZoom + ')' : '') + '">' +
+      '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Árbol genealógico de la familia">' +
+      '<g class="arbol-lineas">' + lineas + '</g>' + cajas + '</svg>' + etiquetas + '</div></div></div>' +
       '<p class="ayuda">Desliza para moverte y toca a alguien para ver su ficha. El corazón, cuándo empezaron a salir; el anillo, la boda; †, fallecido.</p>';
     const lienzo = document.querySelector('.arbol-lienzo');
     lienzo.scrollLeft = (centroX !== undefined ? centroX : arbol.x) * arbolZoom - lienzo.clientWidth / 2;
@@ -3044,10 +3207,11 @@
   }
 
   /* ---------- Vistas ---------- */
-  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', eventos: 'Lo que viene y quién va', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
+  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', eventos: 'Lo que viene y quién va', rellenar: 'Rellenar lo que falta', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
   function ponerVista(v) {
+    if (v === 'rellenar') rfSucio = true;  // v4.40
     vista = SUBTITULOS[v] ? v : 'semana';
-    ['semana', 'eventos', 'personas', 'huecos'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
+    ['semana', 'eventos', 'personas', 'huecos', 'rellenar'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
     $('subtitulo').textContent = SUBTITULOS[vista];
     document.querySelectorAll('nav.vistas a').forEach(function (a) {
       if (a.dataset.vista === vista) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
