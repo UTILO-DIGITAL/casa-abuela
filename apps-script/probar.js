@@ -155,6 +155,12 @@ d = R.guardarPersona('(T+1) - Jordi P', { novios: '03/1980' }, M_, V);
 ver('se cambia desde cualquiera de los dos', quien(M_).novios === '00/03/1980');
 err = ''; try { R.guardarPersona(M_, { boda: '31/02/1985' }, M_, V); } catch (e) { err = e.message; }
 ver('una boda que no existe no se guarda', /la boda/.test(err));
+d = R.guardarPersona(M_, { boda: '20/06/2030' }, M_, V);
+ver('una boda que viene, también', quien(M_).boda === '20/06/2030');
+err = ''; try { R.guardarPersona(M_, { boda: '2099' }, M_, V); } catch (e) { err = e.message; }
+ver('pero no de aquí a más de diez años', /diez años/.test(err));
+err = ''; try { R.guardarPersona(M_, { novios: '2030' }, M_, V); } catch (e) { err = e.message; }
+ver('el noviazgo, no en el futuro', /después de hoy/.test(err));
 err = ''; try { R.guardarPersona('(N) - Laura', { novios: '2001' }, M_, V); } catch (e) { err = e.message; }
 ver('sin pareja, no hay fecha de novios', /elige primero su pareja/.test(err) || !!quien('(N) - Laura').pareja);
 d = R.guardarPersona(M_, { boda: '' }, M_, V);

@@ -550,7 +550,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.22.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.23.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -806,8 +806,9 @@
       const quienes = p.apodo + ' y ' + pa.apodo;
       [['boda', 'Aniversario de boda de '], ['novios', 'Hace {n} que empezaron a salir ']].forEach(function (x) {
         const c = p[x[0]] || '';
-        if (c.slice(0, 5) !== dm || Number(c.slice(6, 10)) >= ano) return;
+        if (c.slice(0, 5) !== dm || Number(c.slice(6, 10)) > ano) return;
         const n = ano - Number(c.slice(6, 10)), anos = n === 1 ? 'un año' : n + ' años';
+        if (!n) { if (x[0] === 'boda') out.push('Hoy se casan ' + quienes); return; }  // v4.23: el día de la boda
         out.push(x[0] === 'boda' ? x[1] + quienes + ': ' + anos : x[1].replace('{n}', anos) + quienes);
       });
     });
@@ -816,7 +817,16 @@
   /* v4.21: «Empezaron a salir en 1980 · se casaron el 12 de junio de 1985» */
   function fechasPareja(p) {
     const cuando = function (c) { return (Number(c.slice(0, 2)) ? 'el ' : 'en ') + fechaTexto(c); };
-    return [p.novios ? 'Empezaron a salir ' + cuando(p.novios) : '', p.boda ? (p.novios ? 'se casaron ' : 'Se casaron ') + cuando(p.boda) : ''].filter(Boolean).join(' · ');
+    const verbo = p.boda && bodaQueViene(p.boda) ? 'se casan ' : 'se casaron ';  // v4.23
+    return [p.novios ? 'Empezaron a salir ' + cuando(p.novios) : '', p.boda ? (p.novios ? verbo : verbo.charAt(0).toUpperCase() + verbo.slice(1)) + cuando(p.boda) : ''].filter(Boolean).join(' · ');
+  }
+  /* v4.23: ¿la boda aún no ha llegado? (con lo que se sepa: año, mes y día) */
+  function bodaQueViene(c) {
+    const h = hoy().replace(/-/g, ''), a = c.slice(6, 10), m = c.slice(3, 5), d = c.slice(0, 2);
+    if (a !== h.slice(0, 4)) return a > h.slice(0, 4);
+    if (m === '00') return true;
+    if (m !== h.slice(4, 6)) return m > h.slice(4, 6);
+    return d === '00' || d > h.slice(6, 8);
   }
   /* v4.16: fechas como se sepan (dd/mm/aaaa, con 00 en lo que no se sabe) y quien ha fallecido */
   function esFallecido(p) { return !!(p && p.fallecio); }
@@ -1587,9 +1597,10 @@
       '<div class="solo-familia nucleo-campos"><div class="dos dos-iguales"><label class="campo" for="dlg-sexo">Es<select id="dlg-sexo"><option value="">Sin decir</option>' +
       ['Hombre', 'Mujer'].map(function (v) { return '<option value="' + v + '"' + (p && p.sexo === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') + '</select></label></div>' +
       '<label class="campo" for="dlg-pareja">Pareja<select id="dlg-pareja">' + opcionesPersonas(pa ? pa.id : '', p ? p.id : '') + '</select></label>' +
+      '<div id="dlg-de-pareja"' + (pa ? '' : ' hidden') + '>' +  // v4.23: casados y fechas, solo con pareja
       (hayCasados() ? '<label class="campo" for="dlg-casados">¿Están casados?<select id="dlg-casados"><option value="">Sin decir</option>' +
         ['Sí', 'No'].map(function (v) { return '<option value="' + v + '"' + (p && p.casados === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') + '</select></label>' : '') +
-      '<div class="fechas-de-pareja">' + campoFechaPareja('nv', 'Empezaron a salir', p ? p.novios || '' : '') + campoFechaPareja('bd', 'Boda', p ? p.boda || '' : '') + '</div>' +
+      '<div class="fechas-de-pareja">' + campoFechaPareja('nv', 'Empezaron a salir', p ? p.novios || '' : '') + campoFechaPareja('bd', 'Boda (también si es la que viene)', p ? p.boda || '' : '', 10) + '</div></div>' +
       '<label class="campo" for="dlg-hijode">Hijo o hija de<select id="dlg-hijode">' + opcionesPersonas(p ? p.hijoDe || '' : '', p ? p.id : '') + '</select></label>' +
       '<p class="ayuda">Con su pareja forma un núcleo («Familia» y los apellidos de él y de ella). Basta con poner a uno de los padres: sale en el núcleo de ese padre o madre y su pareja.</p></div></fieldset>';
   }
@@ -1607,6 +1618,8 @@
     const sel = $('dlg-familia');
     if (sel) sel.addEventListener('change', ajustarFormularioFamilia);
     ajustarFormularioFamilia();
+    const par = $('dlg-pareja'), dePareja = $('dlg-de-pareja');  // v4.23
+    if (par && dePareja) par.addEventListener('change', function () { dePareja.hidden = !par.value; });
   }
   function leerNucleo(p) {
     if (!hayNucleos()) return {};
@@ -1632,7 +1645,7 @@
     // v4.21: las fechas de la pareja (sin pareja, ninguna)
     [['novios', 'nv', 'cuándo empezaron a salir'], ['boda', 'bd', 'la boda']].forEach(function (x) {
       if (!$('dlg-' + x[1] + 'ano')) return;
-      const r = v.pareja ? leerFechaPareja(x[1], x[2]) : { valor: '' };
+      const r = v.pareja ? leerFechaPareja(x[1], x[2], x[0] === 'boda' ? 10 : 0) : { valor: '' };
       if (r.error) { c.errorFecha = r.error; return; }
       const antes = pa && v.pareja === pa.id ? p[x[0]] || '' : '';
       if (r.valor !== antes) c[x[0]] = r.valor;
@@ -1688,28 +1701,28 @@
     return '<label class="campo" for="dlg-cano">Año<input id="dlg-cano" type="number" inputmode="numeric" min="1900" max="' + hoy().slice(0, 4) + '" placeholder="aaaa" value="' + esc(v || '') + '"></label>';
   }
   /* v4.16: una fecha como se sepa: día y mes (con o sin año), mes y año, o solo el año */
-  function leerFecha(pre, que, desde) {
+  function leerFecha(pre, que, desde, futuro) {  // v4.23: futuro = años por delante de hoy (la boda)
     const d = $('dlg-' + pre + 'dia').value, m = $('dlg-' + pre + 'mes').value, a = ($('dlg-' + pre + 'ano') ? $('dlg-' + pre + 'ano').value : '').trim();
     if (d && !m) return { error: 'Para ' + que + ', con el día elige también el mes.' };
     if (!d && m && !a) return { error: 'Para ' + que + ', con el mes pon también el día o el año.' };
-    const max = Number(hoy().slice(0, 4));
+    const max = Number(hoy().slice(0, 4)) + (futuro || 0);
     if (a && !(/^\d{4}$/.test(a) && Number(a) >= desde && Number(a) <= max)) return { error: 'El año de ' + que + ' tiene que ser de ' + desde + ' a ' + max + ', con cuatro cifras.' };
     const dd = ('0' + (d || 0)).slice(-2), mm = ('0' + (m || 0)).slice(-2);
     return { valor: d && !a ? dd + '/' + mm : (a ? dd + '/' + mm + '/' + a : '') };
   }
   function leerCumple() { const r = leerFecha('c', 'el cumpleaños', 1900); return r.error ? r : { cumple: r.valor }; }
   /* v4.21: una fecha de la pareja (día, mes y año, lo que se sepa) */
-  function campoFechaPareja(pre, titulo, v) {
+  function campoFechaPareja(pre, titulo, v, futuro) {
     const fd = v ? Number(v.slice(0, 2)) : 0, fm = v ? Number(v.slice(3, 5)) : 0;
     return '<p class="et-fecha">' + titulo + '</p><div class="tres">' +
       '<label class="campo" for="dlg-' + pre + 'dia">Día<select id="dlg-' + pre + 'dia"><option value="">—</option>' +
       Array.from({ length: 31 }, function (_, k) { return '<option value="' + (k + 1) + '"' + (fd === k + 1 ? ' selected' : '') + '>' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-' + pre + 'mes">Mes<select id="dlg-' + pre + 'mes"><option value="">—</option>' +
       MESES.map(function (m, k) { return '<option value="' + (k + 1) + '"' + (fm === k + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
-      '<label class="campo" for="dlg-' + pre + 'ano">Año<input id="dlg-' + pre + 'ano" type="number" inputmode="numeric" min="1850" max="' + hoy().slice(0, 4) + '" placeholder="aaaa" value="' + esc(v ? v.slice(6, 10) : '') + '"></label></div>';
+      '<label class="campo" for="dlg-' + pre + 'ano">Año<input id="dlg-' + pre + 'ano" type="number" inputmode="numeric" min="1850" max="' + (Number(hoy().slice(0, 4)) + (futuro || 0)) + '" placeholder="aaaa" value="' + esc(v ? v.slice(6, 10) : '') + '"></label></div>';
   }
-  function leerFechaPareja(pre, que) {
-    const r = leerFecha(pre, que, 1850);
+  function leerFechaPareja(pre, que, futuro) {
+    const r = leerFecha(pre, que, 1850, futuro);
     if (r.error) return r;
     if (r.valor && r.valor.length < 10) return { error: 'Para ' + que + ', pon también el año.' };
     return r;

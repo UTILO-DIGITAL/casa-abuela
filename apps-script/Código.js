@@ -30,7 +30,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.21.0
+ * Versión 4.23.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -231,7 +231,7 @@ function aPersona_(f) {
     casados: CASADOS.indexOf(String(f[COL_CASADOS - 1] || '').trim()) !== -1 ? String(f[COL_CASADOS - 1]).trim() : '',
     fallecio: aFallecio_(f[COL_FALLECIO - 1]),
     novios: aFechaParcial_(f[COL_NOVIOS - 1], 1850),
-    boda: aFechaParcial_(f[COL_BODA - 1], 1850),
+    boda: aFechaParcial_(f[COL_BODA - 1], 1850, 10),
   };
 }
 
@@ -984,8 +984,8 @@ function ponerNucleo_(ss, p, cambios, registro, todos) {
   [['novios', COL_NOVIOS, 'empezaron a salir', 'cuándo empezaron a salir'], ['boda', COL_BODA, 'se casaron', 'la boda']].forEach(function (x) {
     if (cambios[x[0]] === undefined) return;
     const texto = String(cambios[x[0]] || '').trim();
-    const fecha = aFechaParcial_(texto, 1850);
-    if (texto && !fecha) throw new Error('La fecha de ' + x[3] + ' tiene que ser un día, mes y año que existan (o mes y año, o solo el año), y no de después de hoy.');
+    const fecha = aFechaParcial_(texto, 1850, x[0] === 'boda' ? 10 : 0);  // v4.23: la boda, también la que viene
+    if (texto && !fecha) throw new Error('La fecha de ' + x[3] + ' tiene que ser un día, mes y año que existan (o mes y año, o solo el año)' + (x[0] === 'boda' ? ', de aquí a diez años como mucho.' : ', y no de después de hoy.'));
     const pareja = cambios.pareja !== undefined ? String(cambios.pareja || '').trim() : p.pareja;
     if (fecha && !pareja) throw new Error('Para poner la fecha de ' + x[3] + ', elige primero su pareja.');
     if (fecha !== (p[x[0]] || '')) {
@@ -1168,7 +1168,7 @@ function aFallecio_(v) {
   return /^s[ií]$/i.test(String(v || '').trim()) ? 'Sí' : aFechaParcial_(v, 1850);
 }
 
-function aFechaParcial_(v, desde) {
+function aFechaParcial_(v, desde, futuro) {  // v4.23: futuro = años que puede ir por delante de hoy (la boda)
   if (v instanceof Date) return Utilities.formatDate(v, TZ, 'dd/MM/yyyy');
   const t = String(v || '').trim();
   let m, d = 0, mes = 0, ano = 0;
@@ -1176,7 +1176,7 @@ function aFechaParcial_(v, desde) {
   else if ((m = t.match(/^(\d{1,2})[\/\-.](\d{4})$/))) { mes = Number(m[1]); ano = Number(m[2]); }
   else if ((m = t.match(/^(\d{4})$/))) { ano = Number(m[1]); }
   else return '';
-  if (ano < (desde || 1850) || ano > Number(hoy_().slice(0, 4)) || mes > 12 || (!mes && d)) return '';
+  if (ano < (desde || 1850) || ano > Number(hoy_().slice(0, 4)) + (futuro || 0) || mes > 12 || (!mes && d)) return '';
   if (d && d > [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1]) return '';
   return ('0' + d).slice(-2) + '/' + ('0' + mes).slice(-2) + '/' + ano;
 }
