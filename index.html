@@ -26,6 +26,8 @@
     --color-destacado-claro: #FFF0C2;
     --color-linea: #EADFD2;
     --color-error: #B3261E;
+    --color-futuro: #6A4FA3;        /* v4.39: lo que está por venir (bebé en camino, boda que viene) */
+    --color-futuro-claro: #EEE8F8;
     --radio: 10px;
     --letra-titulos: 'Fredoka', 'Trebuchet MS', sans-serif;
     --letra-texto: 'Nunito', 'Trebuchet MS', sans-serif;
@@ -372,6 +374,13 @@
   .arbol-caja { fill: #fff; stroke: #E3D6C5; stroke-width: 1.5; filter: drop-shadow(0 1px 2px rgba(28, 43, 38, .10)); }
   .arbol-caja.raiz { fill: var(--color-principal-claro); stroke: var(--color-principal); }
   .arbol-caja.muerto { fill: #F3EFE9; }
+  .arbol-caja.futuro { fill: var(--color-futuro-claro); stroke: var(--color-futuro); stroke-dasharray: 4 3; }
+  .arbol-persona.futuro .arbol-nombre, .arbol-persona.futuro .arbol-dato { fill: var(--color-futuro); }
+  .arbol-anillo.futuro rect { fill: var(--color-futuro-claro); stroke: var(--color-futuro); }
+  .arbol-anillo.futuro circle, .arbol-anillo.futuro path { stroke: var(--color-futuro); }
+  .arbol-anillo.futuro .arbol-ano { fill: var(--color-futuro); }
+  button.fila-persona.fila-caja.futuro { background: var(--color-futuro-claro); border-radius: calc(var(--radio) / 2); padding-left: 10px; padding-right: 10px; }
+  .fila-caja.futuro .fp-come, .fechas-pareja.futuro { color: var(--color-futuro); font-weight: 700; }
   .arbol-raya { stroke: #EADFD2; stroke-width: 1.5; }
   .arbol-anillo rect { fill: #fff; stroke: #E3D6C5; }
   .arbol-anillo circle, .arbol-anillo path { fill: none; stroke: var(--color-principal-oscuro); stroke-width: 2.2; stroke-linejoin: round; }
@@ -587,7 +596,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.38.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.39.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1637,7 +1646,7 @@
       if (n.cabezas.length < 2) return [];
       const p = n.cabezas[0], out = [];
       if (p.novios) out.push({ icono: 'corazon', ano: p.novios.slice(6, 10), titulo: 'Empezaron a salir: ' + fechaTexto(p.novios) });
-      if (n.casados || p.boda) out.push({ icono: 'anillo', ano: p.boda ? p.boda.slice(6, 10) : '', titulo: p.boda ? (bodaQueViene(p.boda) ? 'Se casan: ' : 'Boda: ') + fechaTexto(p.boda) : 'Casados' });
+      if (n.casados || p.boda) out.push({ icono: 'anillo', futuro: !!(p.boda && bodaQueViene(p.boda)), ano: p.boda ? p.boda.slice(6, 10) : '', titulo: p.boda ? (bodaQueViene(p.boda) ? 'Se casan: ' : 'Boda: ') + fechaTexto(p.boda) : 'Casados' });
       out.forEach(function (x) { x.w = x.ano ? 52 : 20; });
       return out;
     };
@@ -1661,7 +1670,7 @@
     const persona_ = function (p, py, bw) {
       const clic = editor(p.id) ? (p.fallecio ? '' : ' data-comida-abuela') : ' data-persona="' + esc(p.id) + '"';
       const dato = datoDe(p);
-      return '<g class="arbol-persona' + (esFallecido(p) ? ' muerto' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic + '>' +
+      return '<g class="arbol-persona' + (esFallecido(p) ? ' muerto' : '') + (enCamino(p) ? ' futuro' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic + '>' +
         '<rect x="3" y="' + (py - 3) + '" width="' + (bw - 6) + '" height="' + (altoP(p) + 6) + '" rx="9" class="arbol-zona"/>' +
         '<text x="' + PAD + '" y="' + (py + 19) + '" class="arbol-nombre">' + esc(nombreDe(p)) + '</text>' +
         (dato ? '<text x="' + PAD + '" y="' + (py + 37) + '" class="arbol-dato">' + esc(dato) + '</text>' : '') + '</g>';
@@ -1678,14 +1687,14 @@
         l.forEach(function (x) {
           const icono = x.icono === 'anillo' ? '<circle cx="12" cy="15" r="6"/><path d="M12 3.5l2.5 2.5L12 8.5 9.5 6z"/>' :
             '<path d="M12 20s-7-4.4-8.6-8.6C2.2 8.2 4.4 5.5 7.3 5.5c2 0 3.6 1.2 4.7 2.9 1.1-1.7 2.7-2.9 4.7-2.9 2.9 0 5.1 2.7 3.9 5.9C19 15.6 12 20 12 20z"/>';
-          dentro += '<g class="arbol-anillo" transform="translate(' + px + ',' + (yr - 10) + ')"><rect width="' + x.w + '" height="20" rx="10"/>' +
+          dentro += '<g class="arbol-anillo' + (x.futuro ? ' futuro' : '') + '" transform="translate(' + px + ',' + (yr - 10) + ')"><rect width="' + x.w + '" height="20" rx="10"/>' +
             '<g transform="translate(2.5,2.5) scale(0.62)">' + icono + '</g>' +
             (x.ano ? '<text x="' + (x.w - 7) + '" y="14.5" text-anchor="end" class="arbol-ano">' + x.ano + '</text>' : '') + '<title>' + esc(x.titulo) + '</title></g>';
           px += x.w + 6;
         });
         dentro += persona_(n.cabezas[1], yr + 6, bw);
       }
-      cajas += '<g transform="translate(' + x + ',' + y + ')"><rect class="arbol-caja ' + (n.raiz ? 'raiz' : '') + (n.cabezas.every(esFallecido) ? ' muerto' : '') + '" width="' + bw + '" height="' + h + '" rx="12"/>' + dentro + '</g>';
+      cajas += '<g transform="translate(' + x + ',' + y + ')"><rect class="arbol-caja ' + (n.raiz ? 'raiz' : '') + (n.cabezas.every(esFallecido) ? ' muerto' : '') + (n.cabezas.every(enCamino) ? ' futuro' : '') + '" width="' + bw + '" height="' + h + '" rx="12"/>' + dentro + '</g>';
       if (n.hijos.length) {
         const ym = y + h + GY / 2;
         lineas += '<path d="M' + n.x + ' ' + (y + h) + 'V' + ym + '"/>';
@@ -1783,7 +1792,7 @@
     const come = esFallecido(p) ? vidaTexto(p) : enCamino(p) ? 'en camino · nace ' + (Number(p.cumple.slice(0, 2)) ? 'el ' : 'en ') + fechaTexto(p.cumple) : [edadTexto(p), comeTexto(p)].filter(Boolean).join(' · ');  // v4.24
     // v4.12.5: un circulito a quien entró en la familia por su pareja (los «+1»: no son de sangre)
     const deFuera = esDeFuera(p) && !esServicio(p) && p.familia !== 'Otros';
-    return '<li><button type="button" class="fila-persona fila-caja' + (p.id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' +
+    return '<li><button type="button" class="fila-persona fila-caja' + (p.id === yo ? ' soy-yo' : '') + (enCamino(p) ? ' futuro' : '') + '" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' +
       (deFuera ? '<span class="marca-politico" role="img" aria-label="entró en la familia por su pareja" title="Entró en la familia por su pareja"></span>' : '') + esc(p.apodo) + (esFallecido(p) ? ' †' : '') + '</b>' +
       (completo && completo !== p.apodo ? '<small>' + esc(completo) + '</small>' : '') +
       (come ? '<span class="fp-come' + (p.alergias ? ' con-alergia' : '') + '">' + esc(come) + '</span>' : '') +
@@ -1797,7 +1806,7 @@
   function tarjeta(titulo, estado, cabezas, hijos, dentro) {
     const fp = cabezas.length === 2 && parejaDe(cabezas[0]) === cabezas[1] ? fechasPareja(cabezas[0]) : '';  // v4.21
     return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + anillo(estado) + '</div>' : '') +
-      (fp ? '<p class="fechas-pareja">' + esc(fp) + '</p>' : '') +
+      (fp ? '<p class="fechas-pareja' + (cabezas[0].boda && bodaQueViene(cabezas[0].boda) ? ' futuro' : '') + '">' + esc(fp) + '</p>' : '') +
       (cabezas.length ? '<ul class="per-filas">' + cabezas.map(filaCaja).join('') + '</ul>' : '') +
       // v4.13: los hijos (sueltos o con su caja), juntos en un subgrupo un poco metido hacia dentro
       // Si al filtrar no se ve a los padres, los hijos van sin la etiqueta ni la sangría
