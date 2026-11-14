@@ -313,7 +313,7 @@
   .evento-texto { margin: 0; font-size: 15px; font-weight: 600; white-space: pre-line; }
   .evento-dia button.mini { justify-self: start; margin-left: 0; }
   /* v4.35: el modo sencillo de la abuela: solo para mirar */
-  .modo-abuela nav.vistas a[data-vista="personas"], .modo-abuela nav.vistas a[data-vista="huecos"], .modo-abuela .eventos-barra, .modo-abuela #quien-soy, .modo-abuela #mis-proximas, .modo-abuela .nav-herr, .modo-abuela .instalar,
+  .modo-abuela nav.vistas a[data-vista="huecos"], .modo-abuela [data-nueva-persona], .modo-abuela .fp-falta-corto, .modo-abuela .eventos-barra, .modo-abuela #quien-soy, .modo-abuela #mis-proximas, .modo-abuela .nav-herr, .modo-abuela .instalar,
   .modo-abuela .utilo, .modo-abuela #huerfanos, .modo-abuela .paso { display: none !important; }
   .modo-abuela .nadie.suave { border: 0; background: none; padding: 0; min-height: 0; color: var(--color-texto-suave); font-weight: 700; }
   .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
@@ -586,7 +586,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.36.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.37.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1023,7 +1023,7 @@
     const sencillo = modoAbuela();  // v4.35
     document.body.classList.toggle('modo-abuela', sencillo);
     $('salir-sencillo').hidden = !sencillo;
-    if (sencillo && vista !== 'semana' && vista !== 'eventos') { ponerVista('semana'); return; }  // v4.35: la Semana y los Eventos, para mirar
+    if (sencillo && vista === 'huecos') { ponerVista('semana'); return; }  // v4.35: la Semana, los Eventos y (v4.37) las Personas, para mirar
     pintarNavegador();
     pintarSemana();
     pintarEventos();
@@ -1557,13 +1557,13 @@
     const ordenGen = GENERACIONES.map(function (g) { return g.nombre; }).concat(['servicio']);
     orden.generacion.sort(function (a, b) { return ordenGen.indexOf(a) - ordenGen.indexOf(b); });
     const grupos = [
-      ['falta', 'Mostrar', [['si', 'Les falta algo']]],
+      modoAbuela() ? null : ['falta', 'Mostrar', [['si', 'Les falta algo']]],  // v4.37: en el modo sencillo no se piden datos
       ['familia', 'Familia', orden.familia.map(function (f) { return [f, nombreFamilia(f).replace(/^Familia /, '')]; })],
       ['generacion', 'Generación', orden.generacion.map(function (g) { return [g, g.charAt(0).toUpperCase() + g.slice(1)]; })],
       ['sangre', 'Sangre', [['sangre', 'De sangre'], ['pareja', 'Entraron por pareja']]],
       ['come', 'Qué come', [['entero', 'Entero'], ['mitad', 'La mitad'], ['nada', 'No come'], ['sin', 'Sin anotar']]],
     ];
-    $p.innerHTML = grupos.map(function (g) {
+    $p.innerHTML = grupos.filter(Boolean).map(function (g) {
       const k = g[0];
       const ops = g[2].map(function (o) {
         // El contador cuenta con los demás filtros puestos
