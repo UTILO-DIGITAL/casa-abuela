@@ -312,6 +312,8 @@
   .evento-titulo span { font-size: 14px; font-weight: 700; color: var(--color-texto-suave); }
   .evento-texto { margin: 0; font-size: 15px; font-weight: 600; white-space: pre-line; }
   .evento-dia button.mini { justify-self: start; margin-left: 0; }
+  .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
+  .turno-evento svg { width: 16px; height: 16px; flex: none; color: var(--color-accion); }
   /* v4.28: la pestaña Eventos */
   .eventos-barra { margin: 0 0 16px; }
   #eventos-lista { display: grid; gap: 14px; }
@@ -1127,7 +1129,8 @@
         html += '<span class="cuantos">' + cuenta(ids, t.id, fecha) + '</span>';
       }
       const evT = ft && eventoEn(fecha, t.id);  // v4.31
-      if (ft) html += '<p class="sin-turno">' + (evT ? 'La abuela está en ' + esc(evT.nombre) : 'La abuela no está') + (ids.length ? ': avisad a quien va.' : '.') + '</p>';
+      if (evT) html += '<p class="turno-evento">' + ICONO_EVENTO + esc(evT.nombre) + '</p>';  // v4.32: en el hueco, el evento tal cual
+      else if (ft) html += '<p class="sin-turno">La abuela no está' + (ids.length ? ': avisad a quien va.' : '.') + '</p>';
       else if (motivo !== null) html += '<p class="sin-turno">No hace falta que vaya nadie' + (motivo ? ': ' + esc(motivo) : '.') + '</p>';
       if (comp.length) html += '<div class="gente">' + comp.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
       if (serv.length) html += '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
@@ -2754,7 +2757,7 @@
     const bloques = (tipo === 'semana' ? dias : [tipo]).map(function (f) {
       let b = '📅 *' + diaLargo(f) + '*';
       const evDia = eventoEn(f, 'COMIDA') || eventoEn(f, 'CENA');  // v4.31
-      if (fueraTodo(f)) return b + (evDia ? '\n🎉 La abuela está en ' + evDia.nombre + '.' : '\n🧳 La abuela no está' + ((fuera(f) || {}).motivoFuera ? ' (' + fuera(f).motivoFuera + ')' : '') + '.');
+      if (fueraTodo(f)) return b + (evDia ? '\n🎉 ' + evDia.nombre : '\n🧳 La abuela no está' + ((fuera(f) || {}).motivoFuera ? ' (' + fuera(f).motivoFuera + ')' : '') + '.');
       textoCumples(f).forEach(function (c) { b += '\n🎂 ' + c; });
       textoRecuerdos(f).forEach(function (c) { b += '\n🕯️ ' + c; });
       textoAniversarios(f).forEach(function (c) { b += '\n💍 ' + c; });
@@ -2765,7 +2768,7 @@
         const ids = idsDe(f, t.id), comp = compania(ids, t.id), serv = servicioDe(ids, t.id), motivo = sinTurno(f, t.id);
         const total = comp.length + acompanantesDe(comp, f, t.id);
         b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (total > 1 ? ' (' + total + ')' : '');
-        if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? '\n🎉 La abuela está en ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
+        if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? ' 🎉 ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
         else if (motivo !== null && !comp.length) { b += '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.'; return; }
         else if (!comp.length) b += '\n⚠️ Falta alguien';
         comp.concat(serv).forEach(function (id) {
@@ -2823,7 +2826,7 @@
       return '<tr><th scope="row">' + diaLargo(f) + (extra.length ? '<br><small>' + extra.map(esc).join('<br>') + '</small>' : '') + '</th>' + TURNOS.map(function (t) {
         const ids = idsDe(f, t.id), comp = compania(ids, t.id), serv = servicioDe(ids, t.id), motivo = sinTurno(f, t.id);
         const al = t.id === 'DORMIR' ? [] : ids.map(persona).filter(function (p) { return p && p.alergias; });
-        if (fueraTurno(f, t.id) && !comp.length) return '<td>' + (eventoEn(f, t.id) ? 'La abuela está en ' + esc(eventoEn(f, t.id).nombre) : 'La abuela no está') + '</td>';
+        if (fueraTurno(f, t.id) && !comp.length) return '<td>' + (eventoEn(f, t.id) ? esc(eventoEn(f, t.id).nombre) : 'La abuela no está') + '</td>';
         return '<td>' + (motivo !== null && !comp.length ? 'No hace falta nadie' + (motivo ? ': ' + esc(motivo) : '')
           : (comp.length ? comp.map(function (id) { return esc(persona(id).apodo); }).join(', ') : '____________')) +
           (serv.length ? '<br>Servicio: ' + serv.map(function (id) { return esc(persona(id).apodo); }).join(', ') : '') +
