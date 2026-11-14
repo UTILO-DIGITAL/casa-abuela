@@ -332,18 +332,18 @@
   .proximas li:first-child { border-top: 0; }
   .proximas small { display: block; color: var(--color-texto-suave); font-weight: 700; font-size: 13px; }
   .ev-total { margin: 4px 0; }
-  .ev-resumen { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
-  .ev-resumen tr { cursor: pointer; border-top: 1px solid var(--color-linea); }
-  .ev-resumen tr:first-child { border-top: 0; }
-  .ev-resumen th { text-align: left; padding: 7px 8px 7px 0; font-weight: 700; }
-  .ev-resumen .ev-van { padding: 7px 8px; font-weight: 800; color: var(--color-principal-oscuro); white-space: nowrap; }
-  .ev-resumen .ev-resto { padding: 7px 0; font-size: 13px; color: var(--color-texto-suave); text-align: right; }
-  .ev-desglose { margin: 12px 0 0; font-size: 16px; }
-  .ev-resumen .ev-ver { padding: 4px 0 4px 8px; width: 1%; }
-  .ev-resumen .ev-ver .mini { margin: 0; }
+  .ev-resumen { margin: 4px 0 0; }
+  .ev-familia summary { list-style: none; display: grid; grid-template-columns: 1fr auto; grid-template-areas: "n v b" "r r r"; grid-template-columns: 1fr auto auto; gap: 0 10px; align-items: center; }
+  .ev-familia summary::-webkit-details-marker { display: none; }
+  .ev-fam-nombre { grid-area: n; }
+  .ev-familia .ev-van { grid-area: v; font-weight: 800; color: var(--color-principal-oscuro); white-space: nowrap; }
+  .ev-familia .ev-resto { grid-area: r; font-size: 13px; color: var(--color-texto-suave); font-weight: 600; }
+  .ev-familia .ev-ver { grid-area: b; margin: 0; padding: 3px 12px; border: 2px solid var(--color-principal-oscuro); border-radius: 999px; font-size: 13px; font-weight: 800; color: var(--color-principal-oscuro); background: #fff; }
+  .ev-familia .ev-ver::after { content: 'Ver'; }
+  .ev-familia[open] .ev-ver::after { content: 'Ocultar'; }
+  .ev-familia[open] summary { padding-bottom: 6px; border-bottom: 1px dashed var(--color-linea); }
   .ev-familia { border-top: 1px solid var(--color-linea); padding: 6px 0; }
-  .ev-familia summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
-  .ev-familia summary span { font-size: 14px; color: var(--color-texto-suave); font-weight: 700; }
+  .ev-familia summary { cursor: pointer; }
   .ev-familia ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
   .ev-fila { display: flex; align-items: center; gap: 8px; padding-top: 3px; padding-bottom: 3px; }
   .ev-nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1238,20 +1238,15 @@
       (e.lugar ? '<p>📍 <b>Dónde:</b> ' + esc(e.lugar) + '</p>' : '') +
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
       '<p class="ev-total"><b>' + esc(resumenEvento(e)) + '</b></p>' +
-      '<table class="ev-resumen"><tbody>' + porFamiliaEvento(e).map(function (x) {
-        return '<tr data-ev-fam="' + esc(x.f) + '"><th scope="row">' + esc(cortoFamilia(x.f)) + '</th><td class="ev-van">' + (x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : '—') + '</td>' +
-          '<td class="ev-resto">' + [x.no ? (x.no === 1 ? '1 no puede' : x.no + ' no pueden') : '', x.pend ? x.pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</td>' +
-          '<td class="ev-ver"><button type="button" class="mini" aria-label="Ver quién de ' + esc(cortoFamilia(x.f)) + '">Ver</button></td></tr>';
-      }).join('') + '</tbody></table>' +
-      '<h3 class="ev-desglose">Familia por familia</h3>' +
       '<p class="ayuda">✓ va · ✗ no puede · sin marcar, aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).</p>' +
-      orden.map(function (f) {
-        const l = porFam[f];
-        const van = l.filter(function (p) { return estado(p) === 'si'; }).length, no = l.filter(function (p) { return estado(p) === 'no'; }).length, pend = l.length - van - no;
-        return '<details class="ev-familia" data-fam="' + esc(f) + '"' + (abiertasEv[f] ? ' open' : '') + '><summary><b>' + esc(nombreFamilia(f)) + '</b><span>' +
-          [van ? (van === 1 ? 'va 1' : 'van ' + van) : '', no ? (no === 1 ? 'no puede 1' : 'no pueden ' + no) : '', pend ? pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</span></summary>' +
-          '<ul>' + enOrden(l).map(fila).join('') + '</ul></details>';
-      }).join('');
+      // v4.30: una sola lista: cada familia con sus números y, al tocar «Ver», quién es justo debajo
+      '<div class="ev-resumen">' + porFamiliaEvento(e).map(function (x) {
+        return '<details class="ev-familia" data-fam="' + esc(x.f) + '"' + (abiertasEv[x.f] ? ' open' : '') + '><summary>' +
+          '<b class="ev-fam-nombre">' + esc(cortoFamilia(x.f)) + '</b><span class="ev-van">' + (x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : '—') + '</span>' +
+          '<span class="ev-resto">' + [x.no ? (x.no === 1 ? '1 no puede' : x.no + ' no pueden') : '', x.pend ? x.pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</span>' +
+          '<span class="mini ev-ver" aria-hidden="true"></span></summary>' +
+          '<ul>' + enOrden(x.gente).map(fila).join('') + '</ul></details>';
+      }).join('') + '</div>';
   }
   const abiertasEv = {};  // v4.29: las familias desplegadas en el detalle, para que no se cierren al marcar
   document.addEventListener('toggle', function (ev) { const d = ev.target; if (d.classList && d.classList.contains('ev-familia')) abiertasEv[d.dataset.fam] = d.open; }, true);
@@ -1365,8 +1360,6 @@
   }
   $('ev-anadir').addEventListener('click', function () { abrirEvento(null); });
   document.addEventListener('click', function (ev) {
-    const fam = ev.target.closest('[data-ev-fam]');
-    if (fam) { const d = document.querySelector('.ev-familia[data-fam="' + fam.dataset.evFam + '"]'); if (d) { d.open = true; d.scrollIntoView({ block: 'start', behavior: 'smooth' }); } return; }
     const b = ev.target.closest('[data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p]');
     if (!b) return;
     if (b.dataset.evVoy) apuntarEv(b.dataset.evVoy, true);
