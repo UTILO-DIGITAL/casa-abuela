@@ -327,7 +327,6 @@
   .rf-persona h3 { margin: 0; font-size: 18px; }
   .rf-persona h3 small { font-weight: 600; color: var(--color-texto-suave); font-size: 14px; margin-left: 6px; }
   .rf-guardar { position: sticky; bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; padding: 10px 0; }
-  .modo-abuela #per-pedir { display: none !important; }
   .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
   .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
   .turno-evento svg { width: 16px; height: 16px; flex: none; color: var(--color-accion); }
@@ -586,7 +585,6 @@
       <button type="button" class="accion" id="per-filtros-btn" aria-expanded="false" aria-controls="per-filtros">Filtros</button>
       <button type="button" class="accion" id="per-arbol-btn" aria-pressed="false">Árbol</button>
       <button type="button" class="accion" data-nueva-persona>Añadir</button>
-      <button type="button" class="accion" id="per-pedir">Pedir lo que falta</button>
     </div>
     <div id="per-filtros" class="per-filtros-panel" hidden></div>
     <p id="per-resultado" class="per-resultado" hidden></p>
@@ -622,7 +620,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.41.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.42.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1361,27 +1359,6 @@
       });
     });
   }
-  /* El mensaje para el grupo grande, con el enlace */
-  function mensajeRellenar() {
-    const url = (datos.url || location.href).replace(/#.*$/, '') + '#rellenar';
-    const n = datos.personas.filter(function (p) { return !esServicio(p) && p.familia !== 'Otros' && !esFallecido(p) && !enCamino(p) && rfFalta(p).length; }).length;
-    return '👋 ¡Hola, familia!\n\nEn la web de la abuela nos faltan datos de ' + n + ' personas: sobre todo los cumpleaños con el año, y algún menú.\n\n' +
-      'Entrad aquí, elegid vuestra familia y rellenad lo que sepáis (la clave es la de siempre):\n👉 ' + url + '\n\n¡Gracias! 🙏';
-  }
-  $('per-pedir').addEventListener('click', function () {
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Pedir lo que falta</h2></div>' +
-      '<div class="dlg-cuerpo"><p class="ayuda">Copia el mensaje y pégalo en el grupo de la familia. El enlace lleva a una página donde cada uno elige su familia y rellena lo que sepa.</p>' +
-      '<label class="campo" for="dlg-texto">Mensaje (puedes cambiarlo)<textarea id="dlg-texto" rows="9"></textarea></label></div>' +
-      '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-copiar">Copiar el mensaje</button>' +
-      '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
-    $('dlg-texto').value = mensajeRellenar();
-    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
-    $('dlg-copiar').addEventListener('click', function () {
-      const t = $('dlg-texto'), hecho = function () { aviso('Mensaje copiado. Pégalo en el grupo.'); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(hecho).catch(function () { t.select(); document.execCommand('copy'); hecho(); });
-      else { t.select(); document.execCommand('copy'); hecho(); }
-    });
-  });
   document.addEventListener('click', function (ev) {
     const b = ev.target.closest('[data-rf-fam]');
     if (!b) return;
