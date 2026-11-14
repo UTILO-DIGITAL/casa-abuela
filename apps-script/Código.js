@@ -20,8 +20,9 @@
  *                 (la abuela no está en esa comida, cena o noche; FUERA = las tres, de versiones anteriores)
  *   MESA_CAMBIOS  CUANDO | QUIEN_ID | QUIEN | CAMBIO   (registro de quién cambia qué)
  *   MESA_ALIAS    ID_ANTIGUO | ID_NUEVO | NOTA   (si a alguien se le cambia el apodo o la jerarquía en PERSONAS)
+ *   MESA_VISITAS  PERSONA_ID | ULTIMA_VEZ | VECES (v4.58; se crea sola: quién abre la web, como mucho una vez por hora)
  *   MESA_EVENTOS  ID | NOMBRE | DESDE | HASTA | CUANDO (DIA, COMIDA, CENA o DORMIR) | TEXTO | VAN | NO_VAN (Ids con «;») | CREADO_EN | BORRADO | LUGAR | HORA | TURNOS (v4.33: de cada día, los que se salta) (v4.28; se crea sola)
- *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), PISTA (v4.18: se enseña al pedir la clave), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
+ *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), PISTA (v4.18: se enseña al pedir la clave), ADMIN_IDS (v4.58: quién ve los Ajustes, Ids con «;»), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
  *                 (EXCLUIR_IDS: no salen para apuntarse, pero pueden hacer cambios, como la abuela)
  * Turnos: COMIDA, CENA y DORMIR (quién pasa la noche en casa).
  * El servicio son las personas de PERSONAS con Familia = «Servicio»: cuentan para cocinar y no como compañía en comida y cena; para dormir, sí.
@@ -31,7 +32,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.40.0
+ * Versión 4.58.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -43,7 +44,8 @@ const HOJA_CONFIG = 'MESA_CONFIG';
 const HOJA_DIAS = 'MESA_DIAS';
 const HOJA_CAMBIOS = 'MESA_CAMBIOS';
 const HOJA_ALIAS = 'MESA_ALIAS';
-const HOJA_EVENTOS = 'MESA_EVENTOS';  // v4.28: los eventos (castañada, PortAventura…) con quién va
+const HOJA_EVENTOS = 'MESA_EVENTOS';
+const HOJA_VISITAS = 'MESA_VISITAS';  // v4.58: PERSONA_ID | ULTIMA_VEZ | VECES (la última vez que cada uno abrió la web; como mucho, una vez por hora)  // v4.28: los eventos (castañada, PortAventura…) con quién va
 const TURNOS = ['COMIDA', 'CENA', 'DORMIR'];
 const MENUS_BASE = ['\uD83C\uDF15 Entero', '\uD83C\uDF17 Medio', '\uD83C\uDF7C Nada'];  // luna llena, media luna y biberón, escritos así para que no se estropeen al copiar
 const COL_MENU = 6;      // F en PERSONAS
@@ -101,6 +103,8 @@ const API_ = {
   guardarPersonas: function (a) { return guardarPersonas(a[0], a[1], a[2]); },
   guardarDia: function (a) { return guardarDia(a[0], a[1], a[2], a[3]); },
   guardarEvento: function (a) { return guardarEvento(a[0], a[1], a[2]); },
+  getAjustes: function (a) { return getAjustes(a[0]); },
+  guardarAjustes: function (a) { return guardarAjustes(a[0], a[1], a[2]); },
   borrarEvento: function (a) { return borrarEvento(a[0], a[1], a[2]); },
   apuntarEvento: function (a) { return apuntarEvento(a[0], a[1], a[2], a[3], a[4]); },
   guardarAusencia: function (a) { return guardarAusencia(a[0], a[1], a[2], a[3], a[4], a[5]); },
@@ -149,6 +153,7 @@ function getDatos(p) {
   p = p || {};
   const cache = CacheService.getScriptCache();
   const clave = 'd|' + versionCache_(cache) + '|' + (p.desde || '') + '|' + (p.hasta || '') + '|' + (p.yo || '');
+  try { registrarVisita_(cache, p.yo); } catch (e) { /* si no se puede apuntar, no pasa nada */ }  // v4.58
   const guardado = cache.get(clave);
   if (guardado) return JSON.parse(guardado);
   const d = datos_(SpreadsheetApp.openById(SPREADSHEET_ID), p);
@@ -194,6 +199,7 @@ function datos_(ss, p) {
     apuntes: efectivos_(crudos, fijos, desde, hasta),
     fijos: fijos.filter(function (f) { return !f.hasta || f.hasta >= hoy; }),
     dias: leerDias_(ss).filter(function (d) { return d.fecha >= desde && d.fecha <= hasta; }),
+    admins: config.admins,  // v4.58: quién ve los Ajustes
     eventos: leerEventos_(ss).filter(function (e) { return e.hasta >= (desde < sumarDias_(hoy, -60) ? desde : sumarDias_(hoy, -60)); }),  // v4.28
     misProximas: p.yo ? efectivos_(crudos, fijos, hoy, sumarDias_(hoy, 60)).filter(function (a) { return a.persona === p.yo; }).slice(0, 12) : [],
     bajas: leerBajas_(ss).map(function (b) { return { id: b.id, apodo: b.apodo, jerarquia: b.jerarquia, familia: b.familia, menu: b.menu, baja: b.baja }; }),
@@ -216,6 +222,7 @@ function leerConfigSin_(ss) {
     urlCompartir: String(mapa.URL_COMPARTIR || '').trim(),
     clave: String(mapa.CLAVE || '').trim(),
     pista: String(mapa.PISTA || '').trim(),
+    admins: String(mapa.ADMIN_IDS || '').split(';').map(function (s) { return s.trim(); }).filter(Boolean),  // v4.58
   };
 }
 
@@ -1166,6 +1173,97 @@ function hojaDias_(ss) {
   return ss.getSheetByName(HOJA_DIAS) || crearHoja_(ss, HOJA_DIAS,
     ['FECHA', 'NOTA', 'SIN_TURNO', 'CAMBIADO_POR', 'CAMBIADO_EN', 'SIN_COMIDA', 'MOTIVO_COMIDA', 'SIN_CENA', 'MOTIVO_CENA', 'NOTA_SERVICIO', 'SIN_DORMIR', 'MOTIVO_DORMIR',
       'NOTA_POR', 'NOTA_EN', 'SERVICIO_POR', 'SERVICIO_EN', 'COMIDA_POR', 'COMIDA_EN', 'CENA_POR', 'CENA_EN', 'DORMIR_POR', 'DORMIR_EN']);
+}
+
+/* ---------- v4.58: ajustes del administrador ---------- */
+
+/** La última vez que alguien abrió la web: como mucho una vez por hora y persona (con la caché), sin esperar si hay otro guardando. */
+function registrarVisita_(cache, yo) {
+  yo = String(yo || '').trim();
+  if (!yo || cache.get('visto|' + yo)) return;
+  cache.put('visto|' + yo, '1', 3600);
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(2000)) return;
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const hoja = ss.getSheetByName(HOJA_VISITAS) || crearHoja_(ss, HOJA_VISITAS, ['PERSONA_ID', 'ULTIMA_VEZ', 'VECES']);
+    const n = Math.max(0, hoja.getLastRow() - 1);
+    const filas = n ? hoja.getRange(2, 1, n, 3).getValues() : [];
+    const i = filas.findIndex(function (f) { return String(f[0]).trim() === yo; });
+    const fila = i === -1 ? hoja.getLastRow() + 1 : i + 2;
+    const r = hoja.getRange(fila, 1, 1, 3);
+    comoTexto_(r);
+    r.setValues([[yo, ahora_(), String((i === -1 ? 0 : Number(filas[i][2]) || 0) + 1)]]);
+  } finally { lock.releaseLock(); }
+}
+function esAdmin_(config, quien) { return !!quien && config.admins.indexOf(String(quien).trim()) !== -1; }
+function ponerConfig_(ss, k, v) {
+  const hoja = ss.getSheetByName(HOJA_CONFIG);
+  const n = Math.max(0, hoja.getLastRow() - 1);
+  const claves = n ? hoja.getRange(2, 1, n, 1).getValues().map(function (f) { return String(f[0]).trim(); }) : [];
+  const i = claves.indexOf(k);
+  const r = hoja.getRange(i === -1 ? hoja.getLastRow() + 1 : i + 2, 1, 1, 2);
+  comoTexto_(r);
+  r.setValues([[k, String(v)]]);
+}
+
+/** Para la pestaña Ajustes: la configuración, quién entra y el historial de cambios. Solo para los de ADMIN_IDS. */
+function getAjustes(quien) {
+  reiniciar_();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const config = leerConfig_(ss);
+  if (!esAdmin_(config, quien)) throw new Error('Los ajustes son solo para quien lleva la web.');
+  const hc = ss.getSheetByName(HOJA_CAMBIOS);
+  const nc = hc ? Math.max(0, hc.getLastRow() - 1) : 0;
+  const desde = Math.max(0, nc - 500);
+  const cambios = nc ? hc.getRange(2 + desde, 1, nc - desde, 4).getValues().map(function (f) {
+    return { cuando: f[0] instanceof Date ? Utilities.formatDate(f[0], TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(f[0]), quien: String(f[1]), apodo: String(f[2]), cambio: String(f[3]) };
+  }).reverse() : [];
+  const hv = ss.getSheetByName(HOJA_VISITAS);
+  const nv = hv ? Math.max(0, hv.getLastRow() - 1) : 0;
+  const visitas = nv ? hv.getRange(2, 1, nv, 3).getValues().filter(function (f) { return f[0]; }).map(function (f) {
+    return { persona: String(f[0]).trim(), ultima: f[1] instanceof Date ? Utilities.formatDate(f[1], TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(f[1]), veces: Number(f[2]) || 0 };
+  }) : [];
+  return {
+    config: { clave: config.clave, pista: config.pista, horaComida: config.horaComida, horaCena: config.horaCena, horaDormir: config.horaDormir, avisoHoras: config.avisoHoras, inicio: config.inicio },
+    cambios: cambios, visitas: visitas,
+  };
+}
+
+function guardarAjustes(aj, quien, vista) {
+  return conBloqueo_(function (ss) {
+    const config = leerConfig_(ss);
+    if (!esAdmin_(config, quien)) throw new Error('Los ajustes son solo para quien lleva la web.');
+    const autor = autor_(leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir)), quien);
+    aj = aj || {};
+    const hora = function (v, que) { const t = String(v || '').trim(); if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(t)) throw new Error('La hora de ' + que + ' tiene que ser como 14:00.'); return t.length === 4 ? '0' + t : t; };
+    const registro = [];
+    if (aj.clave !== undefined) {
+      const c = limpiar_(aj.clave, 40, 'La clave', true);
+      if (!c) throw new Error('La clave no puede quedar vacía (si no, cualquiera podría entrar).');
+      if (c !== config.clave) { ponerConfig_(ss, 'CLAVE', c); registro.push('Cambia la clave de la familia'); }
+    }
+    if (aj.pista !== undefined) { const t = limpiar_(aj.pista, 100, 'La pista', true); if (t !== config.pista) { ponerConfig_(ss, 'PISTA', t); registro.push('Cambia la pista de la clave'); } }
+    [['horaComida', 'HORA_COMIDA', 'la comida'], ['horaCena', 'HORA_CENA', 'la cena'], ['horaDormir', 'HORA_DORMIR', 'dormir']].forEach(function (x) {
+      if (aj[x[0]] === undefined) return;
+      const h = hora(aj[x[0]], x[2]);
+      if (h !== config[x[0]]) { ponerConfig_(ss, x[1], h); registro.push('Hora de ' + x[2] + ': ' + h); }
+    });
+    if (aj.avisoHoras !== undefined) {
+      const n = Math.floor(Number(aj.avisoHoras));
+      if (!(n >= 0 && n <= 48)) throw new Error('El aviso tiene que ser de 0 a 48 horas antes.');
+      if (n !== config.avisoHoras) { ponerConfig_(ss, 'AVISO_HORAS', n); registro.push('Aviso de «falta alguien»: ' + n + ' horas antes'); }
+    }
+    if (aj.inicio !== undefined) {
+      if (!esFecha_(aj.inicio)) throw new Error('Elige el día en que empieza el calendario.');
+      if (aj.inicio !== config.inicio) { ponerConfig_(ss, 'FECHA_INICIO', aj.inicio); registro.push('El calendario empieza el ' + aj.inicio); }
+    }
+    if (!registro.length) throw new Error('No has cambiado nada.');
+    try { CacheService.getScriptCache().remove('clave_familia_v2'); } catch (e) { /* la clave nueva vale en 5 minutos */ }
+    olvidar_('config');
+    registrar_(ss, autor, registro);
+    return datos_(ss, vista || {});
+  });
 }
 
 /* ---------- v4.28: otras fechas de cada persona ---------- */

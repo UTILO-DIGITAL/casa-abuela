@@ -339,6 +339,17 @@
   .rf-flecha { font-size: 26px; line-height: 1; color: var(--color-texto-suave); }
   .botones-grandes { display: grid; gap: 10px; margin-top: 8px; }
   .botones-grandes button { min-height: 52px; font-size: 17px; }
+  /* v4.58: Ajustes */
+  .aj-sec { margin: 0 0 22px; padding: 14px 16px; border-radius: var(--radio); background: #fff; border: 1px solid var(--color-linea); display: grid; gap: 10px; }
+  .aj-sec h2 { margin: 0; font-size: 18px; }
+  .aj-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .aj-tabla th { text-align: left; font-size: 12px; color: var(--color-texto-suave); font-weight: 800; padding: 4px 6px 4px 0; }
+  .aj-tabla td { padding: 6px 6px 6px 0; border-top: 1px solid var(--color-linea); vertical-align: top; }
+  .aj-tabla td.n { text-align: right; white-space: nowrap; }
+  .aj-nunca { color: var(--color-accion); font-weight: 700; }
+  .aj-hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; font-size: 14px; max-height: 60vh; overflow: auto; }
+  .aj-hist li { padding: 7px 0; border-top: 1px solid var(--color-linea); }
+  .aj-hist small { display: block; color: var(--color-texto-suave); font-weight: 700; font-size: 12px; }
   .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
   .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
   .turno-evento svg { width: 16px; height: 16px; flex: none; color: var(--color-accion); }
@@ -404,6 +415,8 @@
   .arbol-et.muerto b { color: var(--color-texto-suave); }
   .arbol-et.futuro b, .arbol-et.futuro span { color: var(--color-futuro); }
   .arbol-et .barra-embarazo { margin: 3px 0 0; max-width: none; flex: none; }
+  .arbol-et.fuera-filtro { opacity: .28; }
+  .arbol-caja.fuera-filtro { opacity: .45; }
   .arbol-et.soy-yo { box-shadow: inset 0 0 0 2.5px var(--color-accion); }
   .arbol-ano-et { position: absolute; height: 20px; line-height: 20px; font-family: var(--letra-texto); font-size: 11.5px; font-weight: 700; color: var(--color-principal-oscuro); text-align: right; pointer-events: none; }
   .arbol-ano-et.futuro { color: var(--color-futuro); }
@@ -596,6 +609,7 @@
       <a href="#eventos" data-vista="eventos">Eventos</a>
       <a href="#personas" data-vista="personas">Personas</a>
       <a href="#huecos" data-vista="huecos">Huecos</a>
+      <a href="#ajustes" data-vista="ajustes" id="nav-ajustes" hidden>Ajustes</a>
     </nav>
   </div>
 </header>
@@ -630,6 +644,9 @@
   <section id="vista-rellenar" hidden>
     <div id="rellenar"><p class="vacio">Cargando…</p></div>
   </section>
+  <section id="vista-ajustes" hidden>
+    <div id="ajustes"><p class="vacio">Cargando…</p></div>
+  </section>
   <section id="vista-huecos" hidden>
     <div id="huecos-lista"><p class="vacio">Cargando…</p></div>
   </section>
@@ -651,7 +668,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.57.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.60.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1103,7 +1120,9 @@
     const sencillo = modoAbuela();  // v4.35
     document.body.classList.toggle('modo-abuela', sencillo);
     $('salir-sencillo').hidden = !sencillo;
-    if (sencillo && (vista === 'huecos' || vista === 'rellenar')) { ponerVista('semana'); return; }  // v4.35: la Semana, los Eventos y (v4.37) las Personas, para mirar
+    if (sencillo && (vista === 'huecos' || vista === 'rellenar')) { ponerVista('semana'); return; }
+    $('nav-ajustes').hidden = !esAdmin();  // v4.58
+    if (vista === 'ajustes') { if (!esAdmin()) { ponerVista('semana'); return; } if (!ajustes) pintarAjustes(); }  // v4.35: la Semana, los Eventos y (v4.37) las Personas, para mirar
     pintarNavegador();
     pintarSemana();
     pintarEventos();
@@ -1523,6 +1542,82 @@
     });
   }
 
+  /* ---------- v4.58: Ajustes (solo para quien lleva la web: ADMIN_IDS en el Excel) ---------- */
+  function esAdmin() { return !!(datos && yo && (datos.admins || []).indexOf(yo) !== -1) && !modoAbuela(); }
+  let ajustes = null, ajCargando = false;
+  function haceCuanto(iso) {
+    if (!iso) return '';
+    const d = diasEntre(iso.slice(0, 10), hoy());
+    return d <= 0 ? 'hoy' : d === 1 ? 'ayer' : d < 14 ? 'hace ' + d + ' días' : d < 60 ? 'hace ' + Math.round(d / 7) + ' semanas' : 'hace ' + Math.round(d / 30) + ' meses';
+  }
+  function cargarAjustes() {
+    if (ajCargando) return;
+    ajCargando = true;
+    llamar('getAjustes', [yo]).then(function (a) { ajCargando = false; ajustes = a; pintarAjustes(); })
+      .catch(function (err) { ajCargando = false; if (esErrorClave(err)) { pedirClave(err); return; } $('ajustes').innerHTML = '<p class="vacio">' + esc(mensajeError(err)) + '</p>'; });
+  }
+  function pintarAjustes() {
+    const $a = $('ajustes');
+    if (!ajustes) { $a.innerHTML = '<p class="vacio">Cargando…</p>'; cargarAjustes(); return; }
+    const c = ajustes.config;
+    // quién la usa: la última visita y los cambios de cada uno
+    const cambiosDe = {}, ultimoCambio = {};
+    ajustes.cambios.forEach(function (x) { cambiosDe[x.quien] = (cambiosDe[x.quien] || 0) + 1; if (!ultimoCambio[x.quien]) ultimoCambio[x.quien] = x.cuando; });
+    const visita = {};
+    ajustes.visitas.forEach(function (v) { visita[v.persona] = v; });
+    const mayor = function (p) { const e = edad(p); return e !== null ? e >= 14 : p.jerarquia !== 'Biznietos'; };  // los niños no cuentan
+    const gente = abuelas().concat(datos.personas).filter(function (p) { return !esFallecido(p) && !enCamino(p) && !esServicio(p) && p.familia !== 'Otros' && mayor(p); });
+    const usan = gente.filter(function (p) { return visita[p.id] || cambiosDe[p.id]; })
+      .sort(function (a, b) { return ((visita[b.id] || {}).ultima || ultimoCambio[b.id] || '').localeCompare((visita[a.id] || {}).ultima || ultimoCambio[a.id] || ''); });
+    const nunca = gente.filter(function (p) { return !visita[p.id] && !cambiosDe[p.id]; });
+    const campo = function (id, et, tipo, v, extra) { return '<label class="campo" for="aj-' + id + '">' + et + '<input id="aj-' + id + '" type="' + tipo + '" value="' + esc(v == null ? '' : v) + '"' + (extra || '') + '></label>'; };
+    $a.innerHTML =
+      '<section class="aj-sec"><h2>Configuración</h2>' +
+        '<div class="dos dos-iguales">' + campo('clave', 'Clave de la familia', 'text', c.clave, ' maxlength="40" autocomplete="off" autocapitalize="off"') + campo('pista', 'Pista de la clave', 'text', c.pista, ' maxlength="100" autocomplete="off"') + '</div>' +
+        '<div class="tres">' + campo('comida', 'Hora de comida', 'time', c.horaComida) + campo('cena', 'Hora de cena', 'time', c.horaCena) + campo('dormir', 'Hora de dormir', 'time', c.horaDormir) + '</div>' +
+        '<div class="dos dos-iguales">' + campo('aviso', 'Avisar de «falta alguien» (horas antes)', 'number', c.avisoHoras, ' min="0" max="48"') + campo('inicio', 'El calendario empieza el', 'date', c.inicio) + '</div>' +
+        '<p class="ayuda">Si cambias la clave, a todos les pedirá la nueva la próxima vez que entren (con la pista).</p>' +
+        '<div><button type="button" class="principal" id="aj-guardar">Guardar ajustes</button></div></section>' +
+      '<section class="aj-sec"><h2>Quién la usa</h2>' +
+        (usan.length ? '<table class="aj-tabla"><thead><tr><th>Persona</th><th>Última vez que entró</th><th class="n">Cambios</th></tr></thead><tbody>' + usan.map(function (p) {
+          const v = visita[p.id];
+          return '<tr><td><b>' + esc(p.apodo) + '</b></td><td>' + esc(v ? haceCuanto(v.ultima) : '—') + '</td><td class="n">' + (cambiosDe[p.id] || 0) + '</td></tr>';
+        }).join('') + '</tbody></table>' : '<p class="vacio">Aún nadie.</p>') +
+        '<p class="ayuda">Las visitas se apuntan desde hoy (como mucho una vez por hora); los cambios, de los últimos ' + ajustes.cambios.length + '.</p>' +
+        (nunca.length ? '<h3 class="rf-sec">No la han usado nunca (' + nunca.length + ')</h3><p class="aj-nunca">' + esc(nunca.map(function (p) { return p.apodo; }).join(', ')) + '</p>' : '') +
+      '</section>' +
+      '<section class="aj-sec"><h2>Historial de cambios</h2>' +
+        '<label class="buscar" for="aj-q"><span class="oculto">Buscar</span><input id="aj-q" type="search" autocomplete="off" placeholder="Buscar (persona, fecha, qué)"></label>' +
+        '<ul class="aj-hist" id="aj-hist"></ul></section>';
+    const pintarHist = function () {
+      const q = sinAcentos($('aj-q').value.trim());
+      const l = ajustes.cambios.filter(function (x) { return !q || sinAcentos(x.apodo + ' ' + x.cambio + ' ' + x.cuando).indexOf(q) !== -1; }).slice(0, 200);
+      $('aj-hist').innerHTML = l.length ? l.map(function (x) {
+        const f = x.cuando.slice(0, 10), h = x.cuando.slice(11, 16);
+        return '<li><small>' + esc(ddmm(f) + ' ' + h + ' · ' + x.apodo) + '</small>' + esc(x.cambio) + '</li>';
+      }).join('') : '<li>Nada con eso.</li>';
+    };
+    $('aj-q').addEventListener('input', pintarHist);
+    pintarHist();
+    $('aj-guardar').addEventListener('click', function () {
+      const aj = {}, v = function (id) { return $('aj-' + id).value.trim(); };
+      if (v('clave') !== c.clave) aj.clave = v('clave');
+      if (v('pista') !== c.pista) aj.pista = v('pista');
+      if (v('comida') !== c.horaComida) aj.horaComida = v('comida');
+      if (v('cena') !== c.horaCena) aj.horaCena = v('cena');
+      if (v('dormir') !== c.horaDormir) aj.horaDormir = v('dormir');
+      if (Number(v('aviso')) !== c.avisoHoras) aj.avisoHoras = Number(v('aviso'));
+      if (v('inicio') !== c.inicio) aj.inicio = v('inicio');
+      if (!Object.keys(aj).length) { aviso('No has cambiado nada.'); return; }
+      if (aj.clave !== undefined && !aj.clave) { aviso('La clave no puede quedar vacía.', 6000); return; }
+      aviso('Guardando…', 0);
+      llamar('guardarAjustes', [aj, yo, rango()]).then(function (d) {
+        if (aj.clave) guardarClave(aj.clave);  // en este móvil, ya con la clave nueva
+        datos = d; guardarLocal(); ajustes = null; pintar(); aviso('Ajustes guardados.');
+      }).catch(function (err) { if (esErrorClave(err)) { pedirClave(err); return; } aviso('No se ha guardado. ' + mensajeError(err), 9000); });
+    });
+  }
+
   /* ---------- v4.28: Pestaña Eventos ---------- */
   /* v4.28: quién va, por familias: los de la familia (sin el servicio, ni quien ha fallecido o está en camino) */
   function genteEvento(e) {
@@ -1796,8 +1891,14 @@
     // v4.16: el árbol genealógico, en lugar de la lista
     $('per-arbol-btn').setAttribute('aria-pressed', String(vistaArbol));
     $('per-arbol-btn').innerHTML = vistaArbol ? ICONO_LISTA + 'Lista' : ICONO_ARBOL + 'Árbol';  // v4.55: botón flotante; v4.56: con iconos de línea
-    if (vistaArbol) {
-      $('per-filtros').hidden = true; $('per-resultado').hidden = true; $('per-abuela').innerHTML = '';
+    if (vistaArbol) {  // v4.59: los mismos filtros que en la lista; quien no los cumple, atenuado
+      $('per-abuela').innerHTML = '';
+      const $r = $('per-resultado');
+      $r.hidden = !hayFiltros();
+      if (!$r.hidden) {
+        const n = datos.personas.filter(function (p) { return pasaFiltros(p); }).length;
+        $r.innerHTML = (n === 1 ? 'Sale 1 persona' : 'Salen ' + n + ' personas') + ' (las demás, en gris)' + '<button type="button" class="enlace" data-quitar-filtros>Quitar filtros</button>';
+      }
       pintarArbol();
       return;
     }
@@ -1882,7 +1983,7 @@
     semanasExtra += 2;
     cargar();
   });
-  $('per-filtros-btn').addEventListener('click', function () { panelFiltros = !panelFiltros; vistaArbol = false; pintarPersonas(); });
+  $('per-filtros-btn').addEventListener('click', function () { panelFiltros = !panelFiltros; pintarPersonas(); });  // v4.59: sin salir del árbol
   $('per-arbol-btn').addEventListener('click', function () { vistaArbol = !vistaArbol; panelFiltros = false; firmaArbol = ''; pintarPersonas(); window.scrollTo(0, document.getElementById('vista-personas').offsetTop - 10); });
   $('per-lista').addEventListener('click', function (e) {
     const z = e.target.closest('[data-zoom]');
@@ -1900,7 +2001,7 @@
   function pintarArbol(centroX) {
     // v4.55: al actualizarse sola la web (cada 30 s), si no ha cambiado nada no se redibuja; y si cambia, se queda donde estabas
     const viejo = document.querySelector('.arbol-lienzo');
-    const firma = JSON.stringify([datos.personas, datos.editores, arbolZoom, yo]);
+    const firma = JSON.stringify([datos.personas, datos.editores, arbolZoom, yo, filtros]);
     if (viejo && centroX === undefined && firma === firmaArbol) return;
     firmaArbol = firma;
     const sitio = viejo && centroX === undefined ? { x: viejo.scrollLeft, y: viejo.scrollTop, pag: window.scrollY } : null;
@@ -1954,7 +2055,8 @@
     const PAD = 12, GX = 14, GY = 44;
     const altoP = function (p) { return datoDe(p) ? (semanasEmbarazo(p) ? 54 : 44) : 28; };  // v4.54: con la barrita del embarazo, algo más alta
     const anchoCaja = function (n) { return n.bw || (n.bw = Math.max(96, Math.round(n.cabezas.reduce(function (m, p) { return Math.max(m, nombreDe(p).length * 8.4, datoDe(p).length * 6.8); }, anchoPastillas(n) + 24)) + 2 * PAD)); };
-    const alto = function (n) { return n.cabezas.length > 1 ? 6 + altoP(n.cabezas[0]) + 12 + altoP(n.cabezas[1]) + 6 : 6 + altoP(n.cabezas[0]) + 6; };
+    const aire = function (n) { return pastillas(n).length ? 16 : 8; };  // v4.59: espacio a cada lado de la raya de la pareja
+    const alto = function (n) { return n.cabezas.length > 1 ? 6 + altoP(n.cabezas[0]) + 2 * aire(n) + altoP(n.cabezas[1]) + 6 : 6 + altoP(n.cabezas[0]) + 6; };
     const ancho = function (n) { return n.w || (n.w = Math.max(anchoCaja(n), n.hijos.reduce(function (t, h) { return t + ancho(h); }, 0) + GX * Math.max(0, n.hijos.length - 1))); };
     let H = 0;
     const situa = function (n, x, y) {
@@ -1971,7 +2073,7 @@
     const persona_ = function (p, py, bw, bx, by) {
       const clic = ' data-persona="' + esc(p.id) + '"';  // v4.53: los abuelos también, a su ficha
       const dato = datoDe(p);
-      etiquetas += '<div class="arbol-et' + (esFallecido(p) ? ' muerto' : '') + (enCamino(p) ? ' futuro' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic +
+      etiquetas += '<div class="arbol-et' + (hayFiltros() && !pasaFiltros(p) ? ' fuera-filtro' : '') + (esFallecido(p) ? ' muerto' : '') + (enCamino(p) ? ' futuro' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic +
         ' style="left:' + (bx + 3) + 'px;top:' + (by + py - 3) + 'px;width:' + (bw - 6) + 'px;height:' + (altoP(p) + 6) + 'px">' +
         '<b>' + esc(nombreDe(p)) + '</b>' + (dato ? '<span>' + esc(dato) + '</span>' : '') +
         (semanasEmbarazo(p) ? '<span class="barra-embarazo" role="img" aria-label="' + semanasEmbarazo(p) + ' de 40 semanas"><i style="width:' + Math.round(semanasEmbarazo(p) / 40 * 100) + '%"></i></span>' : '') + '</div>';
@@ -1982,7 +2084,7 @@
       const bw = anchoCaja(n), h = alto(n), x = n.x - bw / 2, y = n.y;
       let dentro = persona_(n.cabezas[0], 6, bw, x, y);
       if (n.cabezas.length > 1) {
-        const yr = 6 + altoP(n.cabezas[0]) + 6;
+        const yr = 6 + altoP(n.cabezas[0]) + aire(n);
         dentro += '<path class="arbol-raya" d="M' + PAD + ' ' + yr + 'H' + (bw - PAD) + '"/>';
         const l = pastillas(n), bx0 = x;
         let px = bw / 2 - anchoPastillas(n) / 2;
@@ -1995,9 +2097,9 @@
           if (x.ano) etiquetas += '<span class="arbol-ano-et' + (x.futuro ? ' futuro' : '') + '" style="left:' + (bx0 + px + 18) + 'px;top:' + (y + yr - 10) + 'px;width:' + (x.w - 25) + 'px">' + x.ano + '</span>';
           px += x.w + 6;
         });
-        dentro += persona_(n.cabezas[1], yr + 6, bw, x, y);
+        dentro += persona_(n.cabezas[1], yr + aire(n), bw, x, y);
       }
-      cajas += '<g transform="translate(' + x + ',' + y + ')"><rect class="arbol-caja ' + (n.raiz ? 'raiz' : '') + (n.cabezas.every(esFallecido) ? ' muerto' : '') + (n.cabezas.every(enCamino) ? ' futuro' : '') + '" width="' + bw + '" height="' + h + '" rx="12"/>' + dentro + '</g>';
+      cajas += '<g transform="translate(' + x + ',' + y + ')"><rect class="arbol-caja ' + (n.raiz ? 'raiz' : '') + (n.cabezas.every(esFallecido) ? ' muerto' : '') + (n.cabezas.every(enCamino) ? ' futuro' : '') + (hayFiltros() && !n.cabezas.some(function (p) { return pasaFiltros(p); }) ? ' fuera-filtro' : '') + '" width="' + bw + '" height="' + h + '" rx="12"/>' + dentro + '</g>';
       if (n.hijos.length) {
         const ym = y + h + GY / 2;
         lineas += '<path d="M' + n.x + ' ' + (y + h) + 'V' + ym + '"/>';
@@ -3358,11 +3460,12 @@
   }
 
   /* ---------- Vistas ---------- */
-  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', eventos: 'Lo que viene y quién va', rellenar: 'Rellenar lo que falta', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
+  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', eventos: 'Lo que viene y quién va', rellenar: 'Rellenar lo que falta', ajustes: 'Solo para quien lleva la web', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
   function ponerVista(v) {
+    if (v === 'ajustes') ajustes = null;  // v4.58: al entrar, lo último
     if (v === 'rellenar') rfSucio = true;  // v4.40
     vista = SUBTITULOS[v] ? v : 'semana';
-    ['semana', 'eventos', 'personas', 'huecos', 'rellenar'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
+    ['semana', 'eventos', 'personas', 'huecos', 'rellenar', 'ajustes'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
     $('subtitulo').textContent = SUBTITULOS[vista];
     document.querySelectorAll('nav.vistas a').forEach(function (a) {
       if (a.dataset.vista === vista) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
