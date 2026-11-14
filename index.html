@@ -645,7 +645,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.52.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.53.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1766,7 +1766,7 @@
     if (hayNombre() && !p.nombre && (deFamilia || esServicio(p))) f.push('nombre');
     if (hayNucleos() && deFamilia && !p.apellido) f.push('apellido');
     if (hayNucleos() && deFamilia && !p.sexo) f.push('si es hombre o mujer');
-    if (hayNucleos() && deFamilia && !esDeFuera(p) && !p.hijoDe) f.push('de quién es hijo o hija');
+    if (hayNucleos() && deFamilia && !esDeFuera(p) && !p.hijoDe && !editor(p.id)) f.push('de quién es hijo o hija');  // v4.53: los abuelos son los de arriba
     if (hayCasados() && parejaDe(p) && !p.casados) f.push('si están casados');
     if (!p.menu) f.push('menú');
     if (!p.cumple && p.familia !== 'Otros') f.push('cumpleaños');  // v4.7: a los de fuera de la familia no se les pide
@@ -1945,7 +1945,7 @@
     // v4.41: los nombres y las edades, como texto normal encima del dibujo (Safari del iPhone deja de pintar el texto del SVG al deslizar)
     let etiquetas = '';
     const persona_ = function (p, py, bw, bx, by) {
-      const clic = editor(p.id) ? (p.fallecio ? '' : ' data-comida-abuela') : ' data-persona="' + esc(p.id) + '"';
+      const clic = ' data-persona="' + esc(p.id) + '"';  // v4.53: los abuelos también, a su ficha
       const dato = datoDe(p);
       etiquetas += '<div class="arbol-et' + (esFallecido(p) ? ' muerto' : '') + (enCamino(p) ? ' futuro' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic +
         ' style="left:' + (bx + 3) + 'px;top:' + (by + py - 3) + 'px;width:' + (bw - 6) + 'px;height:' + (altoP(p) + 6) + 'px">' +
@@ -2060,8 +2060,7 @@
       const dentro = '<span class="fp-nombre"><b>' + esc(p.apodo) + (vivo ? '' : ' †') + '</b>' +
         (completo && completo !== p.apodo ? '<small>' + esc(completo) + '</small>' : '') +
         (dato ? '<span class="fp-come' + (p.alergias ? ' con-alergia' : '') + '">' + esc(dato) + '</span>' : '') + '</span>';
-      return '<li>' + (vivo ? '<button type="button" class="fila-persona fila-caja" data-comida-abuela>' + dentro + '</button>' :
-        '<div class="fila-persona fila-caja">' + dentro + '</div>') + '</li>';
+      return '<li><button type="button" class="fila-persona fila-caja" data-persona="' + esc(p.id) + '">' + dentro + '</button></li>';  // v4.53: los dos, a su ficha
     };
     return '<section class="familia familia-dentro"><div class="nucleo-card"><div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + (casados ? anillo('casados') : '') + '</div>' + (casados && fechasPareja(ellos[0]) ? '<p class="fechas-pareja">' + esc(fechasPareja(ellos[0])) + '</p>' : '') +
       '<ul class="per-filas">' + ellos.map(fila).join('') + '</ul></div></section>';
@@ -2775,15 +2774,17 @@
   }
   /* v4.36: en el modo sencillo, al tocar a alguien: solo para mirar */
   function abrirInfoPersona(id) {
-    const p = persona(id);
+    const p = persona(id) || editor(id);
     if (!p) return;
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2></div><div class="dlg-cuerpo">' + datosBasicos(p) + '</div>' +
       '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
   }
   function abrirPersona(id, fecha, turno) {
-    const p = persona(id);
+    const esAbuelo = !persona(id) && !!editor(id);  // v4.53: los abuelos, con su ficha como todos (sin comidas ni quitarlos)
+    const p = persona(id) || editor(id);
     if (!p) { const b = deBaja(id); if (b) aviso(b.apodo + ' ya no está en la lista.'); return; }
+    if (esAbuelo) { fecha = null; turno = null; }
     const a = fecha ? apunte(fecha, turno, id) : null;
     const fijosAntes = fijosDe(id).map(function (f) { return f.dow + '|' + f.turno; });
     let html = '<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2><div><span class="p ' + clase(p) + '"><small>' + esc(deQuien(p)) + '</small></span></div></div><div class="dlg-cuerpo">';
@@ -2800,7 +2801,7 @@
     } else {
     const fl = falta(p);
     if (fl.length) html += '<p class="falta-ficha">Falta: ' + esc(lista(fl)) + '.</p>';
-    html += camposFicha(p) + camposNucleo(p);
+    html += (esAbuelo ? '' : camposFicha(p)) + camposNucleo(p);
     html += '<fieldset><legend>Sus datos para la cocina</legend>' +
       '<label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + (p.menu ? '' : '<option value="">Sin definir</option>') + opcionesMenu(p.menu) + '</select></label>' +
       '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna" value="' + esc(p.alergias) + '"></label></fieldset>';
@@ -2811,7 +2812,7 @@
       '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' +
       MESES.map(function (m, i) { return '<option value="' + (i + 1) + '"' + (cm === i + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' + campoAno((p.cumple || '').slice(6, 10)) + '</div></fieldset>' +
       campoFallecio(p.fallecio || '') + campoOtrasFechas(p.fechas || []);
-    html += '<fieldset><legend>Va siempre, desde hoy</legend><table class="tabla-turnos tabla-fijos"><thead><tr><th scope="col">Día</th>' + TURNOS.map(function (t) { return '<th scope="col">' + t.nombre + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    if (!esAbuelo) html += '<fieldset><legend>Va siempre, desde hoy</legend><table class="tabla-turnos tabla-fijos"><thead><tr><th scope="col">Día</th>' + TURNOS.map(function (t) { return '<th scope="col">' + t.nombre + '</th>'; }).join('') + '</tr></thead><tbody>' +
       [1, 2, 3, 4, 5, 6, 0].map(function (d) {
         return '<tr><td>' + DIAS[d] + '</td>' + TURNOS.map(function (t) {
           const k = d + '|' + t.id;
@@ -2821,15 +2822,15 @@
     if (!esServicio(p) && p.familia !== 'Otros' && hayNucleos()) html += '<fieldset><legend>Hijos</legend>' +  // v4.29
       '<button type="button" class="accion" id="dlg-hijo">+ Añadir hijo o hija de ' + esc(p.apodo) + '</button>' +
       '<p class="ayuda">Se abre con su padre o su madre, la familia y el parentesco ya puestos. Si está en camino, en el cumpleaños pon cuándo nacerá.</p></fieldset>';
-    html += '<fieldset><legend>Quitar de la lista</legend><p class="ayuda">Si se añadió por error o ya no va a venir.</p>' +
-      '<button type="button" class="accion quitar" id="dlg-baja">Quitar a ' + esc(p.apodo) + ' de la lista</button></fieldset></div>' + pie('Guardar cambios');
+    html += (esAbuelo ? '' : '<fieldset><legend>Quitar de la lista</legend><p class="ayuda">Si se añadió por error o ya no va a venir.</p>' +
+      '<button type="button" class="accion quitar" id="dlg-baja">Quitar a ' + esc(p.apodo) + ' de la lista</button></fieldset>') + '</div>' + pie('Guardar cambios');
     abrirDialogo(html);
     montarFormularioFamilia();
     montarOtrasFechas();
     if ($('dlg-hijo')) $('dlg-hijo').addEventListener('click', function () {
       abrirNuevaPersona('', { hijoDe: p.id, familia: p.familia, jerarquia: GEN_HIJOS[p.jerarquia] || '', de: p.apodo });
     });
-    $('dlg-baja').addEventListener('click', function () { confirmarBaja(p); });
+    if ($('dlg-baja')) $('dlg-baja').addEventListener('click', function () { confirmarBaja(p); });
     }
 
     $dlg.querySelectorAll('input[data-k]').forEach(function (c) {
@@ -2858,7 +2859,7 @@
       if (!fecha) {
       const menu = $('dlg-menu').value, alergias = $('dlg-alergias').value.trim();
       if (menu && menu !== p.menu) cambios.menu = menu;
-      const apodo = $('dlg-apodo').value.trim(), jer = $('dlg-jerarquia').value, fam = $('dlg-familia').value;
+      const apodo = $('dlg-apodo') ? $('dlg-apodo').value.trim() : p.apodo, jer = $('dlg-jerarquia') ? $('dlg-jerarquia').value : '', fam = $('dlg-familia') ? $('dlg-familia').value : '';
       if (!apodo) { errorDialogo('El nombre no puede quedar vacío.'); return; }
       if (apodo !== p.apodo) {
         const errorA = errorApodo(apodo, p.id);
