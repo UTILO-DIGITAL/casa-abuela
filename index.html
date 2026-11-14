@@ -332,6 +332,13 @@
   .proximas li:first-child { border-top: 0; }
   .proximas small { display: block; color: var(--color-texto-suave); font-weight: 700; font-size: 13px; }
   .ev-total { margin: 4px 0; }
+  .ev-resumen { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
+  .ev-resumen tr { cursor: pointer; border-top: 1px solid var(--color-linea); }
+  .ev-resumen tr:first-child { border-top: 0; }
+  .ev-resumen th { text-align: left; padding: 7px 8px 7px 0; font-weight: 700; }
+  .ev-resumen .ev-van { padding: 7px 8px; font-weight: 800; color: var(--color-principal-oscuro); white-space: nowrap; }
+  .ev-resumen .ev-resto { padding: 7px 0; font-size: 13px; color: var(--color-texto-suave); text-align: right; }
+  .ev-desglose { margin: 12px 0 0; font-size: 16px; }
   .ev-familia { border-top: 1px solid var(--color-linea); padding: 6px 0; }
   .ev-familia summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
   .ev-familia summary span { font-size: 14px; color: var(--color-texto-suave); font-weight: 700; }
@@ -1163,6 +1170,14 @@
     const responde = function (p) { return e.van.indexOf(p.id) !== -1 || e.noVan.indexOf(p.id) !== -1; };
     return vivos.filter(function (p) { return p.familia !== 'Otros' || responde(p); });
   }
+  /* v4.29: cuántos van de cada familia, en el orden de Personas */
+  function porFamiliaEvento(e) {
+    const porFam = {}, orden = [];
+    genteEvento(e).forEach(function (p) { const f = familiaDe(p); if (!porFam[f]) { porFam[f] = { f: f, gente: [], van: 0, no: 0, pend: 0 }; orden.push(f); } const x = porFam[f]; x.gente.push(p);
+      if (e.van.indexOf(p.id) !== -1) x.van++; else if (e.noVan.indexOf(p.id) !== -1) x.no++; else x.pend++; });
+    return orden.map(function (f) { return porFam[f]; });
+  }
+  function cortoFamilia(f) { return nombreFamilia(f).replace(/^Familia /, ''); }
   function cuentaEvento(e) {
     const g = genteEvento(e);
     return { van: e.van.length, noVan: e.noVan.length, faltan: g.filter(function (p) { return e.van.indexOf(p.id) === -1 && e.noVan.indexOf(p.id) === -1; }).length };
@@ -1179,6 +1194,7 @@
       (e.lugar ? '<p class="evento-gente">📍 ' + esc(e.lugar) + '</p>' : '') +
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
       '<p class="evento-gente"><b>' + esc(resumenEvento(e)) + '</b></p>' +
+      (function () { const l = porFamiliaEvento(e).filter(function (x) { return x.van; }); return l.length ? '<p class="evento-gente"><span>' + esc(l.map(function (x) { return cortoFamilia(x.f) + ' ' + x.van; }).join(' · ')) + '</span></p>' : ''; })() +
       '<div class="evento-botones">' + (pasado ? '' :
         '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? 'Voy ✓' : 'Voy') + '</button>' +
         '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '" aria-pressed="' + noVoy + '">' + (noVoy ? 'No voy ✓' : 'No voy') + '</button>') +
@@ -1217,16 +1233,24 @@
       (e.lugar ? '<p>📍 <b>Dónde:</b> ' + esc(e.lugar) + '</p>' : '') +
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
       '<p class="ev-total"><b>' + esc(resumenEvento(e)) + '</b></p>' +
-      '<p class="ayuda">✓ va · ✗ no puede · sin marcar, aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).</p>' +
+      '<table class="ev-resumen"><tbody>' + porFamiliaEvento(e).map(function (x) {
+        return '<tr data-ev-fam="' + esc(x.f) + '"><th scope="row">' + esc(cortoFamilia(x.f)) + '</th><td class="ev-van">' + (x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : '—') + '</td>' +
+          '<td class="ev-resto">' + [x.no ? (x.no === 1 ? '1 no puede' : x.no + ' no pueden') : '', x.pend ? x.pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<h3 class="ev-desglose">Familia por familia</h3>' +
+      '<p class="ayuda">Toca una familia para ver quién. ✓ va · ✗ no puede · sin marcar, aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).</p>' +
       orden.map(function (f) {
         const l = porFam[f];
         const van = l.filter(function (p) { return estado(p) === 'si'; }).length, no = l.filter(function (p) { return estado(p) === 'no'; }).length, pend = l.length - van - no;
-        return '<details class="ev-familia"' + (van || pend ? ' open' : '') + '><summary><b>' + esc(nombreFamilia(f)) + '</b><span>' +
+        return '<details class="ev-familia" data-fam="' + esc(f) + '"' + (abiertasEv[f] ? ' open' : '') + '><summary><b>' + esc(nombreFamilia(f)) + '</b><span>' +
           [van ? (van === 1 ? 'va 1' : 'van ' + van) : '', no ? (no === 1 ? 'no puede 1' : 'no pueden ' + no) : '', pend ? pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</span></summary>' +
           '<ul>' + enOrden(l).map(fila).join('') + '</ul></details>';
       }).join('');
   }
+  const abiertasEv = {};  // v4.29: las familias desplegadas en el detalle, para que no se cierren al marcar
+  document.addEventListener('toggle', function (ev) { const d = ev.target; if (d.classList && d.classList.contains('ev-familia')) abiertasEv[d.dataset.fam] = d.open; }, true);
   function abrirDetalleEvento(id) {
+    Object.keys(abiertasEv).forEach(function (k) { delete abiertasEv[k]; });
     const e = evento(id);
     if (!e) return;
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(e.nombre) + '</h2></div><div class="dlg-cuerpo" id="dlg-ev-detalle" data-ev="' + esc(e.id) + '">' + htmlDetalleEvento(e) + '</div>' +
@@ -1335,6 +1359,8 @@
   }
   $('ev-anadir').addEventListener('click', function () { abrirEvento(null); });
   document.addEventListener('click', function (ev) {
+    const fam = ev.target.closest('[data-ev-fam]');
+    if (fam) { const d = document.querySelector('.ev-familia[data-fam="' + fam.dataset.evFam + '"]'); if (d) { d.open = true; d.scrollIntoView({ block: 'start', behavior: 'smooth' }); } return; }
     const b = ev.target.closest('[data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p]');
     if (!b) return;
     if (b.dataset.evVoy) apuntarEv(b.dataset.evVoy, true);
