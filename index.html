@@ -315,7 +315,6 @@
   /* v4.35: el modo sencillo de la abuela: solo para mirar */
   .modo-abuela nav.vistas a[data-vista="personas"], .modo-abuela nav.vistas a[data-vista="huecos"], .modo-abuela .eventos-barra, .modo-abuela #quien-soy, .modo-abuela #mis-proximas, .modo-abuela .nav-herr, .modo-abuela .instalar,
   .modo-abuela .utilo, .modo-abuela #huerfanos, .modo-abuela .paso { display: none !important; }
-  .modo-abuela .p { cursor: default; }
   .modo-abuela .nadie.suave { border: 0; background: none; padding: 0; min-height: 0; color: var(--color-texto-suave); font-weight: 700; }
   .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
   .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
@@ -587,7 +586,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.35.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.36.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -2457,6 +2456,26 @@
     return (datos.menus || []).map(function (m) { return '<option value="' + esc(m) + '"' + (m === sel ? ' selected' : '') + '>' + esc(etiquetaMenu(m)) + '</option>'; }).join('');
   }
 
+  /* v4.36: quién es, para mirar: nombre completo, familia y lo que come (poco, para que se lea de un vistazo) */
+  function datosBasicos(p) {
+    const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
+    const m = p.menu ? etiquetaMenu(p.menu) : '';
+    const l = [
+      completo && completo !== p.apodo ? ['Nombre', completo] : null,
+      !esServicio(p) && p.familia !== 'Otros' ? ['Familia', nombreFamilia(familiaDe(p)).replace(/^Familia /, '')] : ['De', deQuien(p)],
+      ['Come', m === 'Entero' ? 'Entero' : (m === 'Medio' ? 'La mitad' : (m === 'Nada' ? 'No come' : (m || 'Sin anotar')))],
+      p.alergias ? ['No come', p.alergias] : null,
+    ].filter(Boolean);
+    return '<dl class="basico">' + l.map(function (b) { return '<div' + (b[0] === 'No come' ? ' class="alergia"' : '') + '><dt>' + b[0] + '</dt><dd>' + esc(b[1]) + '</dd></div>'; }).join('') + '</dl>';
+  }
+  /* v4.36: en el modo sencillo, al tocar a alguien: solo para mirar */
+  function abrirInfoPersona(id) {
+    const p = persona(id);
+    if (!p) return;
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2></div><div class="dlg-cuerpo">' + datosBasicos(p) + '</div>' +
+      '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-cerrar">Cerrar</button></div></div>');
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+  }
   function abrirPersona(id, fecha, turno) {
     const p = persona(id);
     if (!p) { const b = deBaja(id); if (b) aviso(b.apodo + ' ya no está en la lista.'); return; }
@@ -2465,15 +2484,7 @@
     let html = '<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2><div><span class="p ' + clase(p) + '"><small>' + esc(deQuien(p)) + '</small></span></div></div><div class="dlg-cuerpo">';
     /* v4.12: desde Semana y Hoy y mañana, solo ese turno; sus datos se cambian en Personas */
     if (fecha) {
-      // v4.13: lo básico para no confundir a nadie (solo se lee; se cambia en su ficha)
-      const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
-      const m = p.menu ? etiquetaMenu(p.menu) : '';
-      const basico = [
-        completo ? ['Nombre', completo] : null,
-        ['Come', m === 'Entero' ? 'Entero' : (m === 'Medio' ? 'La mitad' : (m === 'Nada' ? 'No come' : (m || 'Sin anotar')))],
-        p.alergias ? ['No come', p.alergias] : null,
-      ].filter(Boolean);
-      html += '<dl class="basico">' + basico.map(function (b) { return '<div' + (b[0] === 'No come' ? ' class="alergia"' : '') + '><dt>' + b[0] + '</dt><dd>' + esc(b[1]) + '</dd></div>'; }).join('') + '</dl>';
+      html += datosBasicos(p);  // v4.36: quién es (solo se lee; se cambia en su ficha)
       html += '<fieldset><legend>' + esc(nombreTurno(fecha, turno).replace(/^./, function (c) { return c.toUpperCase(); })) + '</legend>' +
         '<label class="check"><input type="checkbox" data-k="' + fecha + '|' + turno + '"' + (a ? ' checked' : '') + '> Viene' + (a && a.fijo ? ' (va siempre este día)' : '') + '</label>' +
         '<label class="campo" for="dlg-nota">Nota para ese día<input id="dlg-nota" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: llega tarde" value="' + esc(a ? a.nota : '') + '"></label>' +
@@ -2932,6 +2943,7 @@
   document.addEventListener('click', function (e) {
     const el = e.target.closest('[data-persona], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
+    if (modoAbuela() && el.hasAttribute('data-persona')) { abrirInfoPersona(el.dataset.persona); return; }  // v4.36: quién es, para mirar
     if (modoAbuela() && !el.hasAttribute('data-semana') && !el.hasAttribute('data-plegar') && !el.hasAttribute('data-paso-dia')) return;  // v4.35: solo para mirar
     if (el.hasAttribute('data-semana')) {
       const paso = Number(el.dataset.semana);
