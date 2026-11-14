@@ -580,7 +580,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.33.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.34.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -864,7 +864,7 @@
   /* v4.28: los eventos (de la pestaña Eventos) */
   const CUANDO_EV = { DIA: 'todo el día', COMIDA: 'comida', CENA: 'cena', DORMIR: 'noche' };
   function eventosDe(fecha) { return (datos.eventos || []).filter(function (e) { return e.desde <= fecha && fecha <= e.hasta; }); }
-  /* v4.28: las otras fechas de cada persona (bautizo, carnet…): «Bautizo de Tía Mercedes: 65 años» */
+  /* v4.28: las otras fechas de cada persona (bautizo, primera comunión, santo…): «Bautizo de Tía Mercedes: 65 años» */
   function textoOtrasFechas(fecha) {
     const dm = fecha.slice(8, 10) + '/' + fecha.slice(5, 7), ano = Number(fecha.slice(0, 4)), out = [];
     datos.personas.concat(datos.editores || []).forEach(function (p) {
@@ -1328,7 +1328,7 @@
     const prox = proximasFechas();
     $l.innerHTML = (proximos.length ? proximos.map(tarjetaEvento).join('') : '<p class="vacio">No hay ningún evento a la vista. Añade el primero: una comida especial, una excursión, un viaje…</p>') +
       '<h2>Próximas fechas</h2>' + (prox.length ? '<ul class="proximas">' + prox.join('') + '</ul>' : '<p class="vacio">Nada en los próximos 30 días.</p>') +
-      '<p class="ayuda">Cumpleaños, aniversarios y las fechas que cada uno guarda en su ficha (bautizo, carnet de conducir…).</p>' +
+      '<p class="ayuda">Cumpleaños, aniversarios y las fechas que cada uno guarda en su ficha (bautizo, primera comunión, santo…). Solo salen las que tienen el día y el mes.</p>' +
       (pasados.length ? '<details class="eventos-pasados"><summary>Eventos pasados (' + pasados.length + ')</summary>' + pasados.map(tarjetaEvento).join('') + '</details>' : '');
   }
   function abrirEvento(e) {
@@ -1921,7 +1921,7 @@
       '<div id="dlg-de-pareja"' + (pa ? '' : ' hidden') + '>' +  // v4.23: casados y fechas, solo con pareja
       (hayCasados() ? '<label class="campo" for="dlg-casados">¿Están casados?<select id="dlg-casados"><option value="">Sin decir</option>' +
         ['Sí', 'No'].map(function (v) { return '<option value="' + v + '"' + (p && p.casados === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') + '</select></label>' : '') +
-      '<div class="fechas-de-pareja">' + campoFechaPareja('nv', 'Empezaron a salir', p ? p.novios || '' : '') + campoFechaPareja('bd', 'Boda (también si es la que viene)', p ? p.boda || '' : '', 10) + '</div></div>' +
+      '<div class="fechas-de-pareja">' + campoFechaPareja('nv', 'Empezaron a salir', p ? p.novios || '' : '') + campoFechaPareja('bd', 'Boda (también si es la que viene)', p ? p.boda || '' : '', 10) + '<p class="ayuda">Para el aviso del aniversario hace falta el día y el mes.</p></div></div>' +
       '<label class="campo" for="dlg-hijode">Hijo o hija de<select id="dlg-hijode">' + opcionesPersonas(p ? p.hijoDe || '' : '', p ? p.id : '') + '</select></label>' +
       '<p class="ayuda">Con su pareja forma un núcleo («Familia» y los apellidos de él y de ella). Basta con poner a uno de los padres: sale en el núcleo de ese padre o madre y su pareja.</p></div></fieldset>';
   }
@@ -2046,16 +2046,16 @@
     const r = leerFecha(pre, que, 1850, futuro);
     return r;  // v4.30: también solo el día y el mes (una boda o un santo sin año)
   }
-  /* v4.28: otras fechas que cada uno quiere recordar (bautizo, carnet de conducir…) */
+  /* v4.28: otras fechas que cada uno quiere recordar (bautizo, primera comunión…) */
   function filaOtraFecha(i, x) {
-    return '<div class="otra-fecha" data-of="' + i + '"><div class="dos"><label class="campo" for="dlg-of' + i + 'que">Qué es<input id="dlg-of' + i + 'que" type="text" maxlength="40" autocomplete="off" placeholder="Por ejemplo: bautizo" value="' + esc(x.que || '') + '"></label>' +
+    return '<div class="otra-fecha" data-of="' + i + '"><div class="dos"><label class="campo" for="dlg-of' + i + 'que">Qué es<input id="dlg-of' + i + 'que" type="text" maxlength="40" autocomplete="off" placeholder="Por ejemplo: bautizo o primera comunión" value="' + esc(x.que || '') + '"></label>' +
       '<button type="button" class="enlace" data-quitar-of="' + i + '">Quitar</button></div>' + campoFechaPareja('of' + i, '', x.fecha || '') + '</div>';
   }
   function campoOtrasFechas(lista) {
     return '<fieldset class="solo-no-otros"><legend>Otras fechas <small class="leyenda-suave">· lo que haga ilusión recordar</small></legend><div id="dlg-otras">' +
       lista.map(function (x, i) { return filaOtraFecha(i, x); }).join('') + '</div>' +
       '<button type="button" class="accion" id="dlg-of-mas">+ Añadir otra fecha</button>' +
-      '<p class="ayuda">Un santo, un bautizo, el carnet de conducir… Si no se sabe el año, basta con el día y el mes. Sale cada año en su día y en «Próximas fechas».</p></fieldset>';
+      '<p class="ayuda">El bautizo, la primera comunión, el santo… Para que salga el aviso cada año (en su día y en «Próximas fechas») hace falta <b>el día y el mes</b>; con el año, además, sale cuántos años hace. Si falta el día o el mes, no saldrá nunca.</p></fieldset>';
   }
   function montarOtrasFechas() {
     const caja = $('dlg-otras');
@@ -2080,7 +2080,7 @@
       const r = leerFechaPareja('of' + i, que ? 'la fecha de «' + que + '»' : 'esa fecha');
       if (r.error) return r;
       if (!que && !r.valor) continue;
-      if (!que) return { error: 'A cada fecha ponle qué es (bautizo, carnet de conducir…).' };
+      if (!que) return { error: 'A cada fecha ponle qué es (bautizo, primera comunión…).' };
       if (!r.valor) return { error: 'Pon la fecha de «' + que + '» (al menos el año).' };
       out.push({ que: que.replace(/[;:]/g, ' ').replace(/\s+/g, ' ').trim(), fecha: r.valor });
     }

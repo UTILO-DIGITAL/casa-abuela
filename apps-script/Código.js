@@ -59,7 +59,7 @@ const COL_CASADOS = 15;  // O: Sí o No (v4.12)
 const COL_FALLECIO = 16; // P: fecha de fallecimiento, como se sepa (v4.16)
 const COL_NOVIOS = 17;   // Q: cuándo empezaron a salir, como se sepa, en los dos de la pareja (v4.21)
 const COL_BODA = 18;     // R: cuándo se casaron, como se sepa, en los dos de la pareja (v4.21)
-const COL_FECHAS = 19;   // S: otras fechas que cada uno quiere recordar, «Bautizo: 12/05/1961; Carnet de conducir: 00/03/1980» (v4.28)
+const COL_FECHAS = 19;   // S: otras fechas que cada uno quiere recordar, «Bautizo: 12/05/1961; Primera comunión: 00/05/1969; Santo: 24/09» (v4.28)
 const MAX_FECHAS = 10;
 const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de', 14: 'Nombre', 15: 'Casados', 16: 'Falleció', 17: 'Novios desde', 18: 'Boda', 19: 'Otras fechas' };
 const CAMPOS_NUCLEO = ['nombre', 'apellido', 'sexo', 'pareja', 'hijoDe', 'casados', 'fallecio', 'novios', 'boda'];
@@ -483,7 +483,7 @@ function guardarPersona(personaId, cambios, quien, vista) {
       escribirEnPersonas_(ss, personaId, COL_CUMPLE, cumple, true);
       if (cumple !== p.cumple) registro.push('Cumpleaños de ' + p.apodo + ': ' + (cumple || 'borrado'));
     }
-    if (cambios.fechas !== undefined) {  // v4.28: otras fechas (bautizo, carnet…), la lista entera
+    if (cambios.fechas !== undefined) {  // v4.28: otras fechas (bautizo, primera comunión, santo…), la lista entera
       const texto = textoFechas_(cambios.fechas);
       const antes = (p.fechas || []).map(function (x) { return x.que + ': ' + x.fecha; }).join('; ');
       if (texto !== antes) {
@@ -1168,7 +1168,7 @@ function textoFechas_(lista) {
     const que = limpiar_(String((x && x.que) || '').replace(/[;:]/g, ' '), 40, 'Qué se recuerda', true);
     const t = String((x && x.fecha) || '').trim();
     const fecha = aFechaSinAno_(t, 1850);
-    if (!que) throw new Error('A cada fecha ponle qué es (bautizo, carnet de conducir…).');
+    if (!que) throw new Error('A cada fecha ponle qué es (bautizo, primera comunión…).');
     if (!fecha) throw new Error('La fecha de «' + que + '» tiene que ser un día, mes y año que existan (o mes y año, o solo el año), y no de después de hoy.');
     return que + ': ' + fecha;
   }).join('; ');
