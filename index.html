@@ -381,6 +381,7 @@
   .miembros .et { font-size: 13px; font-weight: 800; color: var(--color-texto-suave); margin-right: 2px; }
   .nucleo-card .per-filas { border-top: 0; }
   .nucleo-card .per-filas li:last-child { border-bottom: 0; }
+  .fechas-pareja { margin: 0 0 4px; font-size: 14px; color: var(--color-texto-suave); }
   div.fila-persona.fila-caja { padding: 8px 2px; min-height: 44px; color: var(--color-texto); }  /* v4.20: el abuelo, que no se toca */
   button.fila-persona.fila-caja { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 2px; }
   .fila-caja .fp-nombre { flex: 1; min-width: 0; }
@@ -389,6 +390,7 @@
   .marca-politico { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border: 2px solid var(--color-principal); border-radius: 50%; vertical-align: 1px; flex: none; }
   .fp-falta-corto { flex-basis: 100%; font-size: 14px; font-weight: 800; color: var(--color-error); }
   .hijos-grupo { margin: 10px 0 0 6px; padding-left: 12px; border-left: 2px solid var(--color-linea); }
+  .et-fecha { margin: 8px 0 0; font-weight: 700; }
   .et-hijos { margin: 0; font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
   .hijos-grupo > .nucleo-card:first-of-type { margin-top: 6px; }
   .hijos-grupo.sin-padres { margin: 0; padding-left: 0; border-left: 0; }
@@ -548,7 +550,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.20.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.21.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -795,6 +797,27 @@
       return 'Hace ' + (n === 1 ? 'un año' : n + ' años') + ' que nos dejó ' + p.apodo;
     });
   }
+  /* v4.21: los aniversarios de boda y de cuando empezaron a salir (una vez por pareja, si se sabe el día) */
+  function textoAniversarios(fecha) {
+    const dm = fecha.slice(8, 10) + '/' + fecha.slice(5, 7), ano = Number(fecha.slice(0, 4)), out = [];
+    datos.personas.concat(datos.editores || []).forEach(function (p) {
+      const pa = parejaDe(p);
+      if (!pa || p.id > pa.id) return;  // una vez por pareja
+      const quienes = p.apodo + ' y ' + pa.apodo;
+      [['boda', 'Aniversario de boda de '], ['novios', 'Hace {n} que empezaron a salir ']].forEach(function (x) {
+        const c = p[x[0]] || '';
+        if (c.slice(0, 5) !== dm || Number(c.slice(6, 10)) >= ano) return;
+        const n = ano - Number(c.slice(6, 10)), anos = n === 1 ? 'un año' : n + ' años';
+        out.push(x[0] === 'boda' ? x[1] + quienes + ': ' + anos : x[1].replace('{n}', anos) + quienes);
+      });
+    });
+    return out;
+  }
+  /* v4.21: «Empezaron a salir en 1980 · se casaron el 12 de junio de 1985» */
+  function fechasPareja(p) {
+    const cuando = function (c) { return (Number(c.slice(0, 2)) ? 'el ' : 'en ') + fechaTexto(c); };
+    return [p.novios ? 'Empezaron a salir ' + cuando(p.novios) : '', p.boda ? (p.novios ? 'se casaron ' : 'Se casaron ') + cuando(p.boda) : ''].filter(Boolean).join(' · ');
+  }
   /* v4.16: fechas como se sepan (dd/mm/aaaa, con 00 en lo que no se sabe) y quien ha fallecido */
   function esFallecido(p) { return !!(p && p.fallecio); }
   function fechaTexto(c) {
@@ -996,6 +1019,8 @@
     if (cumples.length) html += '<p class="nota-dia cumple">' + cumples.map(esc).join('<br>') + '</p>';
     const recuerdos = textoRecuerdos(fecha);
     if (recuerdos.length) html += '<p class="nota-dia recuerdo">' + recuerdos.map(esc).join('<br>') + '</p>';
+    const aniversarios = textoAniversarios(fecha);  // v4.21
+    if (aniversarios.length) html += '<p class="nota-dia cumple">' + aniversarios.map(esc).join('<br>') + '</p>';
     // v4.15: un evento puntual (la castañada…), destacado y con su botón para compartirlo
     if (nd && nd.evento) html += '<div class="evento-dia"><p class="evento-titulo">' + ICONO_EVENTO + '<b>' + esc(nd.evento) + '</b><span>' + (nd.eventoTurno === 'DORMIR' ? 'noche' : etiquetaTurno(nd.eventoTurno).toLowerCase()) + '</span></p>' +
       (nd.eventoTexto ? '<p class="evento-texto">' + esc(nd.eventoTexto) + '</p>' : '') +
@@ -1384,7 +1409,8 @@
         '<div class="fila-persona fila-caja">' + dentro + '</div>') + '</li>';
     };
     return '<section class="familia"><h3 class="per-familia">' + esc(titulo) + (casados ? anillo('casados') : '') + '</h3>' +
-      '<div class="nucleo-card"><ul class="per-filas">' + ellos.map(fila).join('') + '</ul></div></section>';
+      '<div class="nucleo-card">' + (casados && fechasPareja(ellos[0]) ? '<p class="fechas-pareja">' + esc(fechasPareja(ellos[0])) + '</p>' : '') +
+      '<ul class="per-filas">' + ellos.map(fila).join('') + '</ul></div></section>';
   }
   function filaCaja(p) {
     const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
@@ -1403,7 +1429,9 @@
     return estado === 'casados' ? ' <span class="anillo" role="img" aria-label="casados" title="Casados">' + ICONO_ANILLO + '</span>' : '';
   }
   function tarjeta(titulo, estado, cabezas, hijos, dentro) {
+    const fp = cabezas.length === 2 && parejaDe(cabezas[0]) === cabezas[1] ? fechasPareja(cabezas[0]) : '';  // v4.21
     return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + anillo(estado) + '</div>' : '') +
+      (fp ? '<p class="fechas-pareja">' + esc(fp) + '</p>' : '') +
       (cabezas.length ? '<ul class="per-filas">' + cabezas.map(filaCaja).join('') + '</ul>' : '') +
       // v4.13: los hijos (sueltos o con su caja), juntos en un subgrupo un poco metido hacia dentro
       // Si al filtrar no se ve a los padres, los hijos van sin la etiqueta ni la sangría
@@ -1550,6 +1578,7 @@
       '<label class="campo" for="dlg-pareja">Pareja<select id="dlg-pareja">' + opcionesPersonas(pa ? pa.id : '', p ? p.id : '') + '</select></label>' +
       (hayCasados() ? '<label class="campo" for="dlg-casados">¿Están casados?<select id="dlg-casados"><option value="">Sin decir</option>' +
         ['Sí', 'No'].map(function (v) { return '<option value="' + v + '"' + (p && p.casados === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') + '</select></label>' : '') +
+      '<div class="fechas-de-pareja">' + campoFechaPareja('nv', 'Empezaron a salir', p ? p.novios || '' : '') + campoFechaPareja('bd', 'Boda', p ? p.boda || '' : '') + '</div>' +
       '<label class="campo" for="dlg-hijode">Hijo o hija de<select id="dlg-hijode">' + opcionesPersonas(p ? p.hijoDe || '' : '', p ? p.id : '') + '</select></label>' +
       '<p class="ayuda">Con su pareja forma un núcleo («Familia» y los apellidos de él y de ella). Basta con poner a uno de los padres: sale en el núcleo de ese padre o madre y su pareja.</p></div></fieldset>';
   }
@@ -1589,10 +1618,19 @@
       const antes = pa && v.pareja === pa.id ? p.casados || '' : '';
       if (cas !== antes) c.casados = cas;
     }
+    // v4.21: las fechas de la pareja (sin pareja, ninguna)
+    [['novios', 'nv', 'cuándo empezaron a salir'], ['boda', 'bd', 'la boda']].forEach(function (x) {
+      if (!$('dlg-' + x[1] + 'ano')) return;
+      const r = v.pareja ? leerFechaPareja(x[1], x[2]) : { valor: '' };
+      if (r.error) { c.errorFecha = r.error; return; }
+      const antes = pa && v.pareja === pa.id ? p[x[0]] || '' : '';
+      if (r.valor !== antes) c[x[0]] = r.valor;
+    });
     return c;
   }
   /* v4.10.1: el círculo se avisa en la misma ficha, antes de guardar (el servidor lo vuelve a comprobar) */
   function errorNucleo(p, c) {
+    if (c.errorFecha) return c.errorFecha;  // v4.21
     if (!p || !c.hijoDe) return '';
     for (let x = c.hijoDe, i = 0; x && i < 50; x = (quienEs(x) || {}).hijoDe, i++) {
       if (x === p.id) return (quienEs(c.hijoDe) || {}).apodo + ' no puede ser padre o madre de ' + p.apodo + ': ya desciende de él o de ella.';
@@ -1606,14 +1644,15 @@
     if (c.hijoDe !== undefined) p.hijoDe = c.hijoDe;
     if (c.pareja !== undefined) {
       const antes = parejaDe(p);
-      if (antes) { antes.pareja = ''; antes.casados = ''; }
+      if (antes) { antes.pareja = ''; antes.casados = ''; antes.novios = ''; antes.boda = ''; }
       const nueva = c.pareja && quienEs(c.pareja);
-      if (nueva) { const otra = parejaDe(nueva); if (otra) { otra.pareja = ''; otra.casados = ''; } nueva.pareja = p.id; nueva.casados = ''; }
+      if (nueva) { const otra = parejaDe(nueva); if (otra) { otra.pareja = ''; otra.casados = ''; otra.novios = ''; otra.boda = ''; } nueva.pareja = p.id; nueva.casados = ''; nueva.novios = ''; nueva.boda = ''; }
       p.pareja = c.pareja;
-      p.casados = '';
+      p.casados = ''; p.novios = ''; p.boda = '';
     }
     if (c.casados !== undefined) { p.casados = c.casados; const pa = parejaDe(p); if (pa) pa.casados = c.casados; }
     if (c.fallecio !== undefined) p.fallecio = c.fallecio;
+    ['novios', 'boda'].forEach(function (k) { if (c[k] !== undefined) { p[k] = c[k]; const pa = parejaDe(p); if (pa) pa[k] = c[k]; } });  // v4.21
   }
   function lista_(a) { return lista(a); }
   $('per-q').addEventListener('input', function () { pintarPersonas(); });
@@ -1648,6 +1687,22 @@
     return { valor: d && !a ? dd + '/' + mm : (a ? dd + '/' + mm + '/' + a : '') };
   }
   function leerCumple() { const r = leerFecha('c', 'el cumpleaños', 1900); return r.error ? r : { cumple: r.valor }; }
+  /* v4.21: una fecha de la pareja (día, mes y año, lo que se sepa) */
+  function campoFechaPareja(pre, titulo, v) {
+    const fd = v ? Number(v.slice(0, 2)) : 0, fm = v ? Number(v.slice(3, 5)) : 0;
+    return '<p class="et-fecha">' + titulo + '</p><div class="tres">' +
+      '<label class="campo" for="dlg-' + pre + 'dia">Día<select id="dlg-' + pre + 'dia"><option value="">—</option>' +
+      Array.from({ length: 31 }, function (_, k) { return '<option value="' + (k + 1) + '"' + (fd === k + 1 ? ' selected' : '') + '>' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="campo" for="dlg-' + pre + 'mes">Mes<select id="dlg-' + pre + 'mes"><option value="">—</option>' +
+      MESES.map(function (m, k) { return '<option value="' + (k + 1) + '"' + (fm === k + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
+      '<label class="campo" for="dlg-' + pre + 'ano">Año<input id="dlg-' + pre + 'ano" type="number" inputmode="numeric" min="1850" max="' + hoy().slice(0, 4) + '" placeholder="aaaa" value="' + esc(v ? v.slice(6, 10) : '') + '"></label></div>';
+  }
+  function leerFechaPareja(pre, que) {
+    const r = leerFecha(pre, que, 1850);
+    if (r.error) return r;
+    if (r.valor && r.valor.length < 10) return { error: 'Para ' + que + ', pon también el año.' };
+    return r;
+  }
   function campoFallecio(v) {
     const sinFecha = v === 'Sí';  // v4.20
     if (sinFecha) v = '';
@@ -1695,6 +1750,7 @@
         cumple: lc.cumple };
       if (lf.valor) nueva.fallecio = lf.valor;
       const nucleo = leerNucleo(null);
+      if (nucleo.errorFecha) { errorDialogo(nucleo.errorFecha); return; }
       Object.assign(nueva, nucleo);
       conQuien(function () {
         enSegundoPlano('crearPersona', [nueva, yo, rango()], apodo + ' ya está en la lista.', function () {
@@ -2332,6 +2388,7 @@
       if (fueraTodo(f)) return b + '\n🧳 La abuela no está' + (fuera(f).motivoFuera ? ' (' + fuera(f).motivoFuera + ')' : '') + '.';
       textoCumples(f).forEach(function (c) { b += '\n🎂 ' + c; });
       textoRecuerdos(f).forEach(function (c) { b += '\n🕯️ ' + c; });
+      textoAniversarios(f).forEach(function (c) { b += '\n💍 ' + c; });
       const nd = notaDia(f);
       if (nd && nd.nota) b += '\n📝 ' + nd.nota;
       TURNOS.forEach(function (t) {

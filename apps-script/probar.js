@@ -147,6 +147,22 @@ ver('al cambiar de pareja, «casados» se borra en los tres', !quien(M_).casados
 d = R.guardarPersona(M_, { pareja: '(T+1) - Jordi P', casados: 'No' }, M_, V);
 ver('pareja y «no casados» en el mismo guardado', quien(M_).pareja === '(T+1) - Jordi P' && quien(M_).casados === 'No' && quien('(T+1) - Jordi P').casados === 'No');
 
+// ---------- v4.21: noviazgo y boda ----------
+d = R.guardarPersona(M_, { casados: 'Sí', novios: '1980', boda: '12/06/1985' }, M_, V);
+ver('novios y boda, en los dos', quien(M_).novios === '00/00/1980' && quien('(T+1) - Jordi P').novios === '00/00/1980' && quien(M_).boda === '12/06/1985' && quien('(T+1) - Jordi P').boda === '12/06/1985');
+ver('con sus títulos en el Excel', hojas.PERSONAS.filas[0][16] === 'Novios desde' && hojas.PERSONAS.filas[0][17] === 'Boda');
+d = R.guardarPersona('(T+1) - Jordi P', { novios: '03/1980' }, M_, V);
+ver('se cambia desde cualquiera de los dos', quien(M_).novios === '00/03/1980');
+err = ''; try { R.guardarPersona(M_, { boda: '31/02/1985' }, M_, V); } catch (e) { err = e.message; }
+ver('una boda que no existe no se guarda', /la boda/.test(err));
+err = ''; try { R.guardarPersona('(N) - Laura', { novios: '2001' }, M_, V); } catch (e) { err = e.message; }
+ver('sin pareja, no hay fecha de novios', /elige primero su pareja/.test(err) || !!quien('(N) - Laura').pareja);
+d = R.guardarPersona(M_, { boda: '' }, M_, V);
+ver('la boda se puede borrar', !quien(M_).boda && !quien('(T+1) - Jordi P').boda && quien(M_).novios === '00/03/1980');
+d = R.guardarPersona(M_, { pareja: '(N) - Laura' }, M_, V);
+ver('al cambiar de pareja, las fechas se borran', !quien(M_).novios && !quien('(T+1) - Jordi P').novios && !quien('(N) - Laura').novios);
+d = R.guardarPersona(M_, { pareja: '(T+1) - Jordi P', casados: 'No' }, M_, V);
+
 // ---------- v4.13: el año del cumpleaños ----------
 d = R.guardarPersona(M_, { cumple: '07/03/1952' }, M_, V);
 ver('cumpleaños con año', quien(M_).cumple === '07/03/1952');
