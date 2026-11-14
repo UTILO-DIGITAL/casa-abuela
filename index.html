@@ -316,6 +316,7 @@
   .modo-abuela nav.vistas a[data-vista="huecos"], .modo-abuela [data-nueva-persona], .modo-abuela .fp-falta-corto, .modo-abuela .eventos-barra, .modo-abuela #quien-soy, .modo-abuela #mis-proximas, .modo-abuela .nav-herr, .modo-abuela .instalar,
   .modo-abuela .utilo, .modo-abuela #huerfanos, .modo-abuela .paso { display: none !important; }
   .modo-abuela .nadie.suave { border: 0; background: none; padding: 0; min-height: 0; color: var(--color-texto-suave); font-weight: 700; }
+  .dia-cab .campana { margin-left: auto; white-space: nowrap; }
   .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
   .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
   .turno-evento svg { width: 16px; height: 16px; flex: none; color: var(--color-accion); }
@@ -586,7 +587,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.37.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.38.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1113,6 +1114,7 @@
     let html = '<article class="dia' + (fecha === h ? ' hoy' : '') + (pasado ? ' pasado' : '') + (abierto ? ' abierto' : '') + (sinTodo ? ' sin' : '') + '">';
     html += '<div class="dia-cab"><h3>' + DIAS[dow(fecha)] + '</h3><span>' + (fecha === h ? 'Hoy' : ddmm(fecha)) + '</span>' +
       (plegable ? '<button type="button" class="mini solo-movil" data-plegar="' + fecha + '" aria-expanded="' + abierto + '">' + (abierto ? 'Ocultar' : 'Ver') + '</button>' : '') +
+      (modoAbuela() && !pasado ? '<button type="button" class="mini campana" data-preguntar="' + fecha + '" aria-label="Copiar quién viene el ' + diaLargo(fecha).toLowerCase() + '">🔔 ¿Quién viene?</button>' : '') +  // v4.38
       (modoAbuela() ? '' : '<button type="button" class="mini' + (plegable && !abierto ? ' solo-escritorio' : '') + '" data-dia="' + fecha + '" aria-label="Notas del ' + diaLargo(fecha).toLowerCase() + '">Nota</button>') + '</div>';
     const cumples = textoCumples(fecha);
     if (cumples.length) html += '<p class="nota-dia cumple">' + cumples.map(esc).join('<br>') + '</p>';
@@ -2901,6 +2903,22 @@
     poner();
   }
 
+  /* v4.38: el mensaje de quién viene un día, copiado para pegarlo en el grupo (desde el modo sencillo) */
+  function preguntarDia(fecha) {
+    const texto = mensaje(fecha);
+    const ventana = function () {  // si el móvil no deja copiar solo
+      abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Quién viene el ' + esc(diaLargo(fecha).toLowerCase()) + '?</h2></div>' +
+        '<div class="dlg-cuerpo"><label class="campo" for="dlg-texto">Mensaje<textarea id="dlg-texto"></textarea></label></div>' +
+        '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-copiar">Copiar el mensaje</button>' +
+        '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+      $('dlg-texto').value = texto;
+      $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+      $('dlg-copiar').addEventListener('click', function () { $('dlg-texto').select(); document.execCommand('copy'); cerrarDialogo(); aviso('Copiado. Abre el grupo de WhatsApp y pégalo.', 6000); });
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(function () { aviso('Copiado. Abre el grupo de WhatsApp y pégalo.', 6000); }).catch(ventana);
+    else ventana();
+  }
+
   /* ---------- Imprimir la semana ---------- */
   function imprimir() {
     const dias = semana(lunesSel);
@@ -2941,9 +2959,10 @@
 
   /* ---------- Clics ---------- */
   document.addEventListener('click', function (e) {
-    const el = e.target.closest('[data-persona], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
+    const el = e.target.closest('[data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
     if (modoAbuela() && el.hasAttribute('data-persona')) { abrirInfoPersona(el.dataset.persona); return; }  // v4.36: quién es, para mirar
+    if (el.hasAttribute('data-preguntar')) { preguntarDia(el.dataset.preguntar); return; }  // v4.38
     if (modoAbuela() && !el.hasAttribute('data-semana') && !el.hasAttribute('data-plegar') && !el.hasAttribute('data-paso-dia')) return;  // v4.35: solo para mirar
     if (el.hasAttribute('data-semana')) {
       const paso = Number(el.dataset.semana);
