@@ -651,7 +651,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.56.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.57.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -2785,8 +2785,9 @@
     const l = [
       completo && completo !== p.apodo ? ['Nombre', completo] : null,
       !esServicio(p) && p.familia !== 'Otros' ? ['Familia', nombreFamilia(familiaDe(p)).replace(/^Familia /, '')] : ['De', deQuien(p)],
-      ['Come', m === 'Entero' ? 'Entero' : (m === 'Medio' ? 'La mitad' : (m === 'Nada' ? 'No come' : (m || 'Sin anotar')))],
-      p.alergias ? ['No come', p.alergias] : null,
+      esFallecido(p) ? (vidaTexto(p) ? ['Vida', vidaTexto(p).charAt(0).toUpperCase() + vidaTexto(p).slice(1)] : null) :  // v4.57: de quien ha fallecido, su vida y nada de comida
+        ['Come', m === 'Entero' ? 'Entero' : (m === 'Medio' ? 'La mitad' : (m === 'Nada' ? 'No come' : (m || 'Sin anotar')))],
+      p.alergias && !esFallecido(p) ? ['No come', p.alergias] : null,
     ].filter(Boolean);
     // v4.38: con quién está casado y cuándo, y sus otras fechas (bautizo, santo…)
     const pa = parejaDe(p);
