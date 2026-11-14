@@ -342,6 +342,16 @@
   /* v4.58: Ajustes */
   .aj-sec { margin: 0 0 22px; padding: 14px 16px; border-radius: var(--radio); background: #fff; border: 1px solid var(--color-linea); display: grid; gap: 10px; }
   .aj-sec h2 { margin: 0; font-size: 18px; }
+  .aj-config fieldset { margin: 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--color-linea); display: grid; gap: 10px; min-width: 0; }
+  .aj-config legend { float: left; width: 100%; padding: 0; margin: 0 0 2px; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--color-principal-oscuro); }
+  .aj-config legend + * { clear: both; }
+  .aj-config input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
+  .aj-config input { width: 100%; min-width: 0; box-sizing: border-box; }
+  .aj-config input[type="time"], .aj-config input[type="date"] { -webkit-appearance: none; appearance: none; min-height: 48px; text-align: left; }
+  .aj-horas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .aj-con-sufijo { display: flex; align-items: center; gap: 10px; }
+  .aj-con-sufijo input { width: 6em; flex: none; }
+  .aj-con-sufijo span { font-weight: 600; color: var(--color-texto-suave); }
   .aj-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
   .aj-tabla th { text-align: left; font-size: 12px; color: var(--color-texto-suave); font-weight: 800; padding: 4px 6px 4px 0; }
   .aj-tabla td { padding: 6px 6px 6px 0; border-top: 1px solid var(--color-linea); vertical-align: top; }
@@ -696,7 +706,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.61.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.62.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1660,11 +1670,13 @@
     const nunca = gente.filter(function (p) { return !visita[p.id] && !cambiosDe[p.id]; });
     const campo = function (id, et, tipo, v, extra) { return '<label class="campo" for="aj-' + id + '">' + et + '<input id="aj-' + id + '" type="' + tipo + '" value="' + esc(v == null ? '' : v) + '"' + (extra || '') + '></label>'; };
     $a.innerHTML =
-      '<section class="aj-sec"><h2>Configuración</h2>' +
-        '<div class="dos dos-iguales">' + campo('clave', 'Clave de la familia', 'text', c.clave, ' maxlength="40" autocomplete="off" autocapitalize="off"') + campo('pista', 'Pista de la clave', 'text', c.pista, ' maxlength="100" autocomplete="off"') + '</div>' +
-        '<div class="tres">' + campo('comida', 'Hora de comida', 'time', c.horaComida) + campo('cena', 'Hora de cena', 'time', c.horaCena) + campo('dormir', 'Hora de dormir', 'time', c.horaDormir) + '</div>' +
-        '<div class="dos dos-iguales">' + campo('aviso', 'Avisar de «falta alguien» (horas antes)', 'number', c.avisoHoras, ' min="0" max="48"') + campo('inicio', 'El calendario empieza el', 'date', c.inicio) + '</div>' +
-        '<p class="ayuda">Si cambias la clave, a todos les pedirá la nueva la próxima vez que entren (con la pista).</p>' +
+      '<section class="aj-sec aj-config"><h2>Configuración</h2>' +  // v4.62: en bloques de una columna (en el móvil se descuadraba)
+        '<fieldset><legend>Clave</legend>' + campo('clave', 'Clave de la familia', 'text', c.clave, ' maxlength="40" autocomplete="off" autocapitalize="off"') + campo('pista', 'Pista', 'text', c.pista, ' maxlength="100" autocomplete="off"') +
+          '<p class="ayuda">Si cambias la clave, a todos les pedirá la nueva la próxima vez que entren (con la pista).</p></fieldset>' +
+        '<fieldset><legend>Horas</legend><div class="aj-horas">' + campo('comida', 'Comida', 'time', c.horaComida) + campo('cena', 'Cena', 'time', c.horaCena) + campo('dormir', 'Dormir', 'time', c.horaDormir) + '</div></fieldset>' +
+        '<fieldset><legend>Avisos y calendario</legend>' +
+          '<label class="campo" for="aj-aviso">Avisar de «falta alguien»<span class="aj-con-sufijo"><input id="aj-aviso" type="number" min="0" max="48" inputmode="numeric" value="' + esc(c.avisoHoras) + '"><span>horas antes</span></span></label>' +
+          campo('inicio', 'El calendario empieza el', 'date', c.inicio) + '</fieldset>' +
         '<div><button type="button" class="principal" id="aj-guardar">Guardar ajustes</button></div></section>' +
       panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan) +
       '<section class="aj-sec"><h2>Historial de cambios</h2>' +
