@@ -352,6 +352,8 @@
   .aj-kpi b { font-size: 26px; line-height: 1.1; color: var(--color-principal-oscuro); font-variant-numeric: tabular-nums; }
   .aj-kpi b small { font-size: 14px; color: var(--color-texto-suave); font-weight: 700; }
   .aj-kpi span { font-size: 13px; color: var(--color-texto-suave); font-weight: 600; }
+  .aj-acc { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+  .aj-acc .enlace { padding: 0; margin: 0; min-height: 0; border: 0; background: none; text-decoration: underline; cursor: pointer; }
   .aj-kpi .enlace { font-size: 13px; justify-self: start; color: var(--color-principal-oscuro); font-weight: 800; }
   .aj-fams, .aj-nunca-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
   .aj-fams li { display: grid; grid-template-columns: minmax(90px, 9em) 1fr auto; gap: 10px; align-items: center; }
@@ -361,7 +363,14 @@
   .aj-fam-c { font-size: 13px; color: var(--color-texto-suave); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .aj-top { margin: 0; padding-left: 20px; font-size: 14px; display: grid; gap: 4px; }
   .aj-top span { color: var(--color-texto-suave); }
-  .aj-nunca-l li { color: var(--color-texto); line-height: 2; }
+  .aj-grupo { margin: 4px 0 8px; }
+  .aj-grupo-t { margin: 6px 0 2px; font-weight: 800; color: var(--color-accion); }
+  .aj-grupo-t span { color: var(--color-texto-suave); font-weight: 700; font-size: 13px; }
+  .aj-filas { list-style: none; margin: 0; padding: 0; }
+  .aj-filas li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--color-linea); font-size: 14px; }
+  .aj-filas li small { color: var(--color-texto-suave); }
+  .aj-filas .mini { margin: 0; flex: none; font-size: 12px; min-height: 28px; }
+  .aj-filas.gris li { color: var(--color-texto-suave); }
   .aj-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px 2px 10px; margin: 2px 0; border-radius: 999px; background: #FFE7E0; font-weight: 700; font-size: 13px; }
   .aj-chip.gris { background: var(--color-linea); }
   .aj-chip button { border: 0; border-radius: 999px; padding: 3px 8px; background: #fff; font: inherit; font-size: 12px; font-weight: 700; color: var(--color-texto-suave); cursor: pointer; }
@@ -1596,7 +1605,7 @@
         cifra(usan.length, gente.length, 'han entrado alguna vez') +
         cifra(activos7, null, 'han entrado esta semana') +
         cifra(cambios7, null, 'cambios esta semana') +
-        cifra(pct(completos, familiaRF.length) + '%', null, 'con los datos completos', '<a href="#rellenar" class="enlace" data-ir-rellenar>Ver lo que falta</a>') +
+        cifra(pct(completos, familiaRF.length) + '%', null, 'con los datos completos', '<span class="aj-acc"><a href="#rellenar" class="enlace" data-ir-rellenar>Ver lo que falta</a><button type="button" class="enlace" id="aj-pedir">Pedirlo al grupo</button></span>') +
       '</div>' +
       '<h3 class="rf-sec">Por familia</h3><ul class="aj-fams">' + porFam.map(function (x) {
         return '<li><span class="aj-fam-n">' + esc(famNom(x.f)) + '</span><span class="aj-barra"><i style="width:' + pct(x.usan, x.total) + '%"></i></span><span class="aj-fam-c">' + x.usan + ' de ' + x.total + '</span></li>';
@@ -1607,10 +1616,13 @@
         const v = visita[p.id];
         return '<tr><td><b>' + esc(p.apodo) + '</b></td><td>' + esc(v ? haceCuanto(v.ultima) : '—') + '</td><td class="n">' + (cambiosDe[p.id] || 0) + '</td></tr>';
       }).join('') + '</tbody></table>' : '<p class="vacio">Aún nadie.</p>') +
-      (nunca.length ? '<h3 class="rf-sec">No la han usado nunca (' + nunca.length + ')</h3><ul class="aj-nunca-l">' + porFam.filter(function (x) { return x.nunca.length; }).map(function (x) {
-        return '<li><b>' + esc(famNom(x.f)) + ':</b> ' + x.nunca.map(function (p) { return '<span class="aj-chip">' + esc(p.apodo) + '<button type="button" data-no-cuenta="' + esc(p.id) + '" aria-label="' + esc(p.apodo) + ' no cuenta">No cuenta</button></span>'; }).join(' ') + '</li>';
-      }).join('') + '</ul><p class="ayuda">Si alguien no va a usarla (no tiene móvil, por ejemplo), toca «No cuenta» y deja de salir aquí y en las cifras.</p>' : '') +
-      (noCuentan.length ? '<h3 class="rf-sec">No cuentan (' + noCuentan.length + ')</h3><p>' + noCuentan.map(function (id) { return '<span class="aj-chip gris">' + esc(nombre(id)) + '<button type="button" data-si-cuenta="' + esc(id) + '" aria-label="Volver a contar a ' + esc(nombre(id)) + '">Volver a contar</button></span>'; }).join(' ') + '</p>' : '') +
+      (nunca.length ? '<h3 class="rf-sec">No la han usado nunca (' + nunca.length + ')</h3>' + porFam.filter(function (x) { return x.nunca.length; }).map(function (x) {
+        return '<div class="aj-grupo"><p class="aj-grupo-t">' + esc(famNom(x.f)) + ' <span>' + x.nunca.length + '</span></p><ul class="aj-filas">' + x.nunca.map(function (p) {
+          return '<li><span><b>' + esc(p.apodo) + '</b>' + ([p.nombre, p.apellido].filter(Boolean).join(' ') && [p.nombre, p.apellido].filter(Boolean).join(' ') !== p.apodo ? ' <small>' + esc([p.nombre, p.apellido].filter(Boolean).join(' ')) + '</small>' : '') + '</span>' +
+            '<button type="button" class="mini" data-no-cuenta="' + esc(p.id) + '" aria-label="' + esc(p.apodo) + ' no cuenta">No cuenta</button></li>';
+        }).join('') + '</ul></div>';
+      }).join('') + '<p class="ayuda">Si alguien no va a usarla (no tiene móvil, por ejemplo), toca «No cuenta» y deja de salir aquí y en las cifras.</p>' : '') +
+      (noCuentan.length ? '<h3 class="rf-sec">No cuentan (' + noCuentan.length + ')</h3><ul class="aj-filas gris">' + noCuentan.map(function (id) { return '<li><span>' + esc(nombre(id)) + '</span><button type="button" class="mini" data-si-cuenta="' + esc(id) + '" aria-label="Volver a contar a ' + esc(nombre(id)) + '">Volver a contar</button></li>'; }).join('') + '</ul>' : '') +
       '<p class="ayuda">Las visitas se apuntan desde que se publicó esto (como mucho una vez por hora); los cambios, de los últimos ' + ajustes.cambios.length + '. No cuentan los bisnietos, los menores de 18, el servicio ni los marcados como «No cuenta».</p></section>';
   }
   // v4.61: «No cuenta» / «Volver a contar»: se guarda en el Excel al momento (montado una sola vez)
@@ -1668,6 +1680,22 @@
     };
     $('aj-q').addEventListener('input', pintarHist);
 
+    if ($('aj-pedir')) $('aj-pedir').addEventListener('click', function () {  // v4.61: el mensaje para el grupo, con el enlace a Rellenar
+      const url = (datos.url || location.href).replace(/#.*$/, '') + '#rellenar';
+      abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Pedir lo que falta</h2></div>' +
+        '<div class="dlg-cuerpo"><p class="ayuda">Copia el mensaje y pégalo en el grupo. El enlace lleva a la página donde cada uno elige su familia y rellena lo que sepa.</p>' +
+        '<label class="campo" for="dlg-texto">Mensaje (puedes cambiarlo)<textarea id="dlg-texto" rows="10"></textarea></label></div>' +
+        '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-copiar">Copiar el mensaje</button>' +
+        '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+      $('dlg-texto').value = '👋 ¡Hola, familia!\n\nEn la web de la abuela nos faltan algunos datos: cumpleaños con el año, santos, fechas de boda y de noviazgo… y alguna pareja o algún bebé en camino que aún no está 😉\n\n' +
+        'Entrad aquí, elegid vuestra familia, tocad vuestro nombre y rellenad lo que sepáis (la clave es la de siempre). También podéis rellenar lo de vuestros hijos o vuestra pareja:\n👉 ' + url + '\n\nSi veis algo mal en lo que ya está puesto, corregidlo ahí mismo. ¡Gracias! 🙏';
+      $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+      $('dlg-copiar').addEventListener('click', function () {
+        const t = $('dlg-texto'), hecho = function () { aviso('Mensaje copiado. Pégalo en el grupo.'); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(hecho).catch(function () { t.select(); document.execCommand('copy'); hecho(); });
+        else { t.select(); document.execCommand('copy'); hecho(); }
+      });
+    });
     const ir = $a.querySelector('[data-ir-rellenar]'); if (ir) ir.addEventListener('click', function (e) { e.preventDefault(); rfFamilia = ''; ponerVista('rellenar'); history.replaceState(null, '', '#rellenar'); window.scrollTo(0, 0); });
     pintarHist();
     $('aj-guardar').addEventListener('click', function () {
