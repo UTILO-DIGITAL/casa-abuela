@@ -275,13 +275,23 @@ ver('borrar el evento', !d.eventos.some(e => e.id === ev1.id) && hojas.MESA_EVEN
 err = ''; try { R.apuntarEvento(ev1.id, M_, true, M_, V2); } catch (e) { err = e.message; }
 ver('y ya no se puede apuntar nadie', /ya no está/.test(err));
 
-d = R.guardarEvento({ nombre: 'Bautizo de Mercedes', desde: '1961-05-12', hasta: '1961-06-30', anual: true }, M_, V2);
-const bau = d.eventos.find(e => e.nombre === 'Bautizo de Mercedes') || {};
-ver('un día de cada año, aunque sea de hace mucho, y de un solo día', bau.anual === true && bau.desde === '1961-05-12' && bau.hasta === '1961-05-12');
-err = ''; try { R.apuntarEvento(bau.id, M_, true, M_, V2); } catch (e) { err = e.message; }
-ver('a un día de cada año no se apunta nadie', /no se apunta nadie/.test(err));
-err = ''; try { R.guardarEvento({ nombre: 'Futuro', desde: '2030-01-01', anual: true }, M_, V2); } catch (e) { err = e.message; }
-ver('un día de cada año tiene que haber pasado', /haber pasado/.test(err));
+d = R.guardarEvento({ nombre: 'Cena de Navidad', desde: '2026-12-24', lugar: 'Casa de la abuela', hora: '21:00' }, M_, V2);
+const cen = d.eventos.find(e => e.nombre === 'Cena de Navidad') || {};
+ver('el evento con dónde y a qué hora', cen.lugar === 'Casa de la abuela' && cen.hora === '21:00' && cen.hasta === '2026-12-24');
+d = R.apuntarEvento(cen.id, JP_, true, M_, V2);
+ver('se puede apuntar a otro (un padre por su hijo)', d.eventos.find(e => e.id === cen.id).van.join() === JP_);
+
+// ---------- v4.28: otras fechas de cada persona ----------
+d = R.guardarPersona(M_, { fechas: [{ que: 'Bautizo', fecha: '12/05/1961' }, { que: 'Carnet de conducir', fecha: '03/1980' }] }, M_, V2);
+ver('otras fechas, con lo que se sepa', JSON.stringify(quien(M_).fechas) === JSON.stringify([{ que: 'Bautizo', fecha: '12/05/1961' }, { que: 'Carnet de conducir', fecha: '00/03/1980' }]) && hojas.PERSONAS.filas[0][18] === 'Otras fechas');
+d = R.guardarPersona(M_, { fechas: [{ que: 'Comunión; 2ª: parte', fecha: '1968' }] }, M_, V2);
+ver('sin «;» ni «:» en el nombre, y se cambia la lista entera', quien(M_).fechas.length === 1 && quien(M_).fechas[0].que === 'Comunión 2ª parte' && quien(M_).fechas[0].fecha === '00/00/1968');
+err = ''; try { R.guardarPersona(M_, { fechas: [{ que: '', fecha: '1968' }] }, M_, V2); } catch (e) { err = e.message; }
+ver('sin decir qué es, no', /ponle qué es/.test(err));
+err = ''; try { R.guardarPersona(M_, { fechas: [{ que: 'Futuro', fecha: '2099' }] }, M_, V2); } catch (e) { err = e.message; }
+ver('ni una fecha imposible', /Futuro/.test(err));
+d = R.guardarPersona(M_, { fechas: [] }, M_, V2);
+ver('y se pueden quitar todas', quien(M_).fechas.length === 0);
 
 // ---------- v4.17: la clave de la familia ----------
 ver('sin CLAVE en MESA_CONFIG, no se pide', R.api_('getDatos', [V2], undefined).ok === true);

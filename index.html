@@ -331,7 +331,18 @@
   .proximas li { padding: 8px 14px; border-top: 1px solid var(--color-linea); font-size: 15px; }
   .proximas li:first-child { border-top: 0; }
   .proximas small { display: block; color: var(--color-texto-suave); font-weight: 700; font-size: 13px; }
-  .proximas .anual-acc { margin-left: 6px; }
+  .ev-total { margin: 4px 0; }
+  .ev-familia { border-top: 1px solid var(--color-linea); padding: 6px 0; }
+  .ev-familia summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+  .ev-familia summary span { font-size: 14px; color: var(--color-texto-suave); font-weight: 700; }
+  .ev-familia ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
+  .ev-fila { display: flex; align-items: center; gap: 8px; padding-top: 3px; padding-bottom: 3px; }
+  .ev-nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ev-bots { display: flex; gap: 6px; flex: none; }
+  .ev-bots button { width: 40px; height: 36px; border-radius: 10px; border: 2px solid var(--color-linea); background: #fff; font: inherit; font-weight: 800; color: var(--color-texto-suave); cursor: pointer; }
+  .ev-bots .ev-si[aria-pressed="true"] { background: var(--color-principal); border-color: var(--color-principal); color: #fff; }
+  .ev-bots .ev-no[aria-pressed="true"] { background: var(--color-error); border-color: var(--color-error); color: #fff; }
+  .ev-estado { flex: none; font-weight: 800; }
   /* v4.16: aniversarios y árbol genealógico */
   .nota-dia.recuerdo { background: var(--color-linea); }
   #per-arbol-btn.activos { background: var(--color-principal-oscuro); color: #fff; }
@@ -412,6 +423,8 @@
   .fp-falta-corto { flex-basis: 100%; font-size: 14px; font-weight: 800; color: var(--color-error); }
   .hijos-grupo { margin: 10px 0 0 6px; padding-left: 12px; border-left: 2px solid var(--color-linea); }
   .leyenda-suave { font-weight: 400; color: var(--color-texto-suave); }
+  .otra-fecha { border-top: 1px dashed var(--color-linea); padding-top: 8px; margin-top: 8px; }
+  .otra-fecha .dos { align-items: end; }
   .et-fecha { margin: 8px 0 0; font-weight: 700; }
   .et-hijos { margin: 0; font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
   .hijos-grupo > .nucleo-card:first-of-type { margin-top: 6px; }
@@ -822,23 +835,29 @@
   }
   /* v4.28: los eventos (de la pestaña Eventos) */
   const CUANDO_EV = { DIA: 'todo el día', COMIDA: 'comida', CENA: 'cena', DORMIR: 'noche' };
-  function eventosDe(fecha) { return (datos.eventos || []).filter(function (e) { return !e.anual && e.desde <= fecha && fecha <= e.hasta; }); }
-  /* v4.28: los días que se recuerdan cada año (un bautizo…): «Bautizo de Tía Mercedes: 65 años» */
-  function textoAnuales(fecha) {
-    const ano = Number(fecha.slice(0, 4));
-    return (datos.eventos || []).filter(function (e) { return e.anual && e.desde.slice(5) === fecha.slice(5) && Number(e.desde.slice(0, 4)) < ano; })
-      .map(function (e) { const n = ano - Number(e.desde.slice(0, 4)); return e.nombre + ': ' + (n === 1 ? 'un año' : n + ' años'); });
+  function eventosDe(fecha) { return (datos.eventos || []).filter(function (e) { return e.desde <= fecha && fecha <= e.hasta; }); }
+  /* v4.28: las otras fechas de cada persona (bautizo, carnet…): «Bautizo de Tía Mercedes: 65 años» */
+  function textoOtrasFechas(fecha) {
+    const dm = fecha.slice(8, 10) + '/' + fecha.slice(5, 7), ano = Number(fecha.slice(0, 4)), out = [];
+    datos.personas.concat(datos.editores || []).forEach(function (p) {
+      (p.fechas || []).forEach(function (x) {
+        if (x.fecha.slice(0, 5) !== dm) return;
+        const n = ano - Number(x.fecha.slice(6, 10));
+        if (n > 0) out.push(x.que + ' de ' + p.apodo + ': ' + (n === 1 ? 'un año' : n + ' años'));
+        else if (!n) out.push(x.que + ' de ' + p.apodo);
+      });
+    });
+    return out;
   }
   function evento(id) { return (datos.eventos || []).filter(function (e) { return e.id === id; })[0]; }
   function diaMes(iso) { return DIAS[dow(iso)].toLowerCase() + ' ' + Number(iso.slice(8, 10)); }
   function fechaEvento(e) {
     const mes = function (iso) { return MESES[Number(iso.slice(5, 7)) - 1]; };
     let t;
-    if (e.anual) t = Number(e.desde.slice(8, 10)) + ' de ' + mes(e.desde) + ' de ' + e.desde.slice(0, 4) + ' · cada año';
-    else if (e.desde === e.hasta) t = diaMes(e.desde) + ' de ' + mes(e.desde);
+    if (e.desde === e.hasta) t = diaMes(e.desde) + ' de ' + mes(e.desde);
     else if (diasEntre(e.desde, e.hasta) === 1) t = diaMes(e.desde) + (mes(e.desde) === mes(e.hasta) ? '' : ' de ' + mes(e.desde)) + ' y ' + diaMes(e.hasta) + ' de ' + mes(e.hasta);
     else t = 'del ' + diaMes(e.desde) + (mes(e.desde) === mes(e.hasta) ? '' : ' de ' + mes(e.desde)) + ' al ' + diaMes(e.hasta) + ' de ' + mes(e.hasta);
-    return t.charAt(0).toUpperCase() + t.slice(1) + (e.anual ? '' : ' · ' + (CUANDO_EV[e.cuando] || 'todo el día'));
+    return t.charAt(0).toUpperCase() + t.slice(1) + ' · ' + (CUANDO_EV[e.cuando] || 'todo el día') + (e.hora ? ', ' + (/^\d/.test(e.hora) ? 'a las ' : '') + e.hora : '');
   }
   function diasEntre(a, b) { return Math.round((aUTC(b) - aUTC(a)) / 86400000); }
   function nombresDe(ids) { return ids.map(function (id) { return (quienEs(id) || {}).apodo || id; }); }
@@ -1057,7 +1076,7 @@
     if (cumples.length) html += '<p class="nota-dia cumple">' + cumples.map(esc).join('<br>') + '</p>';
     const recuerdos = textoRecuerdos(fecha);
     if (recuerdos.length) html += '<p class="nota-dia recuerdo">' + recuerdos.map(esc).join('<br>') + '</p>';
-    const aniversarios = textoAniversarios(fecha).concat(textoAnuales(fecha));  // v4.21; v4.28: y los días de cada año
+    const aniversarios = textoAniversarios(fecha).concat(textoOtrasFechas(fecha));  // v4.21; v4.28: y las otras fechas de cada uno
     if (aniversarios.length) html += '<p class="nota-dia cumple">' + aniversarios.map(esc).join('<br>') + '</p>';
     // v4.15: un evento puntual (la castañada…), destacado y con su botón para compartirlo
     if (nd && nd.evento) html += '<div class="evento-dia"><p class="evento-titulo">' + ICONO_EVENTO + '<b>' + esc(nd.evento) + '</b><span>' + (nd.eventoTurno === 'DORMIR' ? 'noche' : etiquetaTurno(nd.eventoTurno).toLowerCase()) + '</span></p>' +
@@ -1066,7 +1085,7 @@
     eventosDe(fecha).forEach(function (e) {  // v4.28: los de la pestaña Eventos, en cada día que duran
       html += '<div class="evento-dia"><p class="evento-titulo">' + ICONO_EVENTO + '<b>' + esc(e.nombre) + '</b><span>' + esc(CUANDO_EV[e.cuando] || '') + '</span></p>' +
         (e.van.length ? '<p class="evento-texto">' + (e.van.length === 1 ? 'Va ' : 'Van ' + e.van.length + ': ') + esc(nombresDe(e.van).join(', ')) + '</p>' : '') +
-        '<button type="button" class="mini" data-ver-evento="' + esc(e.id) + '">Ver y apuntarse</button></div>';
+        '<button type="button" class="mini" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></div>';
     });
     const fu = fuera(fecha);
     if (fu) html += '<p class="nota-dia fuera">' + esc(textoFuera(fecha)) + (fu.motivoFuera ? ': ' + esc(fu.motivoFuera) : '') + '</p>';
@@ -1138,26 +1157,117 @@
   }
 
   /* ---------- v4.28: Pestaña Eventos ---------- */
+  /* v4.28: quién va, por familias: los de la familia (sin el servicio, ni quien ha fallecido o está en camino) */
+  function genteEvento(e) {
+    const vivos = datos.personas.filter(function (p) { return !esFallecido(p) && !enCamino(p) && !esServicio(p); });
+    const responde = function (p) { return e.van.indexOf(p.id) !== -1 || e.noVan.indexOf(p.id) !== -1; };
+    return vivos.filter(function (p) { return p.familia !== 'Otros' || responde(p); });
+  }
+  function cuentaEvento(e) {
+    const g = genteEvento(e);
+    return { van: e.van.length, noVan: e.noVan.length, faltan: g.filter(function (p) { return e.van.indexOf(p.id) === -1 && e.noVan.indexOf(p.id) === -1; }).length };
+  }
+  function resumenEvento(e) {
+    const c = cuentaEvento(e);
+    return [c.van === 1 ? 'Va 1' : 'Van ' + c.van, c.noVan ? (c.noVan === 1 ? 'no puede 1' : 'no pueden ' + c.noVan) : '', c.faltan ? c.faltan + ' sin contestar' : ''].filter(Boolean).join(' · ');
+  }
   function tarjetaEvento(e) {
-    const h = hoy(), pasado = !e.anual && e.hasta < h;
+    const h = hoy(), pasado = e.hasta < h;
     const voy = e.van.indexOf(yo) !== -1, noVoy = e.noVan.indexOf(yo) !== -1;
     return '<article class="evento-card' + (pasado ? ' pasado' : '') + '" id="ev-' + esc(e.id) + '"><h3>' + ICONO_EVENTO + esc(e.nombre) + '</h3>' +
       '<p class="evento-cuando">' + esc(fechaEvento(e)) + '</p>' +
+      (e.lugar ? '<p class="evento-gente">📍 ' + esc(e.lugar) + '</p>' : '') +
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
-      (e.anual ? '' : '<p class="evento-gente"><b>' + (e.van.length ? (e.van.length === 1 ? 'Va 1' : 'Van ' + e.van.length) : 'Aún no va nadie') + '</b>' + (e.van.length ? ': ' + esc(nombresDe(e.van).join(', ')) : '') + '</p>' +
-        (e.noVan.length ? '<p class="evento-gente"><span>No van: ' + esc(nombresDe(e.noVan).join(', ')) + '</span></p>' : '')) +
-      '<div class="evento-botones">' + (pasado || e.anual ? '' :
+      '<p class="evento-gente"><b>' + esc(resumenEvento(e)) + '</b></p>' +
+      '<div class="evento-botones">' + (pasado ? '' :
         '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? 'Voy ✓' : 'Voy') + '</button>' +
-        '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '" aria-pressed="' + noVoy + '">' + (noVoy ? 'No voy ✓' : 'No voy') + '</button>' +
-        '<button type="button" class="accion" data-ev-compartir="' + esc(e.id) + '">Compartir</button>') +
-      '<button type="button" class="accion" data-ev-cambiar="' + esc(e.id) + '">Cambiar</button></div></article>';
+        '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '" aria-pressed="' + noVoy + '">' + (noVoy ? 'No voy ✓' : 'No voy') + '</button>') +
+      '<button type="button" class="principal" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></div></article>';
+  }
+  /* v4.28: el detalle de un evento: dónde, cuándo y quién va, por familias, con lo que falta por confirmar */
+  function htmlDetalleEvento(e) {
+    const g = genteEvento(e), porFam = {}, orden = [];
+    g.forEach(function (p) { const f = familiaDe(p); if (!porFam[f]) { porFam[f] = []; orden.push(f); } porFam[f].push(p); });
+    const estado = function (p) { return e.van.indexOf(p.id) !== -1 ? 'si' : e.noVan.indexOf(p.id) !== -1 ? 'no' : ''; };
+    const pasado = e.hasta < hoy();
+    // v4.28: dentro de cada familia, por núcleos: los padres y, debajo y metidos, sus hijos (y los hijos de sus hijos)
+    const enOrden = function (gente) {
+      const ids = {}, hijosDe = {}, hecho = {}, out = [];
+      gente.forEach(function (p) { ids[p.id] = p; });
+      gente.forEach(function (p) { if (p.hijoDe && ids[p.hijoDe]) (hijosDe[p.hijoDe] = hijosDe[p.hijoDe] || []).push(p); });
+      const pon = function (p, nivel) {
+        if (hecho[p.id]) return;
+        hecho[p.id] = true; out.push({ p: p, nivel: nivel });
+        const pa = parejaDe(p);
+        if (pa && ids[pa.id] && !hecho[pa.id]) { hecho[pa.id] = true; out.push({ p: pa, nivel: nivel }); }
+        porNacimiento((hijosDe[p.id] || []).concat(pa ? hijosDe[pa.id] || [] : [])).forEach(function (h) { pon(h, nivel + 1); });
+      };
+      gente.filter(function (p) { return !p.hijoDe || !ids[p.hijoDe]; }).forEach(function (p) { const pa = parejaDe(p); if (!(pa && pa.hijoDe && ids[pa.hijoDe])) pon(p, 0); });
+      gente.forEach(function (p) { pon(p, 0); });
+      return out;
+    };
+    const fila = function (x) {
+      const p = x.p, st = estado(p);
+      return '<li class="ev-fila" style="padding-left:' + (x.nivel * 18) + 'px"><span class="ev-nombre">' + esc(p.apodo) + '</span>' +
+        (pasado ? '<span class="ev-estado">' + (st === 'si' ? '✓' : st === 'no' ? '✗' : '') + '</span>' :
+          '<span class="ev-bots"><button type="button" class="ev-si" data-ev-p="' + esc(e.id) + '|' + esc(p.id) + '|si" aria-pressed="' + (st === 'si') + '" aria-label="' + esc(p.apodo) + ' va" title="Va">✓</button>' +
+          '<button type="button" class="ev-no" data-ev-p="' + esc(e.id) + '|' + esc(p.id) + '|no" aria-pressed="' + (st === 'no') + '" aria-label="' + esc(p.apodo) + ' no puede" title="No puede">✗</button></span>') + '</li>';
+    };
+    return '<p class="evento-cuando">' + esc(fechaEvento(e)) + '</p>' +
+      (e.lugar ? '<p>📍 <b>Dónde:</b> ' + esc(e.lugar) + '</p>' : '') +
+      (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
+      '<p class="ev-total"><b>' + esc(resumenEvento(e)) + '</b></p>' +
+      '<p class="ayuda">✓ va · ✗ no puede · sin marcar, aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).</p>' +
+      orden.map(function (f) {
+        const l = porFam[f];
+        const van = l.filter(function (p) { return estado(p) === 'si'; }).length, no = l.filter(function (p) { return estado(p) === 'no'; }).length, pend = l.length - van - no;
+        return '<details class="ev-familia"' + (van || pend ? ' open' : '') + '><summary><b>' + esc(nombreFamilia(f)) + '</b><span>' +
+          [van ? (van === 1 ? 'va 1' : 'van ' + van) : '', no ? (no === 1 ? 'no puede 1' : 'no pueden ' + no) : '', pend ? pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</span></summary>' +
+          '<ul>' + enOrden(l).map(fila).join('') + '</ul></details>';
+      }).join('');
+  }
+  function abrirDetalleEvento(id) {
+    const e = evento(id);
+    if (!e) return;
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(e.nombre) + '</h2></div><div class="dlg-cuerpo" id="dlg-ev-detalle" data-ev="' + esc(e.id) + '">' + htmlDetalleEvento(e) + '</div>' +
+      '<div class="dlg-pie"><div class="botones"><button type="button" class="accion" id="dlg-ev-compartir">Compartir</button>' +
+      '<button type="button" class="accion" id="dlg-ev-cambiar">Cambiar el evento</button>' +
+      '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $('dlg-ev-compartir').addEventListener('click', function () { abrirCompartir('ev:' + id); });
+    $('dlg-ev-cambiar').addEventListener('click', function () { abrirEvento(evento(id)); });
+  }
+  /* Confirmar por alguien desde el detalle, sin cerrarlo: se ve ya y se guarda por detrás */
+  function confirmarEnEvento(id, personaId, va) {
+    conQuien(function () {
+      const e = evento(id);
+      if (!e) return;
+      const actual = e.van.indexOf(personaId) !== -1 ? true : (e.noVan.indexOf(personaId) !== -1 ? false : null);
+      const nuevo = actual === va ? null : va;
+      const copia = JSON.stringify(datos);
+      e.van = e.van.filter(function (x) { return x !== personaId; }); e.noVan = e.noVan.filter(function (x) { return x !== personaId; });
+      if (nuevo === true) e.van.push(personaId); else if (nuevo === false) e.noVan.push(personaId);
+      const repintar = function () { const d = $('dlg-ev-detalle'); if (d && d.dataset.ev === id && evento(id)) d.innerHTML = htmlDetalleEvento(evento(id)); };
+      repintar(); pintar();
+      pendientes++;
+      aviso('Guardando…', 0);
+      llamar('apuntarEvento', [id, personaId, nuevo, yo, rango()]).then(function (d) {
+        pendientes--;
+        if (pendientes === 0) { datos = d; guardarLocal(); pintar(); repintar(); aviso('Guardado.'); }
+      }).catch(function (err) {
+        pendientes--;
+        if (pendientes === 0) { datos = JSON.parse(copia); pintar(); repintar(); }
+        if (esErrorClave(err)) { pedirClave(err); return; }
+        aviso('No se ha guardado. ' + mensajeError(err), 9000);
+      });
+    });
   }
   /* v4.28: lo que viene en los próximos 30 días: cumpleaños, aniversarios, recuerdos y días de cada año */
   function proximasFechas() {
     const h = hoy(), out = [];
     for (let i = 0; i <= 30; i++) {
       const f = sumar(h, i);
-      const cosas = textoCumples(f).concat(textoAniversarios(f), textoAnuales(f), textoRecuerdos(f));
+      const cosas = textoCumples(f).concat(textoAniversarios(f), textoOtrasFechas(f), textoRecuerdos(f));
       if (!cosas.length) continue;
       const cuando = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : 'Dentro de ' + i + ' días';
       out.push('<li><small>' + cuando + ' · ' + esc(diaMes(f) + ' de ' + MESES[Number(f.slice(5, 7)) - 1]) + '</small>' + cosas.map(esc).join('<br>') + '</li>');
@@ -1168,45 +1278,34 @@
     const $l = $('eventos-lista');
     if (!$l) return;
     const h = hoy(), todos = datos.eventos || [];
-    const proximos = todos.filter(function (e) { return !e.anual && e.hasta >= h; });
-    const pasados = todos.filter(function (e) { return !e.anual && e.hasta < h; }).reverse();
-    const anuales = todos.filter(function (e) { return e.anual; }).sort(function (a, b) { return a.desde.slice(5).localeCompare(b.desde.slice(5)); });
+    const proximos = todos.filter(function (e) { return e.hasta >= h; });
+    const pasados = todos.filter(function (e) { return e.hasta < h; }).reverse();
     const prox = proximasFechas();
     $l.innerHTML = (proximos.length ? proximos.map(tarjetaEvento).join('') : '<p class="vacio">No hay ningún evento a la vista. Añade el primero: una comida especial, una excursión, un viaje…</p>') +
       '<h2>Próximas fechas</h2>' + (prox.length ? '<ul class="proximas">' + prox.join('') + '</ul>' : '<p class="vacio">Nada en los próximos 30 días.</p>') +
-      (anuales.length ? '<h2>Días que recordamos cada año</h2>' + anuales.map(tarjetaEvento).join('') : '') +
+      '<p class="ayuda">Cumpleaños, aniversarios y las fechas que cada uno guarda en su ficha (bautizo, carnet de conducir…).</p>' +
       (pasados.length ? '<details class="eventos-pasados"><summary>Eventos pasados (' + pasados.length + ')</summary>' + pasados.map(tarjetaEvento).join('') + '</details>' : '');
   }
   function abrirEvento(e) {
     const h = hoy();
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + (e ? 'Cambiar el evento' : 'Añadir evento') + '</h2></div><div class="dlg-cuerpo">' +
-      '<label class="campo" for="dlg-ev-nombre">Qué es<input id="dlg-ev-nombre" type="text" maxlength="60" autocomplete="off" placeholder="Por ejemplo: PortAventura, o Bautizo de Tía Mercedes" value="' + esc(e ? e.nombre : '') + '"></label>' +
-      '<label class="check"><input type="checkbox" id="dlg-ev-anual"' + (e && e.anual ? ' checked' : '') + '> Se recuerda cada año (un bautizo, una comunión, un día especial)</label>' +
-      '<div class="dos dos-iguales"><label class="campo" for="dlg-ev-desde"><span id="dlg-ev-desde-et">Desde</span><input id="dlg-ev-desde" type="date" value="' + esc(e ? e.desde : h) + '"></label>' +
-      '<label class="campo solo-evento" for="dlg-ev-hasta">Hasta<input id="dlg-ev-hasta" type="date" value="' + esc(e ? e.hasta : h) + '"></label></div>' +
-      '<label class="campo solo-evento" for="dlg-ev-cuando">Cuándo<select id="dlg-ev-cuando">' + Object.keys(CUANDO_EV).map(function (k) { return '<option value="' + k + '"' + ((e ? e.cuando : 'DIA') === k ? ' selected' : '') + '>' + CUANDO_EV[k].charAt(0).toUpperCase() + CUANDO_EV[k].slice(1) + '</option>'; }).join('') + '</select></label>' +
-      '<label class="campo" for="dlg-ev-texto">Descripción<textarea id="dlg-ev-texto" maxlength="500" rows="3" placeholder="Por ejemplo: salimos a las 9 desde casa de la abuela">' + esc(e ? e.texto : '') + '</textarea></label>' +
-      '<p class="ayuda" id="dlg-ev-ayuda"></p></div>' +
-      pie(e ? 'Guardar' : 'Añadir', e ? '<button type="button" class="accion quitar" id="dlg-ev-borrar">Borrar</button>' : ''));
+      '<label class="campo" for="dlg-ev-nombre">Qué es<input id="dlg-ev-nombre" type="text" maxlength="60" autocomplete="off" placeholder="Por ejemplo: PortAventura" value="' + esc(e ? e.nombre : '') + '"></label>' +
+      '<div class="dos dos-iguales"><label class="campo" for="dlg-ev-desde">Desde<input id="dlg-ev-desde" type="date" value="' + esc(e ? e.desde : h) + '"></label>' +
+      '<label class="campo" for="dlg-ev-hasta">Hasta<input id="dlg-ev-hasta" type="date" value="' + esc(e ? e.hasta : h) + '"></label></div>' +
+      '<div class="dos dos-iguales"><label class="campo" for="dlg-ev-cuando">Cuándo<select id="dlg-ev-cuando">' + Object.keys(CUANDO_EV).map(function (k) { return '<option value="' + k + '"' + ((e ? e.cuando : 'DIA') === k ? ' selected' : '') + '>' + CUANDO_EV[k].charAt(0).toUpperCase() + CUANDO_EV[k].slice(1) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="campo" for="dlg-ev-hora">Hora<input id="dlg-ev-hora" type="text" maxlength="40" autocomplete="off" placeholder="Por ejemplo: 9:00" value="' + esc(e ? e.hora || '' : '') + '"></label></div>' +
+      '<label class="campo" for="dlg-ev-lugar">Dónde<input id="dlg-ev-lugar" type="text" maxlength="100" autocomplete="off" placeholder="Por ejemplo: PortAventura, Salou" value="' + esc(e ? e.lugar || '' : '') + '"></label>' +
+      '<label class="campo" for="dlg-ev-texto">Más información<textarea id="dlg-ev-texto" maxlength="500" rows="3" placeholder="Por ejemplo: salimos desde casa de la abuela; entradas compradas">' + esc(e ? e.texto : '') + '</textarea></label>' +
+      '<p class="ayuda">Las comidas y cenas en casa de la abuela siguen como siempre: el evento solo se anuncia, y cada uno dice si va.</p></div>' +
+      pie(e ? 'Guardar' : 'Añadir', e ? '<button type="button" class="accion quitar" id="dlg-ev-borrar">Borrar el evento</button>' : ''));
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
-    const ajustar = function () {
-      const anual = $('dlg-ev-anual').checked;
-      $dlg.querySelectorAll('.solo-evento').forEach(function (x) { x.hidden = anual; });
-      $('dlg-ev-desde-et').textContent = anual ? 'Qué día fue' : 'Desde';
-      $('dlg-ev-ayuda').textContent = anual ? 'Saldrá cada año en su día y en «Próximas fechas», con los años que hace.'
-        : 'Las comidas y cenas en casa de la abuela siguen como siempre: el evento solo se anuncia, y cada uno dice si va.';
-    };
-    $('dlg-ev-anual').addEventListener('change', ajustar);
-    ajustar();
     $('dlg-ev-desde').addEventListener('change', function () { if ($('dlg-ev-hasta').value < $('dlg-ev-desde').value) $('dlg-ev-hasta').value = $('dlg-ev-desde').value; });
     $('dlg-guardar').addEventListener('click', function () {
-      const anual = $('dlg-ev-anual').checked;
-      const ev = { id: e ? e.id : '', nombre: $('dlg-ev-nombre').value.trim(), anual: anual, desde: $('dlg-ev-desde').value,
-        hasta: anual ? $('dlg-ev-desde').value : ($('dlg-ev-hasta').value || $('dlg-ev-desde').value), cuando: anual ? 'DIA' : $('dlg-ev-cuando').value, texto: $('dlg-ev-texto').value.trim() };
-      if (!ev.nombre) { errorDialogo('Pon qué es.'); return; }
-      if (!ev.desde) { errorDialogo(anual ? 'Elige qué día fue.' : 'Elige el día en que empieza.'); return; }
+      const ev = { id: e ? e.id : '', nombre: $('dlg-ev-nombre').value.trim(), desde: $('dlg-ev-desde').value, hasta: $('dlg-ev-hasta').value || $('dlg-ev-desde').value,
+        cuando: $('dlg-ev-cuando').value, hora: $('dlg-ev-hora').value.trim(), lugar: $('dlg-ev-lugar').value.trim(), texto: $('dlg-ev-texto').value.trim() };
+      if (!ev.nombre) { errorDialogo('Pon qué es el evento.'); return; }
+      if (!ev.desde) { errorDialogo('Elige el día en que empieza.'); return; }
       if (ev.hasta < ev.desde) { errorDialogo('El último día no puede ser antes del primero.'); return; }
-      if (anual && ev.desde > h) { errorDialogo('Un día que se recuerda cada año tiene que haber pasado ya.'); return; }
       conQuien(function () {
         enSegundoPlano('guardarEvento', [ev, yo, rango()], ev.nombre + (e ? ' guardado.' : ' añadido.'), function () {
           datos.eventos = datos.eventos || [];
@@ -1216,7 +1315,7 @@
       });
     });
     if ($('dlg-ev-borrar')) $('dlg-ev-borrar').addEventListener('click', function () {
-      if (!confirm('¿Borrar «' + e.nombre + '»?' + (e.anual ? '' : ' Se borra también quién va.'))) return;
+      if (!confirm('¿Borrar «' + e.nombre + '»? Se borra también quién va.')) return;
       conQuien(function () {
         enSegundoPlano('borrarEvento', [e.id, yo, rango()], e.nombre + ' borrado.', function () { datos.eventos = datos.eventos.filter(function (x) { return x.id !== e.id; }); });
       });
@@ -1236,18 +1335,12 @@
   }
   $('ev-anadir').addEventListener('click', function () { abrirEvento(null); });
   document.addEventListener('click', function (ev) {
-    const b = ev.target.closest('[data-ev-voy], [data-ev-novoy], [data-ev-cambiar], [data-ev-compartir], [data-ver-evento]');
+    const b = ev.target.closest('[data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p]');
     if (!b) return;
     if (b.dataset.evVoy) apuntarEv(b.dataset.evVoy, true);
     else if (b.dataset.evNovoy) apuntarEv(b.dataset.evNovoy, false);
-    else if (b.dataset.evCambiar) { const e = evento(b.dataset.evCambiar); if (e) abrirEvento(e); }
-    else if (b.dataset.evCompartir) abrirCompartir('ev:' + b.dataset.evCompartir);
-    else if (b.dataset.verEvento) {
-      ponerVista('eventos');
-      if (hayServidor) google.script.history.replace(null, { vista: vista }, vista); else history.replaceState(null, '', '#eventos');
-      const t = document.getElementById('ev-' + b.dataset.verEvento);
-      if (t) t.scrollIntoView({ block: 'center' }); else window.scrollTo(0, 0);
-    }
+    else if (b.dataset.evVer) abrirDetalleEvento(b.dataset.evVer);
+    else if (b.dataset.evP) { const x = b.dataset.evP.split('|'); confirmarEnEvento(x[0], x[1], x[2] === 'si'); }
   });
 
   /* ---------- Pestaña Personas ---------- */
@@ -1862,7 +1955,7 @@
   /* v4.21: una fecha de la pareja (día, mes y año, lo que se sepa) */
   function campoFechaPareja(pre, titulo, v, futuro) {
     const fd = v ? Number(v.slice(0, 2)) : 0, fm = v ? Number(v.slice(3, 5)) : 0;
-    return '<p class="et-fecha">' + titulo + '</p><div class="tres">' +
+    return (titulo ? '<p class="et-fecha">' + titulo + '</p>' : '') + '<div class="tres">' +
       '<label class="campo" for="dlg-' + pre + 'dia">Día<select id="dlg-' + pre + 'dia"><option value="">—</option>' +
       Array.from({ length: 31 }, function (_, k) { return '<option value="' + (k + 1) + '"' + (fd === k + 1 ? ' selected' : '') + '>' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-' + pre + 'mes">Mes<select id="dlg-' + pre + 'mes"><option value="">—</option>' +
@@ -1874,6 +1967,46 @@
     if (r.error) return r;
     if (r.valor && r.valor.length < 10) return { error: 'Para ' + que + ', pon también el año.' };
     return r;
+  }
+  /* v4.28: otras fechas que cada uno quiere recordar (bautizo, carnet de conducir…) */
+  function filaOtraFecha(i, x) {
+    return '<div class="otra-fecha" data-of="' + i + '"><div class="dos"><label class="campo" for="dlg-of' + i + 'que">Qué es<input id="dlg-of' + i + 'que" type="text" maxlength="40" autocomplete="off" placeholder="Por ejemplo: bautizo" value="' + esc(x.que || '') + '"></label>' +
+      '<button type="button" class="enlace" data-quitar-of="' + i + '">Quitar</button></div>' + campoFechaPareja('of' + i, '', x.fecha || '') + '</div>';
+  }
+  function campoOtrasFechas(lista) {
+    return '<fieldset class="solo-no-otros"><legend>Otras fechas <small class="leyenda-suave">· lo que haga ilusión recordar</small></legend><div id="dlg-otras">' +
+      lista.map(function (x, i) { return filaOtraFecha(i, x); }).join('') + '</div>' +
+      '<button type="button" class="accion" id="dlg-of-mas">+ Añadir otra fecha</button>' +
+      '<p class="ayuda">Un bautizo, una comunión, el carnet de conducir… Sale cada año en su día y en «Próximas fechas».</p></fieldset>';
+  }
+  function montarOtrasFechas() {
+    const caja = $('dlg-otras');
+    if (!caja) return;
+    let n = caja.querySelectorAll('.otra-fecha').length;
+    $('dlg-of-mas').addEventListener('click', function () {
+      caja.insertAdjacentHTML('beforeend', filaOtraFecha(n++, {}));
+      const ult = caja.querySelector('.otra-fecha:last-child input'); if (ult) ult.focus();
+    });
+    caja.addEventListener('click', function (e) {
+      const b = e.target.closest('[data-quitar-of]');
+      if (b) { const f = caja.querySelector('[data-of="' + b.dataset.quitarOf + '"]'); if (f) f.remove(); }
+    });
+  }
+  function leerOtrasFechas() {
+    const caja = $('dlg-otras');
+    if (!caja) return { valor: undefined };
+    const out = [];
+    const filas = Array.from(caja.querySelectorAll('.otra-fecha'));
+    for (let k = 0; k < filas.length; k++) {
+      const i = filas[k].dataset.of, que = $('dlg-of' + i + 'que').value.trim();
+      const r = leerFechaPareja('of' + i, que ? 'la fecha de «' + que + '»' : 'esa fecha');
+      if (r.error) return r;
+      if (!que && !r.valor) continue;
+      if (!que) return { error: 'A cada fecha ponle qué es (bautizo, carnet de conducir…).' };
+      if (!r.valor) return { error: 'Pon la fecha de «' + que + '» (al menos el año).' };
+      out.push({ que: que.replace(/[;:]/g, ' ').replace(/\s+/g, ' ').trim(), fecha: r.valor });
+    }
+    return { valor: out };
   }
   function campoFallecio(v) {
     const sinFecha = v === 'Sí';  // v4.20
@@ -2107,6 +2240,7 @@
       if (cambios.menu !== undefined) p.menu = cambios.menu;
       if (cambios.alergias !== undefined) p.alergias = cambios.alergias;
       if (cambios.cumple !== undefined) p.cumple = cambios.cumple;
+      if (cambios.fechas !== undefined) p.fechas = cambios.fechas;  // v4.28
       aplicarNucleoLocal(p, cambios);
     }
     (cambios.turnos || []).forEach(function (t) {
@@ -2240,7 +2374,7 @@
       Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '"' + (cd === i + 1 ? ' selected' : '') + '>' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' +
       MESES.map(function (m, i) { return '<option value="' + (i + 1) + '"' + (cm === i + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' + campoAno((p.cumple || '').slice(6, 10)) + '</div></fieldset>' +
-      campoFallecio(p.fallecio || '');
+      campoFallecio(p.fallecio || '') + campoOtrasFechas(p.fechas || []);
     html += '<fieldset><legend>Va siempre, desde hoy</legend><table class="tabla-turnos tabla-fijos"><thead><tr><th scope="col">Día</th>' + TURNOS.map(function (t) { return '<th scope="col">' + t.nombre + '</th>'; }).join('') + '</tr></thead><tbody>' +
       [1, 2, 3, 4, 5, 6, 0].map(function (d) {
         return '<tr><td>' + DIAS[d] + '</td>' + TURNOS.map(function (t) {
@@ -2252,6 +2386,7 @@
       '<button type="button" class="accion quitar" id="dlg-baja">Quitar a ' + esc(p.apodo) + ' de la lista</button></fieldset></div>' + pie('Guardar cambios');
     abrirDialogo(html);
     montarFormularioFamilia();
+    montarOtrasFechas();
     $('dlg-baja').addEventListener('click', function () { confirmarBaja(p); });
     }
 
@@ -2300,6 +2435,9 @@
       const lf = leerFallecio();
       if (lf.error) { errorDialogo(lf.error); return; }
       if (lf.valor !== undefined && lf.valor !== (p.fallecio || '')) cambios.fallecio = lf.valor;
+      const lo = leerOtrasFechas();  // v4.28
+      if (lo.error) { errorDialogo(lo.error); return; }
+      if (lo.valor !== undefined && JSON.stringify(lo.valor) !== JSON.stringify(p.fechas || [])) cambios.fechas = lo.valor;
       const fijosAhora = Array.from($dlg.querySelectorAll('input[data-fijo]:checked')).map(function (c) { return c.dataset.fijo; });
       if (fijosAhora.sort().join(',') !== fijosAntes.slice().sort().join(',')) {
         cambios.fijos = fijosAhora.map(function (k) { return { dow: Number(k.split('|')[0]), turno: k.split('|')[1] }; });
@@ -2537,7 +2675,7 @@
   function mensajeEv(id) {
     const e = evento(id) || { nombre: 'Evento', van: [], noVan: [], desde: hoy(), hasta: hoy(), cuando: 'DIA' };
     const enlace = datos.url ? '\n\n👉 Dime si vas aquí: ' + datos.url.replace(/#.*$/, '') + '#eventos' : '';
-    return '🎉 *' + e.nombre + '*\n📅 ' + fechaEvento(e) + (e.texto ? '\n\n' + e.texto : '') + '\n\n' +
+    return '🎉 *' + e.nombre + '*\n📅 ' + fechaEvento(e) + (e.lugar ? '\n📍 ' + e.lugar : '') + (e.texto ? '\n\n' + e.texto : '') + '\n\n' +
       (e.van.length ? '*Van ya (' + e.van.length + '):*\n' + nombresDe(e.van).map(function (n) { return '• ' + n; }).join('\n') : 'Aún no se ha apuntado nadie.') + enlace;
   }
   function mensaje(tipo) {
@@ -2569,7 +2707,7 @@
       textoCumples(f).forEach(function (c) { b += '\n🎂 ' + c; });
       textoRecuerdos(f).forEach(function (c) { b += '\n🕯️ ' + c; });
       textoAniversarios(f).forEach(function (c) { b += '\n💍 ' + c; });
-      textoAnuales(f).forEach(function (c) { b += '\n⭐ ' + c; });
+      textoOtrasFechas(f).forEach(function (c) { b += '\n⭐ ' + c; });
       const nd = notaDia(f);
       if (nd && nd.nota) b += '\n📝 ' + nd.nota;
       TURNOS.forEach(function (t) {
@@ -2597,7 +2735,7 @@
     const pedido = inicialPedido && inicialPedido.indexOf('evento:') === 0 ? inicialPedido.slice(7) : '';
     if (pedido && conEvento.indexOf(pedido) === -1) conEvento.unshift(pedido);
     // v4.28: los de la pestaña Eventos que tocan esta semana (y el que se pide)
-    const evs = (datos.eventos || []).filter(function (e) { return !e.anual && e.hasta >= dias[0] && e.desde <= dias[6]; });
+    const evs = (datos.eventos || []).filter(function (e) { return e.hasta >= dias[0] && e.desde <= dias[6]; });
     const pedidoEv = inicialPedido && inicialPedido.indexOf('ev:') === 0 ? evento(inicialPedido.slice(3)) : null;
     if (pedidoEv && evs.indexOf(pedidoEv) === -1) evs.unshift(pedidoEv);
     const opciones = evs.map(function (e) { return { v: 'ev:' + e.id, t: 'El evento: ' + e.nombre }; }).concat(conEvento.map(function (f) { return { v: 'evento:' + f, t: 'El evento: ' + notaDia(f).evento + ' (' + diaLargo(f).toLowerCase() + ')' }; }))
