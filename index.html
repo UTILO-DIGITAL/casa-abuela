@@ -415,7 +415,8 @@
   button.fila-persona.fila-caja.futuro { background: var(--color-futuro-claro); border-radius: calc(var(--radio) / 2); padding-left: 10px; padding-right: 10px; }
   .barra-embarazo { display: block; flex: 0 0 100%; width: 100%; height: 6px; margin: 4px 0 2px; max-width: 220px; border-radius: 3px; background: #fff; overflow: hidden; }
   .barra-embarazo i { display: block; height: 100%; background: var(--color-futuro); border-radius: 3px; }
-  .fila-caja.futuro .fp-come, .fechas-pareja.futuro { color: var(--color-futuro); font-weight: 700; }
+  .fila-caja.futuro .fp-come { color: var(--color-futuro); font-weight: 700; }
+  .fechas-pareja.futuro { color: var(--color-futuro); }
   .arbol-raya { stroke: #EADFD2; stroke-width: 1.5; }
   .arbol-anillo rect { fill: #fff; stroke: #E3D6C5; }
   .arbol-anillo circle, .arbol-anillo path { fill: none; stroke: var(--color-principal-oscuro); stroke-width: 2.2; stroke-linejoin: round; }
@@ -476,7 +477,10 @@
   .miembros .et { font-size: 13px; font-weight: 800; color: var(--color-texto-suave); margin-right: 2px; }
   .nucleo-card .per-filas { border-top: 0; }
   .nucleo-card .per-filas li:last-child { border-bottom: 0; }
-  .fechas-pareja { margin: 0 0 4px; font-size: 14px; color: var(--color-texto-suave); }
+  .fechas-pareja { margin: 0 0 4px; font-size: 13px; font-weight: 500; color: var(--color-texto-suave); opacity: .8; }  /* v4.47: discreta */
+  .familia-dentro { margin-top: 18px; }
+  .familia-dentro > .nucleo-card > .nucleo-cab h4 { font-size: 17px; }
+  .cuenta-familia { font-weight: 700; color: var(--color-texto-suave); margin-left: 4px; }
   div.fila-persona.fila-caja { padding: 8px 2px; min-height: 44px; color: var(--color-texto); }  /* v4.20: el abuelo, que no se toca */
   button.fila-persona.fila-caja { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 2px; }
   .fila-caja .fp-nombre { flex: 1; min-width: 0; }
@@ -636,7 +640,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.46.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.47.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1744,10 +1748,9 @@
         if (f === 'Servicio' || f === 'Otros') return leyenda + '<section class="familia">' + cab + tarjeta('', '', porFamilia[f], [], '') + '</section>';
         // v4.12.1: la familia se llama como el núcleo de arriba («Familia Canela Ribas»), si tiene uno solo
         const visibles = new Set(porFamilia[f].map(function (p) { return p.id; }));
-        const a = arbolFamilia(datos.personas.filter(function (p) { return familiaDe(p) === f; }), hayFiltros() ? visibles : null);
-        const titulo = a.nombre || 'Familia ' + f;
-        return leyenda + '<section class="familia"><h3 class="per-familia">' + esc(titulo) + ' <span>' + porFamilia[f].length + '</span>' +
-          (hayFiltros() ? '' : anillo(a.estado)) + '</h3>' + a.html + '</section>';
+        const a = arbolFamilia(datos.personas.filter(function (p) { return familiaDe(p) === f; }), hayFiltros() ? visibles : null, porFamilia[f].length);
+        if (a.nombre) return leyenda + '<section class="familia familia-dentro">' + a.html + '</section>';  // v4.47: el título, dentro del recuadro
+        return leyenda + '<section class="familia"><h3 class="per-familia">' + esc('Familia ' + f) + ' <span>' + porFamilia[f].length + '</span></h3>' + a.html + '</section>';
       }
       return cab + '<ul class="per-filas">' + porFamilia[f].map(function (p) { return filaPersona(p); }).join('') + '</ul>';
     }).join('');
@@ -1997,8 +2000,7 @@
       return '<li>' + (vivo ? '<button type="button" class="fila-persona fila-caja" data-comida-abuela>' + dentro + '</button>' :
         '<div class="fila-persona fila-caja">' + dentro + '</div>') + '</li>';
     };
-    return '<section class="familia"><h3 class="per-familia">' + esc(titulo) + (casados ? anillo('casados') : '') + '</h3>' +
-      '<div class="nucleo-card">' + (casados && fechasPareja(ellos[0]) ? '<p class="fechas-pareja">' + esc(fechasPareja(ellos[0])) + '</p>' : '') +
+    return '<section class="familia familia-dentro"><div class="nucleo-card"><div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + (casados ? anillo('casados') : '') + '</div>' + (casados && fechasPareja(ellos[0]) ? '<p class="fechas-pareja">' + esc(fechasPareja(ellos[0])) + '</p>' : '') +
       '<ul class="per-filas">' + ellos.map(fila).join('') + '</ul></div></section>';
   }
   function filaCaja(p) {
@@ -2019,12 +2021,12 @@
   function anillo(estado) {
     return estado === 'casados' ? ' <span class="anillo" role="img" aria-label="casados" title="Casados">' + ICONO_ANILLO + '</span>' : '';
   }
-  function tarjeta(titulo, estado, cabezas, hijos, dentro) {
+  function tarjeta(titulo, estado, cabezas, hijos, dentro, extra) {
     const fp = cabezas.length === 2 && parejaDe(cabezas[0]) === cabezas[1] ? fechasPareja(cabezas[0]) : '';  // v4.21
     // v4.45: añadir un bebé a este núcleo (al de sangre de la pareja)
     const madre = cabezas.filter(function (p) { return !esDeFuera(p) && !esFallecido(p); })[0] || cabezas.filter(function (p) { return !esFallecido(p); })[0];
     const bebe = madre && !modoAbuela() && GEN_HIJOS[madre.jerarquia] ? '<button type="button" class="mini bebe-mas" data-bebe="' + esc(madre.id) + '" aria-label="Añadir un bebé de ' + esc(madre.apodo) + '" title="Añadir un bebé">👶 +</button>' : '';
-    return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + anillo(estado) + bebe + '</div>' : (bebe ? '<div class="nucleo-cab solo-bebe">' + bebe + '</div>' : '')) +
+    return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + (extra || '') + '</h4>' + anillo(estado) + bebe + '</div>' : (bebe ? '<div class="nucleo-cab solo-bebe">' + bebe + '</div>' : '')) +
       (fp ? '<p class="fechas-pareja' + (cabezas[0].boda && bodaQueViene(cabezas[0].boda) ? ' futuro' : '') + '">' + esc(fp) + '</p>' : '') +
       (cabezas.length ? '<ul class="per-filas">' + cabezas.map(filaCaja).join('') + '</ul>' : '') +
       // v4.13: los hijos (sueltos o con su caja), juntos en un subgrupo un poco metido hacia dentro
@@ -2076,11 +2078,11 @@
   }
   function parejaDe(p) { const x = p.pareja && quienEs(p.pareja); return x && x.pareja === p.id ? x : null; }
   /* visible: si se filtra, solo esas personas (las cajas sin nadie visible no salen) */
-  function arbolFamilia(gente, visible) {
+  function arbolFamilia(gente, visible, cuenta) {
     const ve = function (p) { return !visible || visible.has(p.id); };
-    const caja = function (titulo, estado, cabezas, hijos, dentro) {
+    const caja = function (titulo, estado, cabezas, hijos, dentro, extra) {
       const c = cabezas.filter(ve), h = hijos.filter(ve);
-      return c.length || h.length || dentro ? tarjeta(titulo, c.length ? estado : '', c, h, dentro) : '';
+      return c.length || h.length || dentro ? tarjeta(titulo, c.length ? estado : '', c, h, dentro, extra) : '';
     };
     const todos = abuelas().concat(datos.personas);
     const hijosDe = {};
@@ -2149,11 +2151,11 @@
       const t = nombreNucleo(n.cabezas[0], n.cabezas[1]);
       if (t.indexOf('Familia ') === 0) nombre = t;
     }
-    // v4.12.4: esa caja de arriba va sin título (la familia ya lleva su nombre y «casados» va al lado), para no repetir
+    // v4.47: esa caja de arriba lleva dentro el nombre de la familia, con cuántos son y su anillo (como los demás núcleos)
     let html = arriba.map(function (k, i) {
       const n = nucleos[k];
       if (!nombre || i) return pinta(k);
-      return caja('', '', n.cabezas, n.hijos, n.dentro.map(pinta).join(''));
+      return caja(nombre, estado(n), n.cabezas, n.hijos, n.dentro.map(pinta).join(''), cuenta ? ' <span class="cuenta-familia">' + cuenta + '</span>' : '');
     }).join('');
     if (sueltos.length) html += caja(arriba.length ? 'Sin núcleo' : '', '', sueltos, [], '');
     return { html: html, nombre: nombre, estado: nombre ? estado(nucleos[arriba[0]]) : '' };
