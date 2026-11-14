@@ -147,7 +147,33 @@ ver('al cambiar de pareja, «casados» se borra en los tres', !quien(M_).casados
 d = R.guardarPersona(M_, { pareja: '(T+1) - Jordi P', casados: 'No' }, M_, V);
 ver('pareja y «no casados» en el mismo guardado', quien(M_).pareja === '(T+1) - Jordi P' && quien(M_).casados === 'No' && quien('(T+1) - Jordi P').casados === 'No');
 
+// ---------- v4.21: noviazgo y boda ----------
+d = R.guardarPersona(M_, { casados: 'Sí', novios: '1980', boda: '12/06/1985' }, M_, V);
+ver('novios y boda, en los dos', quien(M_).novios === '00/00/1980' && quien('(T+1) - Jordi P').novios === '00/00/1980' && quien(M_).boda === '12/06/1985' && quien('(T+1) - Jordi P').boda === '12/06/1985');
+ver('con sus títulos en el Excel', hojas.PERSONAS.filas[0][16] === 'Novios desde' && hojas.PERSONAS.filas[0][17] === 'Boda');
+d = R.guardarPersona('(T+1) - Jordi P', { novios: '03/1980' }, M_, V);
+ver('se cambia desde cualquiera de los dos', quien(M_).novios === '00/03/1980');
+err = ''; try { R.guardarPersona(M_, { boda: '31/02/1985' }, M_, V); } catch (e) { err = e.message; }
+ver('una boda que no existe no se guarda', /la boda/.test(err));
+d = R.guardarPersona(M_, { boda: '20/06/2030' }, M_, V);
+ver('una boda que viene, también', quien(M_).boda === '20/06/2030');
+err = ''; try { R.guardarPersona(M_, { boda: '2099' }, M_, V); } catch (e) { err = e.message; }
+ver('pero no de aquí a más de diez años', /diez años/.test(err));
+err = ''; try { R.guardarPersona(M_, { novios: '2030' }, M_, V); } catch (e) { err = e.message; }
+ver('el noviazgo, no en el futuro', /después de hoy/.test(err));
+err = ''; try { R.guardarPersona('(N) - Laura', { novios: '2001' }, M_, V); } catch (e) { err = e.message; }
+ver('sin pareja, no hay fecha de novios', /elige primero su pareja/.test(err) || !!quien('(N) - Laura').pareja);
+d = R.guardarPersona(M_, { boda: '' }, M_, V);
+ver('la boda se puede borrar', !quien(M_).boda && !quien('(T+1) - Jordi P').boda && quien(M_).novios === '00/03/1980');
+d = R.guardarPersona(M_, { pareja: '(N) - Laura' }, M_, V);
+ver('al cambiar de pareja, las fechas se borran', !quien(M_).novios && !quien('(T+1) - Jordi P').novios && !quien('(N) - Laura').novios);
+d = R.guardarPersona(M_, { pareja: '(T+1) - Jordi P', casados: 'No' }, M_, V);
+
 // ---------- v4.13: el año del cumpleaños ----------
+d = R.guardarPersona(M_, { cumple: '00/03/2027' }, M_, V);
+ver('v4.24: la fecha prevista de un bebé en camino (el año que viene)', quien(M_).cumple === '00/03/2027');
+err = ''; try { R.guardarPersona(M_, { cumple: '2028' }, M_, V); } catch (e) { err = e.message; }
+ver('pero no más allá', /cumpleaños/.test(err));
 d = R.guardarPersona(M_, { cumple: '07/03/1952' }, M_, V);
 ver('cumpleaños con año', quien(M_).cumple === '07/03/1952');
 d = R.guardarPersona(M_, { cumple: '7/3' }, M_, V);
@@ -209,6 +235,11 @@ err = ''; try { R.guardarPersona('(N) - Nacio', { fallecio: '31/02/2008' }, M_, 
 ver('una fecha que no existe no se guarda', /fallecimiento/.test(err));
 err = ''; try { R.guardarPersona('(N) - Nacio', { fallecio: '2099' }, M_, V2); } catch (e) { err = e.message; }
 ver('ni una del futuro', /fallecimiento/.test(err));
+// v4.20: fallecido sin saber cuándo
+d = R.guardarPersona('(N) - Nacio', { fallecio: 'si' }, M_, V2);
+ver('«sí» = falleció sin saber cuándo', (d.personas.find(p => p.id === '(N) - Nacio') || {}).fallecio === 'Sí');
+d = R.guardarPersona('(N) - Nacio', { fallecio: '06/2008' }, M_, V2);
+ver('y se le puede volver a poner fecha', (d.personas.find(p => p.id === '(N) - Nacio') || {}).fallecio === '00/06/2008');
 d = R.guardarPersona(M_, { cumple: '1952' }, M_, V2);
 ver('cumpleaños con solo el año', quien(M_).cumple === '00/00/1952');
 
@@ -219,3 +250,8 @@ ver('con CLAVE, sin clave no se puede', /^CLAVE/.test(R.api_('getDatos', [V2], '
 ver('con una clave que no es, tampoco', /^CLAVE/.test(R.api_('getDatos', [V2], 'paela').error || ''));
 ver('con la clave, sí (da igual mayúsculas y acentos)', R.api_('getDatos', [V2], ' PÁELLA ').ok === true);
 ver('y también para guardar', /^CLAVE/.test(R.api_('guardarPersona', [M_, { alergias: 'x' }, M_, V2], 'no').error || ''));
+// v4.18: la pista, en el aviso
+ver('sin PISTA, el aviso no lleva pista', !/PISTA/.test(R.api_('getDatos', [V2], 'no').error || ''));
+hojas.MESA_CONFIG.filas.push(['PISTA', 'Lo que se come en verano…']);
+ver('con PISTA, va en el aviso', /PISTA: Lo que se come en verano…$/.test(R.api_('getDatos', [V2], 'no').error || ''));
+ver('y con la clave buena, entra igual', R.api_('getDatos', [V2], 'paella').ok === true);

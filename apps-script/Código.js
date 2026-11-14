@@ -10,7 +10,8 @@
  *                 Los Ids siguen a MESA_ALIAS. La web arma con ellos el árbol de núcleos de cada familia.
  *                 Nombre (N, v4.11): el nombre de verdad; el Apodo (B) es como le llaman en casa y no se repite.
  *                 Casados (O, v4.12): Sí o No, en los dos de la pareja; se borra si cambia la pareja.
- *                 Falleció (P, v4.16): dd/mm/aaaa, 00/mm/aaaa o 00/00/aaaa (como se sepa). El cumpleaños admite lo mismo.
+ *                 Falleció (P, v4.16): dd/mm/aaaa, 00/mm/aaaa o 00/00/aaaa (como se sepa); «Sí» si no se sabe cuándo (v4.20). El cumpleaños admite lo mismo.
+ *                 Novios desde (Q) y Boda (R), v4.21: como se sepan, iguales en los dos de la pareja; se borran si la pareja se deshace.
  *   MESA_APUNTES  ID_APUNTE | FECHA | TURNO | PERSONA_ID | CREADO_EN | NOTA | ESTADO ('' va · 'NO' no va ese día aunque sea fijo) | NOTA_POR | NOTA_EN
  *   MESA_FIJOS    ID_FIJO | PERSONA_ID | DIA_SEMANA (0 domingo … 6 sábado) | TURNO | DESDE | HASTA | NOTA | CREADO_POR | CREADO_EN
  *   MESA_DIAS     FECHA | NOTA | SIN_TURNO | CAMBIADO_POR | CAMBIADO_EN | SIN_COMIDA | MOTIVO_COMIDA | SIN_CENA | MOTIVO_CENA | NOTA_SERVICIO | SIN_DORMIR | MOTIVO_DORMIR
@@ -19,7 +20,7 @@
  *                 (la abuela no está en esa comida, cena o noche; FUERA = las tres, de versiones anteriores)
  *   MESA_CAMBIOS  CUANDO | QUIEN_ID | QUIEN | CAMBIO   (registro de quién cambia qué)
  *   MESA_ALIAS    ID_ANTIGUO | ID_NUEVO | NOTA   (si a alguien se le cambia el apodo o la jerarquía en PERSONAS)
- *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
+ *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), PISTA (v4.18: se enseña al pedir la clave), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
  *                 (EXCLUIR_IDS: no salen para apuntarse, pero pueden hacer cambios, como la abuela)
  * Turnos: COMIDA, CENA y DORMIR (quién pasa la noche en casa).
  * El servicio son las personas de PERSONAS con Familia = «Servicio»: cuentan para cocinar y no como compañía en comida y cena; para dormir, sí.
@@ -29,7 +30,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.17.0
+ * Versión 4.24.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -54,8 +55,10 @@ const COL_HIJO_DE = 13;  // M: Id de su padre o su madre
 const COL_NOMBRE = 14;   // N: nombre de verdad (v4.11)
 const COL_CASADOS = 15;  // O: Sí o No (v4.12)
 const COL_FALLECIO = 16; // P: fecha de fallecimiento, como se sepa (v4.16)
-const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de', 14: 'Nombre', 15: 'Casados', 16: 'Falleció' };
-const CAMPOS_NUCLEO = ['nombre', 'apellido', 'sexo', 'pareja', 'hijoDe', 'casados', 'fallecio'];
+const COL_NOVIOS = 17;   // Q: cuándo empezaron a salir, como se sepa, en los dos de la pareja (v4.21)
+const COL_BODA = 18;     // R: cuándo se casaron, como se sepa, en los dos de la pareja (v4.21)
+const TITULOS_EXTRA = { 9: 'Baja', 10: 'Apellido', 11: 'Sexo', 12: 'Pareja', 13: 'Hijo de', 14: 'Nombre', 15: 'Casados', 16: 'Falleció', 17: 'Novios desde', 18: 'Boda' };
+const CAMPOS_NUCLEO = ['nombre', 'apellido', 'sexo', 'pareja', 'hijoDe', 'casados', 'fallecio', 'novios', 'boda'];
 const CASADOS = ['Sí', 'No'];
 const SEXOS = ['Hombre', 'Mujer'];
 const COLS_APUNTES = 10;  // v4.15: J ACOMPANANTES (cuántos vienen con esa persona sin estar en la lista)
@@ -112,13 +115,16 @@ function api_(fn, args, clave) {
  */
 function comprobarClave_(clave) {
   const cache = CacheService.getScriptCache();
-  let buena = cache.get('clave_familia');
-  if (buena === null) {
-    buena = leerConfigSin_(SpreadsheetApp.openById(SPREADSHEET_ID)).clave;
-    try { cache.put('clave_familia', buena, 300); } catch (e) { /* sin caché, se lee cada vez */ }
+  let guardada = null;
+  try { guardada = JSON.parse(cache.get('clave_familia_v2') || 'null'); } catch (e) { guardada = null; }
+  if (!guardada) {
+    const config = leerConfigSin_(SpreadsheetApp.openById(SPREADSHEET_ID));
+    guardada = { clave: config.clave, pista: config.pista };
+    try { cache.put('clave_familia_v2', JSON.stringify(guardada), 300); } catch (e) { /* sin caché, se lee cada vez */ }
   }
   const n = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
-  if (buena && n(clave) !== n(buena)) throw new Error('CLAVE: hace falta la clave de la familia.');
+  // v4.18: la pista (MESA_CONFIG, PISTA) va en el aviso, para quien aún no ha entrado
+  if (guardada.clave && n(clave) !== n(guardada.clave)) throw new Error('CLAVE: hace falta la clave de la familia.' + (guardada.pista ? ' PISTA: ' + guardada.pista : ''));
 }
 
 /* ---------- Lectura ---------- */
@@ -197,6 +203,7 @@ function leerConfigSin_(ss) {
     avisoHoras: Number(mapa.AVISO_HORAS) || 4,
     urlCompartir: String(mapa.URL_COMPARTIR || '').trim(),
     clave: String(mapa.CLAVE || '').trim(),
+    pista: String(mapa.PISTA || '').trim(),
   };
 }
 
@@ -222,7 +229,9 @@ function aPersona_(f) {
     hijoDe: String(f[COL_HIJO_DE - 1] || '').trim(),
     nombre: String(f[COL_NOMBRE - 1] || '').trim(),
     casados: CASADOS.indexOf(String(f[COL_CASADOS - 1] || '').trim()) !== -1 ? String(f[COL_CASADOS - 1]).trim() : '',
-    fallecio: aFechaParcial_(f[COL_FALLECIO - 1], 1850),
+    fallecio: aFallecio_(f[COL_FALLECIO - 1]),
+    novios: aFechaParcial_(f[COL_NOVIOS - 1], 1850),
+    boda: aFechaParcial_(f[COL_BODA - 1], 1850, 10),
   };
 }
 
@@ -458,7 +467,7 @@ function guardarPersona(personaId, cambios, quien, vista) {
 
     if (cambios.cumple !== undefined) {
       const cumple = aCumple_(cambios.cumple);
-      if (String(cambios.cumple || '').trim() && !cumple) throw new Error('El cumpleaños tiene que ser un día y un mes que existan (y, si se pone, un año de 1900 a hoy), o el mes y el año, o solo el año.');
+      if (String(cambios.cumple || '').trim() && !cumple) throw new Error('El cumpleaños tiene que ser un día y un mes que existan (y, si se pone, un año de 1900 a hoy, o el que viene si está en camino), o el mes y el año, o solo el año.');
       escribirEnPersonas_(ss, personaId, COL_CUMPLE, cumple, true);
       if (cumple !== p.cumple) registro.push('Cumpleaños de ' + p.apodo + ': ' + (cumple || 'borrado'));
     }
@@ -891,8 +900,11 @@ function asegurarColumnas_(ss, hasta) {
   if (hoja.getMaxColumns() < hasta) hoja.insertColumnsAfter(hoja.getMaxColumns(), hasta - hoja.getMaxColumns());
   for (let c = COL_BAJA; c <= hasta; c++) {
     const titulo = hoja.getRange(1, c);
-    if (!String(titulo.getValue()).trim()) titulo.setValue(TITULOS_EXTRA[c]);
+    if (!String(titulo.getValue()).trim() || /^Column \d+$/.test(String(titulo.getValue()).trim())) titulo.setValue(TITULOS_EXTRA[c]);  // v4.21: las tablas ponen «Column 16»
   }
+}
+function sinFechasPareja_(ss, id) {  // v4.21: al deshacerse una pareja, fuera «Casados» y sus fechas
+  [COL_CASADOS, COL_NOVIOS, COL_BODA].forEach(function (c) { escribirEnPersonas_(ss, id, c, '', true); });
 }
 function asegurarColumnaBaja_(ss) { asegurarColumnas_(ss, COL_BAJA); }
 
@@ -903,12 +915,12 @@ function asegurarColumnaBaja_(ss) { asegurarColumnas_(ss, COL_BAJA); }
 function ponerNucleo_(ss, p, cambios, registro, todos) {
   const nombre = function (id) { const x = todos.filter(function (t) { return t.id === id; })[0]; return x ? x.apodo : id; };
   const existe = function (id) { return todos.some(function (t) { return t.id === id; }); };
-  asegurarColumnas_(ss, COL_FALLECIO);
+  asegurarColumnas_(ss, COL_BODA);
   if (cambios.fallecio !== undefined) {
     const texto = String(cambios.fallecio || '').trim();
-    const fallecio = aFechaParcial_(texto, 1850);
+    const fallecio = aFallecio_(texto);
     if (texto && !fallecio) throw new Error('La fecha de fallecimiento tiene que ser un día, mes y año que existan (o mes y año, o solo el año), y no de después de hoy.');
-    if (fallecio !== (p.fallecio || '')) { escribirEnPersonas_(ss, p.id, COL_FALLECIO, fallecio, true); registro.push(p.apodo + (fallecio ? ': falleció (' + fallecio + ')' : ': sin fecha de fallecimiento')); }
+    if (fallecio !== (p.fallecio || '')) { escribirEnPersonas_(ss, p.id, COL_FALLECIO, fallecio, true); registro.push(p.apodo + (fallecio === 'Sí' ? ': falleció (sin saber cuándo)' : (fallecio ? ': falleció (' + fallecio + ')' : ': ya no consta que haya fallecido'))); }
   }
   if (cambios.nombre !== undefined) {
     const nombreReal = limpiar_(cambios.nombre, 40, 'El nombre', true);
@@ -944,16 +956,16 @@ function ponerNucleo_(ss, p, cambios, registro, todos) {
       const parejaDe = {};
       todos.forEach(function (t) { parejaDe[t.id] = t.pareja; });
       // Al cambiar de pareja, «Casados» se borra en las dos parejas que se deshacen y en la nueva (v4.12)
-      if (p.pareja && parejaDe[p.pareja] === p.id) { escribirEnPersonas_(ss, p.pareja, COL_PAREJA, '', true); escribirEnPersonas_(ss, p.pareja, COL_CASADOS, '', true); }
+      if (p.pareja && parejaDe[p.pareja] === p.id) { escribirEnPersonas_(ss, p.pareja, COL_PAREJA, '', true); sinFechasPareja_(ss, p.pareja); }
       if (nueva) {
         const anterior = parejaDe[nueva];
-        if (anterior && anterior !== p.id && parejaDe[anterior] === nueva) { escribirEnPersonas_(ss, anterior, COL_PAREJA, '', true); escribirEnPersonas_(ss, anterior, COL_CASADOS, '', true); }
+        if (anterior && anterior !== p.id && parejaDe[anterior] === nueva) { escribirEnPersonas_(ss, anterior, COL_PAREJA, '', true); sinFechasPareja_(ss, anterior); }
         escribirEnPersonas_(ss, nueva, COL_PAREJA, p.id, true);
-        escribirEnPersonas_(ss, nueva, COL_CASADOS, '', true);
+        sinFechasPareja_(ss, nueva);
       }
       escribirEnPersonas_(ss, p.id, COL_PAREJA, nueva, true);
-      escribirEnPersonas_(ss, p.id, COL_CASADOS, '', true);
-      p.casados = '';
+      sinFechasPareja_(ss, p.id);
+      p.casados = ''; p.novios = ''; p.boda = '';
       registro.push(nueva ? p.apodo + ' y ' + nombre(nueva) + ' son pareja' : p.apodo + ' ya no tiene pareja');
     }
   }
@@ -968,6 +980,20 @@ function ponerNucleo_(ss, p, cambios, registro, todos) {
       if (pareja) registro.push(p.apodo + ' y ' + nombre(pareja) + (casados === 'Sí' ? ': casados' : casados === 'No' ? ': no casados' : ': sin decir si están casados'));
     }
   }
+  // v4.21: cuándo empezaron a salir y cuándo se casaron, en los dos de la pareja
+  [['novios', COL_NOVIOS, 'empezaron a salir', 'cuándo empezaron a salir'], ['boda', COL_BODA, 'se casaron', 'la boda']].forEach(function (x) {
+    if (cambios[x[0]] === undefined) return;
+    const texto = String(cambios[x[0]] || '').trim();
+    const fecha = aFechaParcial_(texto, 1850, x[0] === 'boda' ? 10 : 0);  // v4.23: la boda, también la que viene
+    if (texto && !fecha) throw new Error('La fecha de ' + x[3] + ' tiene que ser un día, mes y año que existan (o mes y año, o solo el año)' + (x[0] === 'boda' ? ', de aquí a diez años como mucho.' : ', y no de después de hoy.'));
+    const pareja = cambios.pareja !== undefined ? String(cambios.pareja || '').trim() : p.pareja;
+    if (fecha && !pareja) throw new Error('Para poner la fecha de ' + x[3] + ', elige primero su pareja.');
+    if (fecha !== (p[x[0]] || '')) {
+      escribirEnPersonas_(ss, p.id, x[1], fecha, true);
+      if (pareja) escribirEnPersonas_(ss, pareja, x[1], fecha, true);
+      registro.push(p.apodo + (pareja ? ' y ' + nombre(pareja) : '') + (fecha ? ' ' + x[2] + ': ' + fecha : ': sin fecha de ' + x[3]));
+    }
+  });
   olvidar_('personas');
 }
 
@@ -979,7 +1005,7 @@ function nucleoDeNueva_(ss, id, nueva, registro) {
   const config = leerConfig_(ss);
   const todos = leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir));
   const p = todos.filter(function (t) { return t.id === id; })[0];
-  if (p) ponerNucleo_(ss, p, { nombre: nueva.nombre || '', apellido: nueva.apellido || '', sexo: nueva.sexo || '', pareja: nueva.pareja || '', hijoDe: nueva.hijoDe || '', casados: nueva.casados || '', fallecio: nueva.fallecio || '' }, registro, todos);
+  if (p) ponerNucleo_(ss, p, { nombre: nueva.nombre || '', apellido: nueva.apellido || '', sexo: nueva.sexo || '', pareja: nueva.pareja || '', hijoDe: nueva.hijoDe || '', casados: nueva.casados || '', fallecio: nueva.fallecio || '', novios: nueva.novios || '', boda: nueva.boda || '' }, registro, todos);
 }
 
 function filaDePersona_(ss, personaId) {
@@ -1126,7 +1152,7 @@ function aCumple_(v) {
   if (v instanceof Date) return Utilities.formatDate(v, TZ, 'dd/MM');
   const t = String(v || '').trim();
   const m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})$/);
-  if (!m) return aFechaParcial_(t, 1900);  // con el año (v4.13), o solo mes y año, o solo el año (v4.16)
+  if (!m) return aFechaParcial_(t, 1900, 1);  // con el año (v4.13), o solo mes y año, o solo el año (v4.16); v4.24: o la fecha prevista de un bebé en camino
   const d = Number(m[1]), mes = Number(m[2]);
   const max = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1];
   if (!max || d < 1 || d > max) return '';
@@ -1137,7 +1163,12 @@ function aCumple_(v) {
  * v4.16: una fecha como se sepa: dd/mm/aaaa, mm/aaaa o aaaa. Se guarda siempre dd/mm/aaaa, con 00 en lo que no se sabe
  * («00/01/2008» es enero de 2008; «00/00/1928», 1928). Entre el año «desde» y hoy. Una celda de fecha del Excel, entera.
  */
-function aFechaParcial_(v, desde) {
+/* v4.20: el fallecimiento, con su fecha (como se sepa) o «Sí» si no se sabe cuándo */
+function aFallecio_(v) {
+  return /^s[ií]$/i.test(String(v || '').trim()) ? 'Sí' : aFechaParcial_(v, 1850);
+}
+
+function aFechaParcial_(v, desde, futuro) {  // v4.23: futuro = años que puede ir por delante de hoy (la boda)
   if (v instanceof Date) return Utilities.formatDate(v, TZ, 'dd/MM/yyyy');
   const t = String(v || '').trim();
   let m, d = 0, mes = 0, ano = 0;
@@ -1145,7 +1176,7 @@ function aFechaParcial_(v, desde) {
   else if ((m = t.match(/^(\d{1,2})[\/\-.](\d{4})$/))) { mes = Number(m[1]); ano = Number(m[2]); }
   else if ((m = t.match(/^(\d{4})$/))) { ano = Number(m[1]); }
   else return '';
-  if (ano < (desde || 1850) || ano > Number(hoy_().slice(0, 4)) || mes > 12 || (!mes && d)) return '';
+  if (ano < (desde || 1850) || ano > Number(hoy_().slice(0, 4)) + (futuro || 0) || mes > 12 || (!mes && d)) return '';
   if (d && d > [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1]) return '';
   return ('0' + d).slice(-2) + '/' + ('0' + mes).slice(-2) + '/' + ano;
 }
