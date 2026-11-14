@@ -640,7 +640,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.47.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.48.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1374,6 +1374,16 @@
     // lo que falta, arriba
     let arriba = '';
     ['cumple', 'sexo', 'apellido', 'menu', 'novios', 'boda', 'santo'].forEach(function (k) { if (falta(k)) arriba += campo[k](); });
+    // v4.48: si son pareja y no están casados (ni hay boda puesta), se pregunta si se casan; no cuenta como pendiente
+    const pregunta = pa && p.casados !== 'Sí' && !p.boda ? '<fieldset><legend>¿Os casáis? <small class="leyenda-suave">· si ya hay fecha de boda con ' + esc(pa.apodo) + '</small></legend>' +
+      campoFechaPareja('rfb', '', '', 10) + '<p class="ayuda">Si no hay boda a la vista, déjalo en blanco. Vale aunque sea solo el mes o el año.</p></fieldset>' : '';
+    // v4.48: sin pareja (y sin ser un niño), si quiere ponerla: de la lista o escribiendo su nombre
+    const ed = edad(p), jerPareja = p.jerarquia && !/\+1$/.test(p.jerarquia) ? p.jerarquia + ' +1' : '';
+    const sinPareja = !pa && !esDeFuera(p) && (ed !== null ? ed >= 16 : p.jerarquia !== 'Biznietos');
+    const preguntaPareja = sinPareja ? '<fieldset><legend>¿Tienes pareja? <small class="leyenda-suave">· si quieres ponerla</small></legend>' +
+      '<label class="campo" for="dlg-rfpa">Si ya está en la web<select id="dlg-rfpa">' + opcionesPersonas('', p.id) + '</select></label>' +
+      ((datos.listas && datos.listas.jerarquias || []).indexOf(jerPareja) !== -1 ? '<label class="campo" for="dlg-rfpanueva">Si no está, su nombre<input id="dlg-rfpanueva" type="text" maxlength="40" autocomplete="off" placeholder="Por ejemplo: Laura"></label>' : '') +
+      '<p class="ayuda">Si no, déjalo en blanco.</p></fieldset>' : '';
     // lo que ya tenemos, abajo (para corregir)
     let abajo = '';
     if (!falta('cumple') && p.cumple) abajo += campo.cumple();
@@ -1390,6 +1400,7 @@
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2><div><small>' + esc([[p.nombre, p.apellido].filter(Boolean).join(' '), rfContexto(p)].filter(Boolean).join(' · ')) + '</small></div></div>' +
       '<div class="dlg-cuerpo">' +
       (arriba ? '<h3 class="rf-sec">Lo que falta</h3><p class="ayuda">Rellena lo que sepas; lo que no, déjalo en blanco.' + (falta('novios') || falta('boda') ? ' Las fechas de la pareja valen para los dos.' : '') + '</p>' + arriba : '<p class="rf-todo">✓ No le falta nada.</p>') +
+      pregunta + preguntaPareja +
       '<h3 class="rf-sec">Lo que ya tenemos de ' + esc(p.apodo) + '</h3><p class="ayuda">Si algo no está bien, corrígelo aquí.</p>' + abajo +
       '<div id="dlg-rfotras"></div><button type="button" class="enlace" id="dlg-rfmas">+ Añadir otra fecha (bautizo, comunión…)</button></div>' + pie('Guardar'));
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
@@ -1418,9 +1429,19 @@
         fechas.push({ que: que.replace(/[;:]/g, ' ').replace(/\s+/g, ' ').trim(), fecha: r.valor });
       }
       if (JSON.stringify(fechas) !== JSON.stringify(p.fechas || [])) cambios.fechas = fechas;
-      if (!Object.keys(cambios).length) { errorDialogo('No has cambiado nada. Si está todo bien, ciérralo.'); return; }
+      if ($('dlg-rfpa') && $('dlg-rfpa').value) cambios.pareja = $('dlg-rfpa').value;  // v4.48
+      const nueva = $('dlg-rfpanueva') && !cambios.pareja ? $('dlg-rfpanueva').value.trim() : '';
+      if (!Object.keys(cambios).length && !nueva) { errorDialogo('No has cambiado nada. Si está todo bien, ciérralo.'); return; }
       conQuien(function () {
-        enSegundoPlano('guardarPersona', [id, cambios, yo, rango()], '¡Gracias! Guardado lo de ' + p.apodo + '.', function () { aplicarPersonaLocal(id, cambios); rfSucio = true; });
+        const altaPareja = function () {
+          enSegundoPlano('crearPersona', [{ apodo: nueva, jerarquia: jerPareja, familia: p.familia, pareja: p.id }, yo, rango()], '¡Gracias! ' + nueva + ' ya está como pareja de ' + p.apodo + '.', function () { rfSucio = true; });
+        };
+        if (!Object.keys(cambios).length) { altaPareja(); return; }
+        if (!nueva) { enSegundoPlano('guardarPersona', [id, cambios, yo, rango()], '¡Gracias! Guardado lo de ' + p.apodo + '.', function () { aplicarPersonaLocal(id, cambios); rfSucio = true; }); return; }
+        // primero lo suyo y luego su pareja nueva
+        cerrarDialogo(); aviso('Guardando…', 0);
+        llamar('guardarPersona', [id, cambios, yo, rango()]).then(function (d) { datos = d; rfSucio = true; altaPareja(); })
+          .catch(function (err) { if (esErrorClave(err)) { pedirClave(err); return; } aviso('No se ha guardado. ' + mensajeError(err), 9000); });
       });
     });
   }
