@@ -219,3 +219,8 @@ ver('con CLAVE, sin clave no se puede', /^CLAVE/.test(R.api_('getDatos', [V2], '
 ver('con una clave que no es, tampoco', /^CLAVE/.test(R.api_('getDatos', [V2], 'paela').error || ''));
 ver('con la clave, sí (da igual mayúsculas y acentos)', R.api_('getDatos', [V2], ' PÁELLA ').ok === true);
 ver('y también para guardar', /^CLAVE/.test(R.api_('guardarPersona', [M_, { alergias: 'x' }, M_, V2], 'no').error || ''));
+// v4.18: la pista, en el aviso
+ver('sin PISTA, el aviso no lleva pista', !/PISTA/.test(R.api_('getDatos', [V2], 'no').error || ''));
+hojas.MESA_CONFIG.filas.push(['PISTA', 'Lo que se come en verano…']);
+ver('con PISTA, va en el aviso', /PISTA: Lo que se come en verano…$/.test(R.api_('getDatos', [V2], 'no').error || ''));
+ver('y con la clave buena, entra igual', R.api_('getDatos', [V2], 'paella').ok === true);

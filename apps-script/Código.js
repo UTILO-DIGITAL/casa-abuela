@@ -19,7 +19,7 @@
  *                 (la abuela no está en esa comida, cena o noche; FUERA = las tres, de versiones anteriores)
  *   MESA_CAMBIOS  CUANDO | QUIEN_ID | QUIEN | CAMBIO   (registro de quién cambia qué)
  *   MESA_ALIAS    ID_ANTIGUO | ID_NUEVO | NOTA   (si a alguien se le cambia el apodo o la jerarquía en PERSONAS)
- *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
+ *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), PISTA (v4.18: se enseña al pedir la clave), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
  *                 (EXCLUIR_IDS: no salen para apuntarse, pero pueden hacer cambios, como la abuela)
  * Turnos: COMIDA, CENA y DORMIR (quién pasa la noche en casa).
  * El servicio son las personas de PERSONAS con Familia = «Servicio»: cuentan para cocinar y no como compañía en comida y cena; para dormir, sí.
@@ -29,7 +29,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.17.0
+ * Versión 4.18.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -112,13 +112,16 @@ function api_(fn, args, clave) {
  */
 function comprobarClave_(clave) {
   const cache = CacheService.getScriptCache();
-  let buena = cache.get('clave_familia');
-  if (buena === null) {
-    buena = leerConfigSin_(SpreadsheetApp.openById(SPREADSHEET_ID)).clave;
-    try { cache.put('clave_familia', buena, 300); } catch (e) { /* sin caché, se lee cada vez */ }
+  let guardada = null;
+  try { guardada = JSON.parse(cache.get('clave_familia_v2') || 'null'); } catch (e) { guardada = null; }
+  if (!guardada) {
+    const config = leerConfigSin_(SpreadsheetApp.openById(SPREADSHEET_ID));
+    guardada = { clave: config.clave, pista: config.pista };
+    try { cache.put('clave_familia_v2', JSON.stringify(guardada), 300); } catch (e) { /* sin caché, se lee cada vez */ }
   }
   const n = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
-  if (buena && n(clave) !== n(buena)) throw new Error('CLAVE: hace falta la clave de la familia.');
+  // v4.18: la pista (MESA_CONFIG, PISTA) va en el aviso, para quien aún no ha entrado
+  if (guardada.clave && n(clave) !== n(guardada.clave)) throw new Error('CLAVE: hace falta la clave de la familia.' + (guardada.pista ? ' PISTA: ' + guardada.pista : ''));
 }
 
 /* ---------- Lectura ---------- */
@@ -197,6 +200,7 @@ function leerConfigSin_(ss) {
     avisoHoras: Number(mapa.AVISO_HORAS) || 4,
     urlCompartir: String(mapa.URL_COMPARTIR || '').trim(),
     clave: String(mapa.CLAVE || '').trim(),
+    pista: String(mapa.PISTA || '').trim(),
   };
 }
 
