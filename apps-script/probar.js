@@ -60,7 +60,7 @@ const ctx = {
   ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, guardarPersonas, api_ };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, guardarPersonas, getAjustes, guardarAjustes, api_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -314,6 +314,30 @@ err = ''; try { R.guardarPersonas([{ id: M_, cambios: { cumple: '31/02/1952' } }
 ver('si una falla, dice quién', /^Mercedes: /.test(err));
 err = ''; try { R.guardarPersonas([], M_, V2); } catch (e) { err = e.message; }
 ver('sin nada, no', /nada que guardar/.test(err));
+
+// ---------- v4.58: ajustes del administrador ----------
+err = ''; try { R.getAjustes(M_); } catch (e) { err = e.message; }
+ver('sin ADMIN_IDS, nadie ve los ajustes', /solo para quien lleva la web/.test(err));
+hojas.MESA_CONFIG.filas.push(['ADMIN_IDS', M_]);
+let aj = R.getAjustes(M_);
+ver('el administrador ve la configuración y el historial', aj.config.horaComida === '14:00' && Array.isArray(aj.cambios) && aj.cambios.length > 0 && Array.isArray(aj.visitas));
+err = ''; try { R.getAjustes(JP_); } catch (e) { err = e.message; }
+ver('los demás, no', /solo para quien lleva la web/.test(err));
+d = R.guardarAjustes({ horaComida: '13:30', avisoHoras: 6, pista: 'Una pista', clave: 'nueva' }, M_, V2);
+aj = R.getAjustes(M_);
+ver('guardar horas, aviso, pista y clave', aj.config.horaComida === '13:30' && aj.config.avisoHoras === 6 && aj.config.pista === 'Una pista' && aj.config.clave === 'nueva' && d.config.horaComida === '13:30');
+ver('y queda en el historial (sin decir la clave)', aj.cambios[0].cambio && !aj.cambios.some(c => /nueva/.test(c.cambio)));
+err = ''; try { R.guardarAjustes({ horaCena: '25:00' }, M_, V2); } catch (e) { err = e.message; }
+ver('una hora imposible, no', /hora de la cena/.test(err));
+err = ''; try { R.guardarAjustes({ clave: '' }, M_, V2); } catch (e) { err = e.message; }
+ver('la clave no puede quedar vacía', /no puede quedar vacía/.test(err));
+err = ''; try { R.guardarAjustes({ horaComida: '13:30' }, JP_, V2); } catch (e) { err = e.message; }
+ver('los demás no pueden guardar ajustes', /solo para quien lleva la web/.test(err));
+d = R.guardarAjustes({ noCuentan: [N_, JP_] }, M_, V2);
+ver('quién no cuenta, en el Excel', R.getAjustes(M_).config.noCuentan.join() === [N_, JP_].join());
+hojas.MESA_CONFIG.filas = hojas.MESA_CONFIG.filas.filter(f => f[0] !== 'CLAVE' && f[0] !== 'PISTA');
+d = R.getDatos(Object.assign({}, V2, { yo: JP_ }));
+ver('al entrar, se apunta la visita (una vez)', !!hojas.MESA_VISITAS && hojas.MESA_VISITAS.filas.some(f => f[0] === JP_ && f[2] === '1'));
 
 // ---------- v4.17: la clave de la familia ----------
 ver('sin CLAVE en MESA_CONFIG, no se pide', R.api_('getDatos', [V2], undefined).ok === true);
