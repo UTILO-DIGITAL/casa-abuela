@@ -283,6 +283,14 @@ ver('el evento con dónde y a qué hora', cen.lugar === 'Casa de la abuela' && c
 d = R.apuntarEvento(cen.id, JP_, true, M_, V2);
 ver('se puede apuntar a otro (un padre por su hijo)', d.eventos.find(e => e.id === cen.id).van.join() === JP_);
 
+d = R.guardarEvento({ nombre: 'PortAventura', desde: '2026-12-19', hasta: '2026-12-20', cuando: 'DIA', turnos: { '2026-12-19': ['COMIDA', 'CENA', 'DORMIR'], '2026-12-20': ['COMIDA'], '2027-01-01': ['CENA'] } }, M_, V2);
+const pa = d.eventos.find(e => e.nombre === 'PortAventura' && e.desde === '2026-12-19') || {};
+ver('v4.33: los turnos de cada día, y nada fuera del evento', JSON.stringify(pa.turnos) === JSON.stringify({ '2026-12-19': ['COMIDA', 'CENA', 'DORMIR'], '2026-12-20': ['COMIDA'] }));
+err = ''; try { R.guardarEvento({ nombre: 'Nada', desde: '2026-12-19', hasta: '2026-12-20', turnos: { '2026-12-19': [], '2026-12-20': [] } }, M_, V2); } catch (e) { err = e.message; }
+ver('al menos un turno', /al menos una/.test(err));
+d = R.guardarEvento({ nombre: 'Un día', desde: '2026-12-22', cuando: 'CENA' }, M_, V2);
+ver('un evento de un día, sin turnos', (d.eventos.find(e => e.nombre === 'Un día') || {}).turnos === null);
+
 // ---------- v4.28: otras fechas de cada persona ----------
 d = R.guardarPersona(M_, { fechas: [{ que: 'Bautizo', fecha: '12/05/1961' }, { que: 'Carnet de conducir', fecha: '03/1980' }] }, M_, V2);
 ver('otras fechas, con lo que se sepa', JSON.stringify(quien(M_).fechas) === JSON.stringify([{ que: 'Bautizo', fecha: '12/05/1961' }, { que: 'Carnet de conducir', fecha: '00/03/1980' }]) && hojas.PERSONAS.filas[0][18] === 'Otras fechas');

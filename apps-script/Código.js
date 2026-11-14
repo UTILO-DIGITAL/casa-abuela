@@ -20,7 +20,7 @@
  *                 (la abuela no está en esa comida, cena o noche; FUERA = las tres, de versiones anteriores)
  *   MESA_CAMBIOS  CUANDO | QUIEN_ID | QUIEN | CAMBIO   (registro de quién cambia qué)
  *   MESA_ALIAS    ID_ANTIGUO | ID_NUEVO | NOTA   (si a alguien se le cambia el apodo o la jerarquía en PERSONAS)
- *   MESA_EVENTOS  ID | NOMBRE | DESDE | HASTA | CUANDO (DIA, COMIDA, CENA o DORMIR) | TEXTO | VAN | NO_VAN (Ids con «;») | CREADO_EN | BORRADO | LUGAR | HORA (v4.28; se crea sola)
+ *   MESA_EVENTOS  ID | NOMBRE | DESDE | HASTA | CUANDO (DIA, COMIDA, CENA o DORMIR) | TEXTO | VAN | NO_VAN (Ids con «;») | CREADO_EN | BORRADO | LUGAR | HORA | TURNOS (v4.33: de cada día, los que se salta) (v4.28; se crea sola)
  *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), PISTA (v4.18: se enseña al pedir la clave), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
  *                 (EXCLUIR_IDS: no salen para apuntarse, pero pueden hacer cambios, como la abuela)
  * Turnos: COMIDA, CENA y DORMIR (quién pasa la noche en casa).
@@ -31,7 +31,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.30.0
+ * Versión 4.33.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -71,7 +71,7 @@ const COLS_DIAS = 32;     // v4.15: AD EVENTO, AE EVENTO_TURNO, AF EVENTO_TEXTO
 const TITULOS_DIAS_V415 = ['EVENTO', 'EVENTO_TURNO', 'EVENTO_TEXTO'];
 const MAX_ACOMPANANTES = 20;
 const MAX_EVENTO = 60, MAX_EVENTO_TEXTO = 500;
-const COLS_EVENTOS = 12;  // ID | NOMBRE | DESDE | HASTA | CUANDO | TEXTO | VAN | NO_VAN | CREADO_EN | BORRADO | LUGAR | HORA
+const COLS_EVENTOS = 13;  // ID | NOMBRE | DESDE | HASTA | CUANDO | TEXTO | VAN | NO_VAN | CREADO_EN | BORRADO | LUGAR | HORA | TURNOS
 const CUANDO_EVENTO = ['DIA', 'COMIDA', 'CENA', 'DORMIR'];
 const MAX_DIAS_EVENTO = 31;
 const MAX_ALERGIAS = 100;
@@ -1177,7 +1177,7 @@ function textoFechas_(lista) {
 /* ---------- v4.28: eventos ---------- */
 
 function hojaEventos_(ss) {
-  return ss.getSheetByName(HOJA_EVENTOS) || crearHoja_(ss, HOJA_EVENTOS, ['ID', 'NOMBRE', 'DESDE', 'HASTA', 'CUANDO', 'TEXTO', 'VAN', 'NO_VAN', 'CREADO_EN', 'BORRADO', 'LUGAR', 'HORA']);
+  return ss.getSheetByName(HOJA_EVENTOS) || crearHoja_(ss, HOJA_EVENTOS, ['ID', 'NOMBRE', 'DESDE', 'HASTA', 'CUANDO', 'TEXTO', 'VAN', 'NO_VAN', 'CREADO_EN', 'BORRADO', 'LUGAR', 'HORA', 'TURNOS']);
 }
 function listaIds_(t) { return String(t || '').split(';').map(function (x) { return x.trim(); }).filter(Boolean); }
 function aFilaEvento_(f) { return f.map(function (c, i) { return (i === 2 || i === 3) ? (aFecha_(c) || String(c || '').trim()) : String(c == null ? '' : c).trim(); }); }
@@ -1189,9 +1189,27 @@ function leerEventos_(ss) {
     return abrirTabla_(hoja, COLS_EVENTOS, aFilaEvento_).vivas().filter(function (x) { return !x.v[9]; }).map(function (x) {
       const f = x.v;
       return { id: f[0], nombre: f[1], desde: f[2], hasta: f[3] || f[2], cuando: f[4] || 'DIA', texto: f[5],
-        van: listaIds_(f[6]).map(alias), noVan: listaIds_(f[7]).map(alias), lugar: f[10], hora: f[11] };
+        van: listaIds_(f[6]).map(alias), noVan: listaIds_(f[7]).map(alias), lugar: f[10], hora: f[11], turnos: leerTurnosEv_(f[12]) };
     }).sort(function (a, b) { return (a.desde + a.id).localeCompare(b.desde + b.id); });
   });
+}
+/* v4.33: en un evento de varios días, qué turnos de cada día se salta («2026-12-19 COMIDA CENA DORMIR; 2026-12-20 COMIDA») */
+function leerTurnosEv_(v) {
+  const t = String(v || '').trim();
+  if (!t) return null;
+  const r = {};
+  t.split(';').forEach(function (x) {
+    const p = x.trim().split(/\s+/);
+    if (esFecha_(p[0])) r[p[0]] = p.slice(1).filter(function (k) { return TURNOS.indexOf(k) !== -1; });
+  });
+  return r;
+}
+function textoTurnosEv_(turnos, desde, hasta) {
+  if (!turnos || typeof turnos !== 'object') return '';
+  const dias = Object.keys(turnos).filter(function (f) { return esFecha_(f) && f >= desde && f <= hasta; }).sort();
+  const partes = dias.map(function (f) { return [f].concat(TURNOS.filter(function (k) { return (turnos[f] || []).indexOf(k) !== -1; })); });
+  if (!partes.some(function (p) { return p.length > 1; })) throw new Error('Marca al menos una comida, cena o noche del evento.');
+  return partes.map(function (p) { return p.join(' '); }).join('; ');
 }
 function abrirEventos_(ss) { return abrirTabla_(hojaEventos_(ss), COLS_EVENTOS, aFilaEvento_); }
 function filaEvento_(tabla, id) {
@@ -1212,6 +1230,7 @@ function guardarEvento(ev, quien, vista) {
     const hasta = esFecha_(ev.hasta) ? ev.hasta : ev.desde;
     const lugar = limpiar_(ev.lugar, 100, 'El sitio', true);
     const hora = limpiar_(ev.hora, 40, 'La hora', true);
+    const turnos = hasta > ev.desde ? textoTurnosEv_(ev.turnos, ev.desde, hasta) : '';  // v4.33
     if (hasta < ev.desde) throw new Error('El último día no puede ser antes del primero.');
     if (diasEntre_(ev.desde, hasta) >= MAX_DIAS_EVENTO) throw new Error('Un evento dura un mes como mucho.');
     const cuando = CUANDO_EVENTO.indexOf(ev.cuando) !== -1 ? ev.cuando : 'DIA';
@@ -1220,11 +1239,11 @@ function guardarEvento(ev, quien, vista) {
     let registro;
     if (ev.id) {
       const x = filaEvento_(tabla, ev.id);
-      x.v[1] = nombre; x.v[2] = ev.desde; x.v[3] = hasta; x.v[4] = cuando; x.v[5] = texto; x.v[10] = lugar; x.v[11] = hora; x.cambiada = true;
+      x.v[1] = nombre; x.v[2] = ev.desde; x.v[3] = hasta; x.v[4] = cuando; x.v[5] = texto; x.v[10] = lugar; x.v[11] = hora; x.v[12] = turnos; x.cambiada = true;
       registro = 'Cambia el evento ' + nombre + ' (' + ev.desde + (hasta !== ev.desde ? ' a ' + hasta : '') + ')';
     } else {
       const id = 'E' + Utilities.formatDate(new Date(), TZ, 'yyyyMMddHHmmss') + Math.floor(Math.random() * 90 + 10);
-      tabla.nueva([id, nombre, ev.desde, hasta, cuando, texto, '', '', ahora_(), '', lugar, hora]);
+      tabla.nueva([id, nombre, ev.desde, hasta, cuando, texto, '', '', ahora_(), '', lugar, hora, turnos]);
       registro = 'Añade el evento ' + nombre + ' (' + ev.desde + (hasta !== ev.desde ? ' a ' + hasta : '') + ')';
     }
     tabla.guardar();

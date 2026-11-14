@@ -580,7 +580,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.32.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.33.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -789,8 +789,16 @@
   /* v4.31: un evento cubre la comida, la cena o la noche (todo el día: comida y cena, y las noches si dura más de un día) */
   function eventoEn(fecha, turno) {
     return (datos.eventos || []).filter(function (e) {
-      return e.desde <= fecha && fecha <= e.hasta && (e.cuando === turno || (e.cuando === 'DIA' && (turno !== 'DORMIR' || fecha < e.hasta)));
+      if (!(e.desde <= fecha && fecha <= e.hasta)) return false;
+      if (e.turnos) return (e.turnos[fecha] || []).indexOf(turno) !== -1;  // v4.33: los que se marcaron de cada día
+      return e.cuando === turno || (e.cuando === 'DIA' && (turno !== 'DORMIR' || fecha < e.hasta));
     })[0] || null;
+  }
+  /* v4.33: «comida y cena» de un día del evento */
+  function turnosEvTexto(e, fecha) {
+    if (!e.turnos) return CUANDO_EV[e.cuando] || '';
+    const n = { COMIDA: 'comida', CENA: 'cena', DORMIR: 'noche' };
+    return lista((e.turnos[fecha] || []).map(function (k) { return n[k]; }));
   }
   // v4.31: la abuela siempre va a los eventos: en ese turno no está en casa (como si se marcara «la abuela no está»)
   function fueraTurno(fecha, turno) { const nd = notaDia(fecha); return !!(nd && nd[CAMPO_FUERA[turno]]) || !!eventoEn(fecha, turno); }
@@ -878,7 +886,7 @@
     if (e.desde === e.hasta) t = diaMes(e.desde) + ' de ' + mes(e.desde);
     else if (diasEntre(e.desde, e.hasta) === 1) t = diaMes(e.desde) + (mes(e.desde) === mes(e.hasta) ? '' : ' de ' + mes(e.desde)) + ' y ' + diaMes(e.hasta) + ' de ' + mes(e.hasta);
     else t = 'del ' + diaMes(e.desde) + (mes(e.desde) === mes(e.hasta) ? '' : ' de ' + mes(e.desde)) + ' al ' + diaMes(e.hasta) + ' de ' + mes(e.hasta);
-    return t.charAt(0).toUpperCase() + t.slice(1) + ' · ' + (CUANDO_EV[e.cuando] || 'todo el día') + (e.hora ? ', ' + (/^\d/.test(e.hora) ? 'a las ' : '') + e.hora : '');
+    return t.charAt(0).toUpperCase() + t.slice(1) + (e.turnos ? '' : ' · ' + (CUANDO_EV[e.cuando] || 'todo el día')) + (e.hora ? ', ' + (/^\d/.test(e.hora) ? 'a las ' : '') + e.hora : '');
   }
   function diasEntre(a, b) { return Math.round((aUTC(b) - aUTC(a)) / 86400000); }
   function nombresDe(ids) { return ids.map(function (id) { return (quienEs(id) || {}).apodo || id; }); }
@@ -1105,7 +1113,7 @@
       (nd.eventoTexto ? '<p class="evento-texto">' + esc(nd.eventoTexto) + '</p>' : '') +
       '<button type="button" class="mini" data-compartir-evento="' + fecha + '">Compartir</button></div>';
     eventosDe(fecha).forEach(function (e) {  // v4.28: los de la pestaña Eventos, en cada día que duran
-      html += '<div class="evento-dia"><p class="evento-titulo">' + ICONO_EVENTO + '<b>' + esc(e.nombre) + '</b><span>' + esc(CUANDO_EV[e.cuando] || '') + '</span></p>' +
+      html += '<div class="evento-dia"><p class="evento-titulo">' + ICONO_EVENTO + '<b>' + esc(e.nombre) + '</b><span>' + esc(turnosEvTexto(e, fecha)) + '</span></p>' +
         (e.van.length ? '<p class="evento-texto">' + (e.van.length === 1 ? 'Va ' : 'Van ' + e.van.length + ': ') + esc(nombresDe(e.van).join(', ')) + '</p>' : '') +
         '<button type="button" class="mini" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></div>';
     });
@@ -1331,18 +1339,49 @@
       '<label class="campo" for="dlg-ev-hasta">Hasta<input id="dlg-ev-hasta" type="date" value="' + esc(e ? e.hasta : h) + '"></label></div>' +
       '<div class="dos dos-iguales"><label class="campo" for="dlg-ev-cuando">Cuándo<select id="dlg-ev-cuando">' + Object.keys(CUANDO_EV).map(function (k) { return '<option value="' + k + '"' + ((e ? e.cuando : 'DIA') === k ? ' selected' : '') + '>' + CUANDO_EV[k].charAt(0).toUpperCase() + CUANDO_EV[k].slice(1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-ev-hora">Hora<input id="dlg-ev-hora" type="text" maxlength="40" autocomplete="off" placeholder="Por ejemplo: 9:00" value="' + esc(e ? e.hora || '' : '') + '"></label></div>' +
+      '<div id="dlg-ev-dias" hidden></div>' +
       '<label class="campo" for="dlg-ev-lugar">Dónde<input id="dlg-ev-lugar" type="text" maxlength="100" autocomplete="off" placeholder="Por ejemplo: PortAventura, Salou" value="' + esc(e ? e.lugar || '' : '') + '"></label>' +
       '<label class="campo" for="dlg-ev-texto">Más información<textarea id="dlg-ev-texto" maxlength="500" rows="3" placeholder="Por ejemplo: salimos desde casa de la abuela; entradas compradas">' + esc(e ? e.texto : '') + '</textarea></label>' +
       '<p class="ayuda">Las comidas y cenas en casa de la abuela siguen como siempre: el evento solo se anuncia, y cada uno dice si va.</p></div>' +
       pie(e ? 'Guardar' : 'Añadir', e ? '<button type="button" class="accion quitar" id="dlg-ev-borrar">Borrar el evento</button>' : ''));
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
-    $('dlg-ev-desde').addEventListener('change', function () { if ($('dlg-ev-hasta').value < $('dlg-ev-desde').value) $('dlg-ev-hasta').value = $('dlg-ev-desde').value; });
+    // v4.33: de varios días, qué comida, cena o noche de cada día se salta (por defecto, como «todo el día»)
+    const leerDias = function () {
+      const r = {};
+      $dlg.querySelectorAll('#dlg-ev-dias input[data-dt]').forEach(function (c) { const p = c.dataset.dt.split('|'); r[p[0]] = r[p[0]] || []; if (c.checked) r[p[0]].push(p[1]); });
+      return r;
+    };
+    let marcados = e && e.turnos ? e.turnos : null;
+    const pintarDias = function () {
+      const d = $('dlg-ev-desde').value, h = $('dlg-ev-hasta').value;
+      const varios = d && h && h > d && diasEntre(d, h) < 31;
+      $('dlg-ev-dias').hidden = !varios;
+      $dlg.querySelector('label[for="dlg-ev-cuando"]').hidden = !!varios;
+      if (!varios) return;
+      if (!$('dlg-ev-dias').hidden && $dlg.querySelector('#dlg-ev-dias input')) marcados = leerDias();
+      const n = { COMIDA: 'Comida', CENA: 'Cena', DORMIR: 'Noche' };
+      let html = '<p class="et-fecha">Qué se salta en casa de la abuela</p><table class="tabla-turnos"><thead><tr><th scope="col">Día</th><th scope="col">Comida</th><th scope="col">Cena</th><th scope="col">Noche</th></tr></thead><tbody>';
+      for (let f = d; f <= h; f = sumar(f, 1)) {
+        html += '<tr><td>' + esc(diaMes(f)) + '</td>' + ['COMIDA', 'CENA', 'DORMIR'].map(function (k) {
+          const on = marcados && marcados[f] ? marcados[f].indexOf(k) !== -1 : (k !== 'DORMIR' || f < h);
+          return '<td><label><input type="checkbox" data-dt="' + f + '|' + k + '"' + (on ? ' checked' : '') + ' aria-label="' + n[k] + ' del ' + esc(diaMes(f)) + '"></label></td>';
+        }).join('') + '</tr>';
+      }
+      $('dlg-ev-dias').innerHTML = html + '</tbody></table><p class="ayuda">Lo marcado no pide a nadie en casa (la abuela va al evento). Lo demás, como siempre.</p>';
+    };
+    $('dlg-ev-desde').addEventListener('change', function () { if ($('dlg-ev-hasta').value < $('dlg-ev-desde').value) $('dlg-ev-hasta').value = $('dlg-ev-desde').value; pintarDias(); });
+    $('dlg-ev-hasta').addEventListener('change', pintarDias);
+    pintarDias();
     $('dlg-guardar').addEventListener('click', function () {
       const ev = { id: e ? e.id : '', nombre: $('dlg-ev-nombre').value.trim(), desde: $('dlg-ev-desde').value, hasta: $('dlg-ev-hasta').value || $('dlg-ev-desde').value,
         cuando: $('dlg-ev-cuando').value, hora: $('dlg-ev-hora').value.trim(), lugar: $('dlg-ev-lugar').value.trim(), texto: $('dlg-ev-texto').value.trim() };
       if (!ev.nombre) { errorDialogo('Pon qué es el evento.'); return; }
       if (!ev.desde) { errorDialogo('Elige el día en que empieza.'); return; }
       if (ev.hasta < ev.desde) { errorDialogo('El último día no puede ser antes del primero.'); return; }
+      if (ev.hasta > ev.desde) {  // v4.33
+        ev.turnos = leerDias(); ev.cuando = 'DIA';
+        if (!Object.keys(ev.turnos).some(function (f) { return ev.turnos[f].length; })) { errorDialogo('Marca al menos una comida, cena o noche.'); return; }
+      } else ev.turnos = null;
       conQuien(function () {
         enSegundoPlano('guardarEvento', [ev, yo, rango()], ev.nombre + (e ? ' guardado.' : ' añadido.'), function () {
           datos.eventos = datos.eventos || [];
