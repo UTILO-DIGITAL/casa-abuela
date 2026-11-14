@@ -31,7 +31,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.33.0
+ * Versión 4.40.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -98,6 +98,7 @@ function doPost(e) {
 const API_ = {
   getDatos: function (a) { return getDatos(a[0]); },
   guardarPersona: function (a) { return guardarPersona(a[0], a[1], a[2], a[3]); },
+  guardarPersonas: function (a) { return guardarPersonas(a[0], a[1], a[2]); },
   guardarDia: function (a) { return guardarDia(a[0], a[1], a[2], a[3]); },
   guardarEvento: function (a) { return guardarEvento(a[0], a[1], a[2]); },
   borrarEvento: function (a) { return borrarEvento(a[0], a[1], a[2]); },
@@ -634,6 +635,21 @@ function guardarFijos_(ss, p, lista, autor, registro) {
  * Lo de un día: nota familiar, nota para el servicio y si no hace falta nadie a la comida o a la cena (con motivo).
  * dia = { nota, notaServicio, sinComida, motivoComida, sinCena, motivoCena, sinDormir, motivoDormir, fueraComida, fueraCena, fueraDormir, motivoFuera }
  */
+/**
+ * v4.40: lo que rellena una familia de una vez (página «Rellenar lo que falta»): lista = [{ id, cambios }].
+ * Cada persona se guarda como en su ficha; si una falla, se dice quién y se para (las anteriores ya están guardadas).
+ */
+function guardarPersonas(lista, quien, vista) {
+  if (!Array.isArray(lista) || !lista.length) throw new Error('No hay nada que guardar.');
+  if (lista.length > 60) throw new Error('Son demasiadas personas de una vez.');
+  let d = null;
+  lista.forEach(function (x) {
+    try { d = guardarPersona(x.id, x.cambios || {}, quien, vista); }
+    catch (e) { throw new Error(String(x.id || '').replace(/^\([^)]*\) - /, '') + ': ' + e.message); }
+  });
+  return d;
+}
+
 function guardarDia(fecha, dia, quien, vista) {
   return conBloqueo_(function (ss) {
     const config = leerConfig_(ss);
