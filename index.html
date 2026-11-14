@@ -387,7 +387,7 @@
   .ev-estado { flex: none; font-weight: 800; }
   /* v4.16: aniversarios y árbol genealógico */
   .nota-dia.recuerdo { background: var(--color-linea); }
-  #per-arbol-btn.activos { background: var(--color-principal-oscuro); color: #fff; }
+  #per-arbol-btn { position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 40; border-radius: 999px; padding: 12px 20px; min-height: 48px; border: 0; background: var(--color-principal-oscuro); color: #fff; font-weight: 800; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); }  /* v4.55: flotante */
   .arbol-barra { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
   .arbol-barra span { flex: 1; font-family: var(--letra-titulos); font-weight: 600; font-size: 20px; }
   .arbol-barra button.icono { font-size: 22px; font-weight: 800; }
@@ -646,7 +646,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.54.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.55.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1755,8 +1755,14 @@
     sangre: sangreDe,
     come: comeDe,
   };
+  /* v4.55: «toda la familia» (sin el servicio ni Otros) es una opción más del filtro de familia */
+  function enFiltro(k, p, v) { return k === 'familia' && v === '*' ? !esServicio(p) && p.familia !== 'Otros' : VALOR[k](p) === v; }
+  function nombreGrande() {
+    const ab = (datos.editores || []).filter(function (e) { return e.jerarquia === 'Abuelos'; }).sort(function (a, b) { return (a.sexo === 'Hombre' ? 0 : 1) - (b.sexo === 'Hombre' ? 0 : 1); });
+    return ab.map(function (e) { return e.apellido; }).filter(Boolean).join(' ') || 'de la abuela';
+  }
   function pasaFiltros(p, salvo) {
-    return Object.keys(filtros).every(function (k) { return k === salvo || !filtros[k] || VALOR[k](p) === filtros[k]; });
+    return Object.keys(filtros).every(function (k) { return k === salvo || !filtros[k] || enFiltro(k, p, filtros[k]); });
   }
   function falta(p) {
     const f = [];
@@ -1779,7 +1785,7 @@
     pintarFiltros();
     // v4.16: el árbol genealógico, en lugar de la lista
     $('per-arbol-btn').setAttribute('aria-pressed', String(vistaArbol));
-    $('per-arbol-btn').classList.toggle('activos', vistaArbol);
+    $('per-arbol-btn').textContent = vistaArbol ? '☰ Lista' : '🌳 Árbol';  // v4.55: botón flotante
     if (vistaArbol) {
       $('per-filtros').hidden = true; $('per-resultado').hidden = true; $('per-abuela').innerHTML = '';
       pintarArbol();
@@ -1845,7 +1851,7 @@
     orden.generacion.sort(function (a, b) { return ordenGen.indexOf(a) - ordenGen.indexOf(b); });
     const grupos = [
       modoAbuela() ? null : ['falta', 'Mostrar', [['si', 'Les falta algo']]],  // v4.37: en el modo sencillo no se piden datos
-      ['familia', 'Familia', orden.familia.map(function (f) { return [f, nombreFamilia(f).replace(/^Familia /, '')]; })],
+      ['familia', 'Familia', [['*', 'Toda la familia ' + nombreGrande()]].concat(orden.familia.map(function (f) { return [f, nombreFamilia(f).replace(/^Familia /, '')]; }))],
       ['generacion', 'Generación', orden.generacion.map(function (g) { return [g, g.charAt(0).toUpperCase() + g.slice(1)]; })],
       ['sangre', 'Sangre', [['sangre', 'De sangre'], ['pareja', 'Entraron por pareja']]],
       ['come', 'Qué come', [['entero', 'Entero'], ['mitad', 'La mitad'], ['nada', 'No come'], ['sin', 'Sin anotar']]],
@@ -1854,7 +1860,7 @@
       const k = g[0];
       const ops = g[2].map(function (o) {
         // El contador cuenta con los demás filtros puestos
-        const n = datos.personas.filter(function (p) { return VALOR[k](p) === o[0] && pasaFiltros(p, k); }).length;
+        const n = datos.personas.filter(function (p) { return enFiltro(k, p, o[0]) && pasaFiltros(p, k); }).length;
         if (!n && filtros[k] !== o[0]) return '';
         return '<button type="button" class="filtro" data-fk="' + k + '" data-fv="' + esc(o[0]) + '" aria-pressed="' + (filtros[k] === o[0]) + '">' + esc(o[1]) + '<span>' + n + '</span></button>';
       }).join('');
@@ -1867,7 +1873,7 @@
     cargar();
   });
   $('per-filtros-btn').addEventListener('click', function () { panelFiltros = !panelFiltros; vistaArbol = false; pintarPersonas(); });
-  $('per-arbol-btn').addEventListener('click', function () { vistaArbol = !vistaArbol; panelFiltros = false; pintarPersonas(); });
+  $('per-arbol-btn').addEventListener('click', function () { vistaArbol = !vistaArbol; panelFiltros = false; firmaArbol = ''; pintarPersonas(); window.scrollTo(0, document.getElementById('vista-personas').offsetTop - 10); });
   $('per-lista').addEventListener('click', function (e) {
     const z = e.target.closest('[data-zoom]');
     if (!z) return;
@@ -1880,7 +1886,14 @@
   /* v4.16: el árbol dibujado, de los abuelos hacia abajo: cada pareja en una caja y sus hijos debajo, unidos con líneas.
      Se mueve deslizando y se acerca o aleja con los botones (en esta web, el zoom con los dedos está quitado). */
   let vistaArbol = false, arbolZoom = 0.8;
+  let firmaArbol = '';
   function pintarArbol(centroX) {
+    // v4.55: al actualizarse sola la web (cada 30 s), si no ha cambiado nada no se redibuja; y si cambia, se queda donde estabas
+    const viejo = document.querySelector('.arbol-lienzo');
+    const firma = JSON.stringify([datos.personas, datos.editores, arbolZoom, yo]);
+    if (viejo && centroX === undefined && firma === firmaArbol) return;
+    firmaArbol = firma;
+    const sitio = viejo && centroX === undefined ? { x: viejo.scrollLeft, y: viejo.scrollTop, pag: window.scrollY } : null;
     const todos = (datos.editores || []).concat(datos.personas);
     const porId = {};
     todos.forEach(function (p) { porId[p.id] = p; });
@@ -1989,6 +2002,7 @@
       '<g class="arbol-lineas">' + lineas + '</g>' + cajas + '</svg>' + etiquetas + '</div></div></div>' +
       '<p class="ayuda">Desliza para moverte y toca a alguien para ver su ficha. El corazón, cuándo empezaron a salir; el anillo, la boda; †, fallecido.</p>';
     const lienzo = document.querySelector('.arbol-lienzo');
+    if (sitio) { lienzo.scrollLeft = sitio.x; lienzo.scrollTop = sitio.y; window.scrollTo(0, sitio.pag); return; }
     lienzo.scrollLeft = (centroX !== undefined ? centroX : arbol.x) * arbolZoom - lienzo.clientWidth / 2;
   }
 
