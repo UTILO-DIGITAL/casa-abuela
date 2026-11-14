@@ -333,7 +333,12 @@
   .rf-txt small { font-size: 13px; color: var(--color-texto-suave); }
   .rf-txt .rf-pend { color: var(--color-accion); font-weight: 800; }
   .rf-txt .rf-ok { color: var(--color-principal-oscuro); font-weight: 800; }
+  .rf-sec { margin: 6px 0 0; font-size: 16px; padding-top: 10px; border-top: 1px solid var(--color-linea); }
+  .rf-sec:first-child { border-top: 0; padding-top: 0; }
+  .rf-todo { margin: 0; font-weight: 800; color: var(--color-principal-oscuro); }
   .rf-flecha { font-size: 26px; line-height: 1; color: var(--color-texto-suave); }
+  .botones-grandes { display: grid; gap: 10px; margin-top: 8px; }
+  .botones-grandes button { min-height: 52px; font-size: 17px; }
   .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
   .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
   .turno-evento svg { width: 16px; height: 16px; flex: none; color: var(--color-accion); }
@@ -460,6 +465,8 @@
   .nucleo-card .nucleo-card { background: var(--color-fondo); padding: 10px 12px; }
   .nucleo-card .nucleo-card .nucleo-card { background: #fff; }
   .nucleo-cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0 0 8px; }
+  .nucleo-cab .bebe-mas { margin-left: auto; align-self: center; }
+  .nucleo-cab.solo-bebe { justify-content: flex-end; margin: -4px 0 4px; }
   .nucleo-cab h4 { margin: 0; font-family: var(--letra-titulos); font-weight: 600; font-size: 18px; color: var(--color-principal-oscuro); }
   .estado-pareja { padding: 1px 8px; border-radius: 999px; background: var(--color-principal-claro); font-size: 13px; font-weight: 800; color: var(--color-principal-oscuro); }
   .miembros { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -627,7 +634,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.44.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.45.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1332,65 +1339,109 @@
         return '<li' + sangria + '><button type="button" class="rf-fila' + (f.length ? '' : ' hecha') + '" data-rf-persona="' + esc(p.id) + '">' + txt + '<span class="rf-flecha" aria-hidden="true">›</span></button></li>';
       }).join('') + '</ul>';
   }
+  /* v4.45: arriba lo que falta; debajo, lo que ya tenemos de esa persona, para corregirlo si algo está mal */
   function abrirRellenarPersona(id) {
     const p = persona(id);
     if (!p) return;
     const f = rfFalta(p), pa = parejaDe(p);
-    const fecha = function (pre, titulo, v) { return '<fieldset><legend>' + titulo + '</legend>' + campoFechaPareja(pre, '', v || '', 0) + '</fieldset>'; };
-    let h = '';
-    if (f.indexOf('cumple') !== -1) h += fecha('rfc', 'Cumpleaños', p.cumple) ;
-    if (f.indexOf('sexo') !== -1 || f.indexOf('apellido') !== -1) h += '<div class="dos dos-iguales">' +
-      (f.indexOf('sexo') !== -1 ? '<label class="campo" for="dlg-rfsexo">Es<select id="dlg-rfsexo"><option value="">Sin decir</option><option>Hombre</option><option>Mujer</option></select></label>' : '') +
-      (f.indexOf('apellido') !== -1 ? '<label class="campo" for="dlg-rfap">Apellido<input id="dlg-rfap" type="text" maxlength="40" autocomplete="off"></label>' : '') + '</div>';
-    if (f.indexOf('menu') !== -1) h += '<div class="dos dos-iguales"><label class="campo" for="dlg-rfmenu">Menú<select id="dlg-rfmenu"><option value="">Sin decir</option>' + opcionesMenu('') + '</select></label>' +
-      '<label class="campo" for="dlg-rfal">Alergias o lo que no come<input id="dlg-rfal" type="text" maxlength="100" autocomplete="off" placeholder="Nada" value="' + esc(p.alergias || '') + '"></label></div>';
-    if (f.indexOf('novios') !== -1) h += fecha('rfn', 'Inicio del noviazgo con ' + esc(pa.apodo), p.novios);
-    if (f.indexOf('boda') !== -1) h += fecha('rfb', 'Boda con ' + esc(pa.apodo), p.boda);
-    if (f.indexOf('santo') !== -1) h += fecha('rfs', 'Santo <small class="leyenda-suave">· el día y el mes</small>', '');
-    h += '<div id="dlg-rfotras"></div><button type="button" class="enlace" id="dlg-rfmas">+ Añadir otra fecha (bautizo, comunión…)</button>';
+    const falta = function (k) { return f.indexOf(k) !== -1; };
+    const fecha = function (pre, titulo, v, futuro) { return '<fieldset><legend>' + titulo + '</legend>' + campoFechaPareja(pre, '', v || '', futuro || 0) + '</fieldset>'; };
+    const campo = {
+      cumple: function () { return fecha('rfc', 'Cumpleaños', p.cumple, 1); },
+      nombre: function () { return '<label class="campo" for="dlg-rfnom">Nombre<input id="dlg-rfnom" type="text" maxlength="40" autocomplete="off" value="' + esc(p.nombre || '') + '"></label>'; },
+      apellido: function () { return '<label class="campo" for="dlg-rfap">Apellido<input id="dlg-rfap" type="text" maxlength="40" autocomplete="off" value="' + esc(p.apellido || '') + '"></label>'; },
+      sexo: function () { return '<label class="campo" for="dlg-rfsexo">Es<select id="dlg-rfsexo"><option value="">Sin decir</option>' + ['Hombre', 'Mujer'].map(function (v) { return '<option' + (p.sexo === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') + '</select></label>'; },
+      menu: function () { return '<div class="dos dos-iguales"><label class="campo" for="dlg-rfmenu">Menú<select id="dlg-rfmenu"><option value="">Sin decir</option>' + opcionesMenu(p.menu || '') + '</select></label>' +
+        '<label class="campo" for="dlg-rfal">Alergias o lo que no come<input id="dlg-rfal" type="text" maxlength="100" autocomplete="off" placeholder="Nada" value="' + esc(p.alergias || '') + '"></label></div>'; },
+      novios: function () { return fecha('rfn', 'Inicio del noviazgo con ' + esc(pa.apodo), p.novios); },
+      boda: function () { return fecha('rfb', 'Boda con ' + esc(pa.apodo), p.boda, 10); },
+      santo: function () { return fecha('rfs', 'Santo <small class="leyenda-suave">· el día y el mes</small>', ''); },
+    };
+    // lo que falta, arriba
+    let arriba = '';
+    ['cumple', 'sexo', 'apellido', 'menu', 'novios', 'boda', 'santo'].forEach(function (k) { if (falta(k)) arriba += campo[k](); });
+    // lo que ya tenemos, abajo (para corregir)
+    let abajo = '';
+    if (!falta('cumple') && p.cumple) abajo += campo.cumple();
+    abajo += '<div class="dos dos-iguales">' + campo.nombre() + (falta('apellido') ? '' : campo.apellido()) + '</div>';
+    if (!falta('sexo')) abajo += campo.sexo();
+    if (!falta('menu')) abajo += campo.menu();
+    if (pa && !falta('novios') && p.novios) abajo += campo.novios();
+    if (pa && !falta('boda') && p.boda) abajo += campo.boda();
+    const filaFecha = function (pre, x) {
+      return '<fieldset class="rf-otra" data-rfe="' + pre + '"><legend>' + esc(x.que || 'Otra fecha') + '</legend><div class="dos"><label class="campo" for="dlg-' + pre + 'que">Qué es<input id="dlg-' + pre + 'que" type="text" maxlength="40" autocomplete="off" placeholder="Por ejemplo: bautizo" value="' + esc(x.que || '') + '"></label>' +
+        '<button type="button" class="enlace" data-rf-quitar="' + pre + '">Quitar</button></div>' + campoFechaPareja(pre, '', x.fecha || '', 0) + '</fieldset>';
+    };
+    abajo += (p.fechas || []).map(function (x, i) { return filaFecha('rfe' + i, x); }).join('');
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2><div><small>' + esc([[p.nombre, p.apellido].filter(Boolean).join(' '), rfContexto(p)].filter(Boolean).join(' · ')) + '</small></div></div>' +
-      '<div class="dlg-cuerpo">' + (f.length ? '<p class="ayuda">Rellena lo que sepas; lo que no, déjalo en blanco.' + (f.indexOf('novios') !== -1 || f.indexOf('boda') !== -1 ? ' Las fechas de la pareja valen para los dos.' : '') + '</p>' : '<p class="ayuda">Ya está todo. Si quieres, añade una fecha más.</p>') + h + '</div>' + pie('Guardar'));
+      '<div class="dlg-cuerpo">' +
+      (arriba ? '<h3 class="rf-sec">Lo que falta</h3><p class="ayuda">Rellena lo que sepas; lo que no, déjalo en blanco.' + (falta('novios') || falta('boda') ? ' Las fechas de la pareja valen para los dos.' : '') + '</p>' + arriba : '<p class="rf-todo">✓ No le falta nada.</p>') +
+      '<h3 class="rf-sec">Lo que ya tenemos de ' + esc(p.apodo) + '</h3><p class="ayuda">Si algo no está bien, corrígelo aquí.</p>' + abajo +
+      '<div id="dlg-rfotras"></div><button type="button" class="enlace" id="dlg-rfmas">+ Añadir otra fecha (bautizo, comunión…)</button></div>' + pie('Guardar'));
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     let n = 0;
-    $('dlg-rfmas').addEventListener('click', function () {
-      const i = n++;
-      $('dlg-rfotras').insertAdjacentHTML('beforeend', '<fieldset class="rf-otra" data-rfo="' + i + '"><legend>Otra fecha</legend><label class="campo" for="dlg-rfo' + i + 'que">Qué es<input id="dlg-rfo' + i + 'que" type="text" maxlength="40" autocomplete="off" placeholder="Por ejemplo: santo o bautizo"></label>' +
-        campoFechaPareja('rfo' + i, '', '', 0) + '</fieldset>');
-    });
+    $('dlg-rfmas').addEventListener('click', function () { $('dlg-rfotras').insertAdjacentHTML('beforeend', filaFecha('rfo' + (n++), {})); });
+    $dlg.querySelector('.dlg-cuerpo').addEventListener('click', function (e) { const b = e.target.closest('[data-rf-quitar]'); if (b) { const fs = $dlg.querySelector('[data-rfe="' + b.dataset.rfQuitar + '"]'); if (fs) fs.remove(); } });
     $('dlg-guardar').addEventListener('click', function () {
       const cambios = {};
-      if ($('dlg-rfcdia')) { const r = leerFecha('rfc', 'el cumpleaños', 1900); if (r.error) { errorDialogo(r.error); return; } if (r.valor && r.valor !== (p.cumple || '')) cambios.cumple = r.valor; }
-      if ($('dlg-rfsexo') && $('dlg-rfsexo').value) cambios.sexo = $('dlg-rfsexo').value;
-      if ($('dlg-rfap') && $('dlg-rfap').value.trim()) cambios.apellido = $('dlg-rfap').value.trim();
-      if ($('dlg-rfmenu') && $('dlg-rfmenu').value) cambios.menu = $('dlg-rfmenu').value;
-      if ($('dlg-rfal') && $('dlg-rfal').value.trim() !== (p.alergias || '')) cambios.alergias = $('dlg-rfal').value.trim();
-      if ($('dlg-rfndia')) { const r = leerFechaPareja('rfn', 'el inicio del noviazgo', 0); if (r.error) { errorDialogo(r.error); return; } if (r.valor && r.valor !== (p.novios || '')) cambios.novios = r.valor; }
-      if ($('dlg-rfbdia')) { const r = leerFechaPareja('rfb', 'la boda', 0); if (r.error) { errorDialogo(r.error); return; } if (r.valor && r.valor !== (p.boda || '')) cambios.boda = r.valor; }
-      const otras = [];
-      if ($('dlg-rfsdia')) { const r = leerFechaPareja('rfs', 'el santo', 0); if (r.error) { errorDialogo(r.error); return; } if (r.valor) otras.push({ que: 'Santo', fecha: r.valor }); }
-      const filas = Array.from($dlg.querySelectorAll('[data-rfo]'));
+      const texto = function (idc, k) { const el = $(idc); if (el && el.value.trim() !== (p[k] || '')) cambios[k] = el.value.trim(); };
+      if ($('dlg-rfcdia')) { const r = leerFecha('rfc', 'el cumpleaños', 1900, 1); if (r.error) { errorDialogo(r.error); return; } if (r.valor !== (p.cumple || '')) cambios.cumple = r.valor; }
+      texto('dlg-rfnom', 'nombre'); texto('dlg-rfap', 'apellido'); texto('dlg-rfal', 'alergias');
+      if ($('dlg-rfsexo') && $('dlg-rfsexo').value !== (p.sexo || '')) cambios.sexo = $('dlg-rfsexo').value;
+      if ($('dlg-rfmenu') && $('dlg-rfmenu').value && $('dlg-rfmenu').value !== (p.menu || '')) cambios.menu = $('dlg-rfmenu').value;
+      if ($('dlg-rfndia')) { const r = leerFechaPareja('rfn', 'el inicio del noviazgo', 0); if (r.error) { errorDialogo(r.error); return; } if (r.valor !== (p.novios || '')) cambios.novios = r.valor; }
+      if ($('dlg-rfbdia')) { const r = leerFechaPareja('rfb', 'la boda', 10); if (r.error) { errorDialogo(r.error); return; } if (r.valor !== (p.boda || '')) cambios.boda = r.valor; }
+      // las otras fechas: las que había (como queden), el santo nuevo y las nuevas
+      const fechas = [];
+      if ($('dlg-rfsdia')) { const r = leerFechaPareja('rfs', 'el santo', 0); if (r.error) { errorDialogo(r.error); return; } if (r.valor) fechas.push({ que: 'Santo', fecha: r.valor }); }
+      const filas = Array.from($dlg.querySelectorAll('[data-rfe]'));
       for (let o = 0; o < filas.length; o++) {
-        const i = filas[o].dataset.rfo, que = $('dlg-rfo' + i + 'que').value.trim();
-        const r = leerFechaPareja('rfo' + i, que ? '«' + que + '»' : 'esa fecha', 0);
+        const pre = filas[o].dataset.rfe, que = $('dlg-' + pre + 'que').value.trim();
+        const r = leerFechaPareja(pre, que ? '«' + que + '»' : 'esa fecha', 0);
         if (r.error) { errorDialogo(r.error); return; }
         if (!que && !r.valor) continue;
         if (!que || !r.valor) { errorDialogo('A cada fecha ponle qué es y la fecha.'); return; }
-        otras.push({ que: que.replace(/[;:]/g, ' ').replace(/\s+/g, ' ').trim(), fecha: r.valor });
+        fechas.push({ que: que.replace(/[;:]/g, ' ').replace(/\s+/g, ' ').trim(), fecha: r.valor });
       }
-      if (otras.length) cambios.fechas = (p.fechas || []).concat(otras);
-      if (!Object.keys(cambios).length) { errorDialogo('No has rellenado nada. Si no lo sabes, ciérralo sin guardar.'); return; }
+      if (JSON.stringify(fechas) !== JSON.stringify(p.fechas || [])) cambios.fechas = fechas;
+      if (!Object.keys(cambios).length) { errorDialogo('No has cambiado nada. Si está todo bien, ciérralo.'); return; }
       conQuien(function () {
         enSegundoPlano('guardarPersona', [id, cambios, yo, rango()], '¡Gracias! Guardado lo de ' + p.apodo + '.', function () { aplicarPersonaLocal(id, cambios); rfSucio = true; });
       });
     });
   }
   document.addEventListener('click', function (ev) {
+    const bb = ev.target.closest('[data-bebe]');
+    if (bb) { ev.stopPropagation(); abrirBebe(bb.dataset.bebe); return; }  // v4.45
     const per = ev.target.closest('[data-rf-persona]');
     if (per) { abrirRellenarPersona(per.dataset.rfPersona); return; }
     const b = ev.target.closest('[data-rf-fam]');
     if (!b) return;
     rfFamilia = b.dataset.rfFam; rfSucio = false; pintarRellenar(); window.scrollTo(0, 0);
   });
+
+  /* v4.45: añadir un bebé: primero, si ya ha nacido o está en camino */
+  function abrirBebe(id) {
+    const m = persona(id);
+    if (!m) return;
+    const pa = parejaDe(m), de = m.apodo + (pa ? ' y ' + pa.apodo : '');
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Un bebé de ' + esc(de) + '</h2></div>' +
+      '<div class="dlg-cuerpo"><p>¿Ya ha nacido o está en camino?</p><div class="botones-grandes">' +
+      '<button type="button" class="principal" data-bebe-ya="1">Ya ha nacido</button>' +
+      '<button type="button" class="accion" data-bebe-ya="0">Está en camino</button></div></div>' +
+      '<div class="dlg-pie"><div class="botones"><button type="button" class="accion quitar" id="dlg-cerrar">Cancelar</button></div></div>');
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $dlg.querySelectorAll('[data-bebe-ya]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        const nacido = b.dataset.bebeYa === '1';
+        conQuien(function () {
+          abrirNuevaPersona(nacido ? '' : 'Bebé de ' + m.apodo, { hijoDe: m.id, familia: m.familia, jerarquia: GEN_HIJOS[m.jerarquia] || '', de: m.apodo, menu: 'Nada',
+            titulo: nacido ? 'Un bebé de ' + de : 'Un bebé en camino de ' + de,
+            ayuda: nacido ? 'Pon su nombre y, en el cumpleaños, el día que nació.' : 'De momento, un nombre provisional; en el cumpleaños, <b>cuándo nacerá</b> (aunque sea el mes). Cuando nazca, se cambia por el nombre y la fecha de verdad.' });
+        });
+      });
+    });
+  }
 
   /* ---------- v4.28: Pestaña Eventos ---------- */
   /* v4.28: quién va, por familias: los de la familia (sin el servicio, ni quien ha fallecido o está en camino) */
@@ -1958,7 +2009,10 @@
   }
   function tarjeta(titulo, estado, cabezas, hijos, dentro) {
     const fp = cabezas.length === 2 && parejaDe(cabezas[0]) === cabezas[1] ? fechasPareja(cabezas[0]) : '';  // v4.21
-    return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + anillo(estado) + '</div>' : '') +
+    // v4.45: añadir un bebé a este núcleo (al de sangre de la pareja)
+    const madre = cabezas.filter(function (p) { return !esDeFuera(p) && !esFallecido(p); })[0] || cabezas.filter(function (p) { return !esFallecido(p); })[0];
+    const bebe = madre && !modoAbuela() && GEN_HIJOS[madre.jerarquia] ? '<button type="button" class="mini bebe-mas" data-bebe="' + esc(madre.id) + '" aria-label="Añadir un bebé de ' + esc(madre.apodo) + '" title="Añadir un bebé">👶 +</button>' : '';
+    return '<div class="nucleo-card">' + (titulo ? '<div class="nucleo-cab"><h4>' + esc(titulo) + '</h4>' + anillo(estado) + bebe + '</div>' : (bebe ? '<div class="nucleo-cab solo-bebe">' + bebe + '</div>' : '')) +
       (fp ? '<p class="fechas-pareja' + (cabezas[0].boda && bodaQueViene(cabezas[0].boda) ? ' futuro' : '') + '">' + esc(fp) + '</p>' : '') +
       (cabezas.length ? '<ul class="per-filas">' + cabezas.map(filaCaja).join('') + '</ul>' : '') +
       // v4.13: los hijos (sueltos o con su caja), juntos en un subgrupo un poco metido hacia dentro
@@ -2319,7 +2373,9 @@
     if (pre) {
       const pon = function (id, v) { const el = $(id); if (el && v && Array.from(el.options).some(function (o) { return o.value === v; })) { el.value = v; el.dispatchEvent(new Event('change')); } };
       pon('dlg-familia', pre.familia); pon('dlg-jerarquia', pre.jerarquia); pon('dlg-hijode', pre.hijoDe);
-      $('dlg-titulo').textContent = 'Añadir hijo o hija de ' + pre.de;
+      $('dlg-titulo').textContent = pre.titulo || 'Añadir hijo o hija de ' + pre.de;
+      if (pre.menu) { const m = Array.from($('dlg-menu').options).filter(function (o) { return etiquetaMenu(o.value) === pre.menu; })[0]; if (m) $('dlg-menu').value = m.value; }  // v4.45
+      if (pre.ayuda) $dlg.querySelector('.dlg-cuerpo').insertAdjacentHTML('afterbegin', '<p class="ayuda aviso-bebe">' + pre.ayuda + '</p>');
       $('dlg-apodo').focus();
     }
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
