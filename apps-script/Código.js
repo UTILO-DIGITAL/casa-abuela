@@ -30,7 +30,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.23.0
+ * Versión 4.24.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -467,7 +467,7 @@ function guardarPersona(personaId, cambios, quien, vista) {
 
     if (cambios.cumple !== undefined) {
       const cumple = aCumple_(cambios.cumple);
-      if (String(cambios.cumple || '').trim() && !cumple) throw new Error('El cumpleaños tiene que ser un día y un mes que existan (y, si se pone, un año de 1900 a hoy), o el mes y el año, o solo el año.');
+      if (String(cambios.cumple || '').trim() && !cumple) throw new Error('El cumpleaños tiene que ser un día y un mes que existan (y, si se pone, un año de 1900 a hoy, o el que viene si está en camino), o el mes y el año, o solo el año.');
       escribirEnPersonas_(ss, personaId, COL_CUMPLE, cumple, true);
       if (cumple !== p.cumple) registro.push('Cumpleaños de ' + p.apodo + ': ' + (cumple || 'borrado'));
     }
@@ -1152,7 +1152,7 @@ function aCumple_(v) {
   if (v instanceof Date) return Utilities.formatDate(v, TZ, 'dd/MM');
   const t = String(v || '').trim();
   const m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})$/);
-  if (!m) return aFechaParcial_(t, 1900);  // con el año (v4.13), o solo mes y año, o solo el año (v4.16)
+  if (!m) return aFechaParcial_(t, 1900, 1);  // con el año (v4.13), o solo mes y año, o solo el año (v4.16); v4.24: o la fecha prevista de un bebé en camino
   const d = Number(m[1]), mes = Number(m[2]);
   const max = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1];
   if (!max || d < 1 || d > max) return '';

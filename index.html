@@ -390,6 +390,7 @@
   .marca-politico { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border: 2px solid var(--color-principal); border-radius: 50%; vertical-align: 1px; flex: none; }
   .fp-falta-corto { flex-basis: 100%; font-size: 14px; font-weight: 800; color: var(--color-error); }
   .hijos-grupo { margin: 10px 0 0 6px; padding-left: 12px; border-left: 2px solid var(--color-linea); }
+  .leyenda-suave { font-weight: 400; color: var(--color-texto-suave); }
   .et-fecha { margin: 8px 0 0; font-weight: 700; }
   .et-hijos { margin: 0; font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
   .hijos-grupo > .nucleo-card:first-of-type { margin-top: 6px; }
@@ -550,7 +551,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.23.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.24.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -779,7 +780,7 @@
   }
   function textoCumples(fecha) {
     // v4.13: con el año, la edad que cumple ese día
-    const out = cumplesDe(fecha).map(function (p) {
+    const out = cumplesDe(fecha).filter(function (p) { return Number((p.cumple || '').slice(6, 10)) < Number(fecha.slice(0, 4)) || !Number((p.cumple || '').slice(6, 10)); }).map(function (p) {  // v4.24: el día previsto de un bebé en camino no es un cumple
       const ano = Number((p.cumple || '').slice(6, 10));
       const n = ano ? Number(fecha.slice(0, 4)) - ano : 0;
       if (esFallecido(p)) return 'Cumple de ' + p.apodo + (n > 0 ? ': habría cumplido ' + n + ' años' : '');  // v4.16
@@ -820,7 +821,8 @@
     const verbo = p.boda && bodaQueViene(p.boda) ? 'se casan ' : 'se casaron ';  // v4.23
     return [p.novios ? 'Empezaron a salir ' + cuando(p.novios) : '', p.boda ? (p.novios ? verbo : verbo.charAt(0).toUpperCase() + verbo.slice(1)) + cuando(p.boda) : ''].filter(Boolean).join(' · ');
   }
-  /* v4.23: ¿la boda aún no ha llegado? (con lo que se sepa: año, mes y día) */
+  /* v4.23: ¿la fecha aún no ha llegado? (con lo que se sepa: año, mes y día). La boda y, v4.24, el bebé en camino */
+  function enCamino(p) { const c = p.cumple || ''; return c.length >= 10 && Number(c.slice(6, 10)) > 0 && !esFallecido(p) && bodaQueViene(c); }
   function bodaQueViene(c) {
     const h = hoy().replace(/-/g, ''), a = c.slice(6, 10), m = c.slice(3, 5), d = c.slice(0, 2);
     if (a !== h.slice(0, 4)) return a > h.slice(0, 4);
@@ -1141,7 +1143,7 @@
   }
   function falta(p) {
     const f = [];
-    if (esFallecido(p)) return f;  // v4.16
+    if (esFallecido(p) || enCamino(p)) return f;  // v4.16; v4.24: ni al que está en camino
     if (apodoRepetido(p.apodo, p.id)) f.push('un apodo que no se repita');  // v4.11
     // v4.12: de la familia (no del Servicio ni de Otros), también su nombre completo y su sitio en el árbol
     const deFamilia = !esServicio(p) && p.familia !== 'Otros';
@@ -1296,7 +1298,7 @@
         if (!f) return n ? '† ' + n : '†';  // v4.20: sin saber cuándo
         return '† ' + (n && n !== f ? n + ' – ' + f : f);
       }
-      return edadTexto(p);
+      return enCamino(p) ? 'en camino' : edadTexto(p);  // v4.24
     };
     // Medidas ajustadas al contenido: el ancho, por lo largo del nombre; el alto, con o sin la línea de la edad
     const PAD = 12, GX = 14, GY = 44;
@@ -1425,7 +1427,7 @@
   }
   function filaCaja(p) {
     const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
-    const come = esFallecido(p) ? vidaTexto(p) : [edadTexto(p), comeTexto(p)].filter(Boolean).join(' · ');
+    const come = esFallecido(p) ? vidaTexto(p) : enCamino(p) ? 'en camino · nace ' + (Number(p.cumple.slice(0, 2)) ? 'el ' : 'en ') + fechaTexto(p.cumple) : [edadTexto(p), comeTexto(p)].filter(Boolean).join(' · ');  // v4.24
     // v4.12.5: un circulito a quien entró en la familia por su pareja (los «+1»: no son de sangre)
     const deFuera = esDeFuera(p) && !esServicio(p) && p.familia !== 'Otros';
     return '<li><button type="button" class="fila-persona fila-caja' + (p.id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' +
@@ -1698,7 +1700,7 @@
 
   /* v4.13: el año del cumpleaños, opcional (para saber cuántos cumple) */
   function campoAno(v) {
-    return '<label class="campo" for="dlg-cano">Año<input id="dlg-cano" type="number" inputmode="numeric" min="1900" max="' + hoy().slice(0, 4) + '" placeholder="aaaa" value="' + esc(v || '') + '"></label>';
+    return '<label class="campo" for="dlg-cano">Año<input id="dlg-cano" type="number" inputmode="numeric" min="1900" max="' + (Number(hoy().slice(0, 4)) + 1) + '" placeholder="aaaa" value="' + esc(v || '') + '"></label>';
   }
   /* v4.16: una fecha como se sepa: día y mes (con o sin año), mes y año, o solo el año */
   function leerFecha(pre, que, desde, futuro) {  // v4.23: futuro = años por delante de hoy (la boda)
@@ -1710,7 +1712,7 @@
     const dd = ('0' + (d || 0)).slice(-2), mm = ('0' + (m || 0)).slice(-2);
     return { valor: d && !a ? dd + '/' + mm : (a ? dd + '/' + mm + '/' + a : '') };
   }
-  function leerCumple() { const r = leerFecha('c', 'el cumpleaños', 1900); return r.error ? r : { cumple: r.valor }; }
+  function leerCumple() { const r = leerFecha('c', 'el cumpleaños', 1900, 1); return r.error ? r : { cumple: r.valor }; }  // v4.24: o la fecha prevista
   /* v4.21: una fecha de la pareja (día, mes y año, lo que se sepa) */
   function campoFechaPareja(pre, titulo, v, futuro) {
     const fd = v ? Number(v.slice(0, 2)) : 0, fm = v ? Number(v.slice(3, 5)) : 0;
@@ -1752,7 +1754,7 @@
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Añadir persona</h2></div><div class="dlg-cuerpo">' + camposFicha(null) + camposNucleo(null) +
       '<fieldset><legend>Para la cocina</legend><label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + opcionesMenu((datos.menus || [])[0]) + '</select></label>' +
       '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna"></label></fieldset>' +
-      '<fieldset class="solo-no-otros"><legend>Cumpleaños</legend><div class="tres"><label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
+      '<fieldset class="solo-no-otros"><legend>Cumpleaños <small class="leyenda-suave">· si está en camino, cuándo nacerá</small></legend><div class="tres"><label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
       Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' + MESES.map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select></label>' + campoAno('') + '</div></fieldset>' + campoFallecio('') + '</div>' +
       pie('Añadir a la lista'));
@@ -1826,7 +1828,7 @@
   }
   function montarBuscador(opciones) {
     elegidoBuscador = opciones.seleccion || '';
-    const candidatos = (opciones.editores ? abuelas() : []).concat(datos.personas.filter(function (p) { return (opciones.excluir || []).indexOf(p.id) === -1 && !esFallecido(p); }));
+    const candidatos = (opciones.editores ? abuelas() : []).concat(datos.personas.filter(function (p) { return (opciones.excluir || []).indexOf(p.id) === -1 && !esFallecido(p) && !enCamino(p); }));
     function pintarRes() {
       const q = sinAcentos($('bus-q').value.trim());
       let res;
@@ -2087,7 +2089,7 @@
       '<label class="campo" for="dlg-menu">Menú<select id="dlg-menu">' + (p.menu ? '' : '<option value="">Sin definir</option>') + opcionesMenu(p.menu) + '</select></label>' +
       '<label class="campo" for="dlg-alergias">Alergias o cosas que no come<input id="dlg-alergias" type="text" maxlength="100" autocomplete="off" placeholder="Ninguna" value="' + esc(p.alergias) + '"></label></fieldset>';
     const cd = p.cumple ? Number(p.cumple.slice(0, 2)) : 0, cm = p.cumple ? Number(p.cumple.slice(3, 5)) : 0;
-    html += '<fieldset class="solo-no-otros"><legend>Cumpleaños</legend><div class="tres">' +
+    html += '<fieldset class="solo-no-otros"><legend>Cumpleaños <small class="leyenda-suave">· si está en camino, cuándo nacerá</small></legend><div class="tres">' +
       '<label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' +
       Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '"' + (cd === i + 1 ? ' selected' : '') + '>' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' +

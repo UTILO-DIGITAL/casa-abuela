@@ -170,6 +170,10 @@ ver('al cambiar de pareja, las fechas se borran', !quien(M_).novios && !quien('(
 d = R.guardarPersona(M_, { pareja: '(T+1) - Jordi P', casados: 'No' }, M_, V);
 
 // ---------- v4.13: el año del cumpleaños ----------
+d = R.guardarPersona(M_, { cumple: '00/03/2027' }, M_, V);
+ver('v4.24: la fecha prevista de un bebé en camino (el año que viene)', quien(M_).cumple === '00/03/2027');
+err = ''; try { R.guardarPersona(M_, { cumple: '2028' }, M_, V); } catch (e) { err = e.message; }
+ver('pero no más allá', /cumpleaños/.test(err));
 d = R.guardarPersona(M_, { cumple: '07/03/1952' }, M_, V);
 ver('cumpleaños con año', quien(M_).cumple === '07/03/1952');
 d = R.guardarPersona(M_, { cumple: '7/3' }, M_, V);
