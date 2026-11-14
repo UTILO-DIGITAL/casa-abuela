@@ -157,6 +157,8 @@ err = ''; try { R.guardarPersona(M_, { boda: '31/02/1985' }, M_, V); } catch (e)
 ver('una boda que no existe no se guarda', /la boda/.test(err));
 d = R.guardarPersona(M_, { boda: '20/06/2030' }, M_, V);
 ver('una boda que viene, también', quien(M_).boda === '20/06/2030');
+d = R.guardarPersona(M_, { boda: '04/10' }, M_, V);
+ver('v4.30: una boda sin año, en los dos', quien(M_).boda === '04/10' && quien('(T+1) - Jordi P').boda === '04/10');
 err = ''; try { R.guardarPersona(M_, { boda: '2099' }, M_, V); } catch (e) { err = e.message; }
 ver('pero no de aquí a más de diez años', /diez años/.test(err));
 err = ''; try { R.guardarPersona(M_, { novios: '2030' }, M_, V); } catch (e) { err = e.message; }
@@ -290,6 +292,10 @@ err = ''; try { R.guardarPersona(M_, { fechas: [{ que: '', fecha: '1968' }] }, M
 ver('sin decir qué es, no', /ponle qué es/.test(err));
 err = ''; try { R.guardarPersona(M_, { fechas: [{ que: 'Futuro', fecha: '2099' }] }, M_, V2); } catch (e) { err = e.message; }
 ver('ni una fecha imposible', /Futuro/.test(err));
+d = R.guardarPersona(M_, { fechas: [{ que: 'Santo', fecha: '25/07' }] }, M_, V2);
+ver('v4.30: una fecha sin año (un santo)', quien(M_).fechas[0].fecha === '25/07');
+err = ''; try { R.guardarPersona(M_, { fechas: [{ que: 'Santo', fecha: '31/02' }] }, M_, V2); } catch (e) { err = e.message; }
+ver('pero que exista', /Santo/.test(err));
 d = R.guardarPersona(M_, { fechas: [] }, M_, V2);
 ver('y se pueden quitar todas', quien(M_).fechas.length === 0);
 

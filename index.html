@@ -339,6 +339,8 @@
   .ev-resumen .ev-van { padding: 7px 8px; font-weight: 800; color: var(--color-principal-oscuro); white-space: nowrap; }
   .ev-resumen .ev-resto { padding: 7px 0; font-size: 13px; color: var(--color-texto-suave); text-align: right; }
   .ev-desglose { margin: 12px 0 0; font-size: 16px; }
+  .ev-resumen .ev-ver { padding: 4px 0 4px 8px; width: 1%; }
+  .ev-resumen .ev-ver .mini { margin: 0; }
   .ev-familia { border-top: 1px solid var(--color-linea); padding: 6px 0; }
   .ev-familia summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
   .ev-familia summary span { font-size: 14px; color: var(--color-texto-suave); font-weight: 700; }
@@ -576,7 +578,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.29.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.30.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -833,6 +835,7 @@
       [['boda', 'Aniversario de boda de '], ['novios', 'Hace {n} que empezaron a salir ']].forEach(function (x) {
         const c = p[x[0]] || '';
         if (c.slice(0, 5) !== dm || Number(c.slice(6, 10)) > ano) return;
+        if (c.length === 5) { out.push(x[0] === 'boda' ? 'Aniversario de boda de ' + quienes : 'Aniversario de cuando empezaron a salir ' + quienes); return; }  // v4.30: sin año
         const n = ano - Number(c.slice(6, 10)), anos = n === 1 ? 'un año' : n + ' años';
         if (!n) { if (x[0] === 'boda') out.push('Hoy se casan ' + quienes); return; }  // v4.23: el día de la boda
         out.push(x[0] === 'boda' ? x[1] + quienes + ': ' + anos : x[1].replace('{n}', anos) + quienes);
@@ -849,6 +852,7 @@
     datos.personas.concat(datos.editores || []).forEach(function (p) {
       (p.fechas || []).forEach(function (x) {
         if (x.fecha.slice(0, 5) !== dm) return;
+        if (x.fecha.length === 5) { out.push(x.que + ' de ' + p.apodo); return; }  // v4.30: sin año (un santo)
         const n = ano - Number(x.fecha.slice(6, 10));
         if (n > 0) out.push(x.que + ' de ' + p.apodo + ': ' + (n === 1 ? 'un año' : n + ' años'));
         else if (!n) out.push(x.que + ' de ' + p.apodo);
@@ -886,6 +890,7 @@
   /* v4.16: fechas como se sepan (dd/mm/aaaa, con 00 en lo que no se sabe) y quien ha fallecido */
   function esFallecido(p) { return !!(p && p.fallecio); }
   function fechaTexto(c) {
+    if (c && c.length === 5 && Number(c.slice(3, 5))) return Number(c.slice(0, 2)) + ' de ' + MESES[Number(c.slice(3, 5)) - 1];  // v4.30: sin año
     if (!c || c.length < 10) return c || '';
     const d = Number(c.slice(0, 2)), m = Number(c.slice(3, 5)), a = c.slice(6, 10);
     if (!m) return a;
@@ -1235,10 +1240,11 @@
       '<p class="ev-total"><b>' + esc(resumenEvento(e)) + '</b></p>' +
       '<table class="ev-resumen"><tbody>' + porFamiliaEvento(e).map(function (x) {
         return '<tr data-ev-fam="' + esc(x.f) + '"><th scope="row">' + esc(cortoFamilia(x.f)) + '</th><td class="ev-van">' + (x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : '—') + '</td>' +
-          '<td class="ev-resto">' + [x.no ? (x.no === 1 ? '1 no puede' : x.no + ' no pueden') : '', x.pend ? x.pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</td></tr>';
+          '<td class="ev-resto">' + [x.no ? (x.no === 1 ? '1 no puede' : x.no + ' no pueden') : '', x.pend ? x.pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</td>' +
+          '<td class="ev-ver"><button type="button" class="mini" aria-label="Ver quién de ' + esc(cortoFamilia(x.f)) + '">Ver</button></td></tr>';
       }).join('') + '</tbody></table>' +
       '<h3 class="ev-desglose">Familia por familia</h3>' +
-      '<p class="ayuda">Toca una familia para ver quién. ✓ va · ✗ no puede · sin marcar, aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).</p>' +
+      '<p class="ayuda">✓ va · ✗ no puede · sin marcar, aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).</p>' +
       orden.map(function (f) {
         const l = porFam[f];
         const van = l.filter(function (p) { return estado(p) === 'si'; }).length, no = l.filter(function (p) { return estado(p) === 'no'; }).length, pend = l.length - van - no;
@@ -1990,9 +1996,7 @@
   }
   function leerFechaPareja(pre, que, futuro) {
     const r = leerFecha(pre, que, 1850, futuro);
-    if (r.error) return r;
-    if (r.valor && r.valor.length < 10) return { error: 'Para ' + que + ', pon también el año.' };
-    return r;
+    return r;  // v4.30: también solo el día y el mes (una boda o un santo sin año)
   }
   /* v4.28: otras fechas que cada uno quiere recordar (bautizo, carnet de conducir…) */
   function filaOtraFecha(i, x) {
@@ -2003,7 +2007,7 @@
     return '<fieldset class="solo-no-otros"><legend>Otras fechas <small class="leyenda-suave">· lo que haga ilusión recordar</small></legend><div id="dlg-otras">' +
       lista.map(function (x, i) { return filaOtraFecha(i, x); }).join('') + '</div>' +
       '<button type="button" class="accion" id="dlg-of-mas">+ Añadir otra fecha</button>' +
-      '<p class="ayuda">Un bautizo, una comunión, el carnet de conducir… Sale cada año en su día y en «Próximas fechas».</p></fieldset>';
+      '<p class="ayuda">Un santo, un bautizo, el carnet de conducir… Si no se sabe el año, basta con el día y el mes. Sale cada año en su día y en «Próximas fechas».</p></fieldset>';
   }
   function montarOtrasFechas() {
     const caja = $('dlg-otras');
