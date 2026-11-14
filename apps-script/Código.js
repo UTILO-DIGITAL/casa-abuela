@@ -10,7 +10,7 @@
  *                 Los Ids siguen a MESA_ALIAS. La web arma con ellos el árbol de núcleos de cada familia.
  *                 Nombre (N, v4.11): el nombre de verdad; el Apodo (B) es como le llaman en casa y no se repite.
  *                 Casados (O, v4.12): Sí o No, en los dos de la pareja; se borra si cambia la pareja.
- *                 Falleció (P, v4.16): dd/mm/aaaa, 00/mm/aaaa o 00/00/aaaa (como se sepa). El cumpleaños admite lo mismo.
+ *                 Falleció (P, v4.16): dd/mm/aaaa, 00/mm/aaaa o 00/00/aaaa (como se sepa); «Sí» si no se sabe cuándo (v4.20). El cumpleaños admite lo mismo.
  *   MESA_APUNTES  ID_APUNTE | FECHA | TURNO | PERSONA_ID | CREADO_EN | NOTA | ESTADO ('' va · 'NO' no va ese día aunque sea fijo) | NOTA_POR | NOTA_EN
  *   MESA_FIJOS    ID_FIJO | PERSONA_ID | DIA_SEMANA (0 domingo … 6 sábado) | TURNO | DESDE | HASTA | NOTA | CREADO_POR | CREADO_EN
  *   MESA_DIAS     FECHA | NOTA | SIN_TURNO | CAMBIADO_POR | CAMBIADO_EN | SIN_COMIDA | MOTIVO_COMIDA | SIN_CENA | MOTIVO_CENA | NOTA_SERVICIO | SIN_DORMIR | MOTIVO_DORMIR
@@ -29,7 +29,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.18.0
+ * Versión 4.20.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -226,7 +226,7 @@ function aPersona_(f) {
     hijoDe: String(f[COL_HIJO_DE - 1] || '').trim(),
     nombre: String(f[COL_NOMBRE - 1] || '').trim(),
     casados: CASADOS.indexOf(String(f[COL_CASADOS - 1] || '').trim()) !== -1 ? String(f[COL_CASADOS - 1]).trim() : '',
-    fallecio: aFechaParcial_(f[COL_FALLECIO - 1], 1850),
+    fallecio: aFallecio_(f[COL_FALLECIO - 1]),
   };
 }
 
@@ -910,9 +910,9 @@ function ponerNucleo_(ss, p, cambios, registro, todos) {
   asegurarColumnas_(ss, COL_FALLECIO);
   if (cambios.fallecio !== undefined) {
     const texto = String(cambios.fallecio || '').trim();
-    const fallecio = aFechaParcial_(texto, 1850);
+    const fallecio = aFallecio_(texto);
     if (texto && !fallecio) throw new Error('La fecha de fallecimiento tiene que ser un día, mes y año que existan (o mes y año, o solo el año), y no de después de hoy.');
-    if (fallecio !== (p.fallecio || '')) { escribirEnPersonas_(ss, p.id, COL_FALLECIO, fallecio, true); registro.push(p.apodo + (fallecio ? ': falleció (' + fallecio + ')' : ': sin fecha de fallecimiento')); }
+    if (fallecio !== (p.fallecio || '')) { escribirEnPersonas_(ss, p.id, COL_FALLECIO, fallecio, true); registro.push(p.apodo + (fallecio === 'Sí' ? ': falleció (sin saber cuándo)' : (fallecio ? ': falleció (' + fallecio + ')' : ': ya no consta que haya fallecido'))); }
   }
   if (cambios.nombre !== undefined) {
     const nombreReal = limpiar_(cambios.nombre, 40, 'El nombre', true);
@@ -1141,6 +1141,11 @@ function aCumple_(v) {
  * v4.16: una fecha como se sepa: dd/mm/aaaa, mm/aaaa o aaaa. Se guarda siempre dd/mm/aaaa, con 00 en lo que no se sabe
  * («00/01/2008» es enero de 2008; «00/00/1928», 1928). Entre el año «desde» y hoy. Una celda de fecha del Excel, entera.
  */
+/* v4.20: el fallecimiento, con su fecha (como se sepa) o «Sí» si no se sabe cuándo */
+function aFallecio_(v) {
+  return /^s[ií]$/i.test(String(v || '').trim()) ? 'Sí' : aFechaParcial_(v, 1850);
+}
+
 function aFechaParcial_(v, desde) {
   if (v instanceof Date) return Utilities.formatDate(v, TZ, 'dd/MM/yyyy');
   const t = String(v || '').trim();

@@ -362,9 +362,6 @@
   .per-resultado button.enlace { margin-left: 8px; padding: 4px 0; }
   button.filtro { min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--color-linea); background: #fff; color: var(--color-texto); font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
   button.filtro[aria-pressed="true"] { background: var(--color-principal-oscuro); border-color: var(--color-principal-oscuro); color: #fff; }
-  .abuela-ficha { display: block; width: 100%; padding: 12px 16px; margin: 0 0 20px; border: 0; border-radius: var(--radio); background: var(--color-principal-claro); color: var(--color-texto); font: inherit; text-align: left; cursor: pointer; }
-  .abuela-ficha h2 { margin: 0; font-family: var(--letra-titulos); font-weight: 600; font-size: 20px; }
-  .abuela-ficha p { margin: 2px 0 0; font-weight: 700; }
   .per-familia { font-size: 16px; font-weight: 800; margin: 20px 0 6px; }
   .per-familia span { color: var(--color-texto-suave); font-weight: 700; }
   .anillo { display: inline-flex; vertical-align: -3px; color: var(--color-principal-oscuro); }
@@ -384,6 +381,7 @@
   .miembros .et { font-size: 13px; font-weight: 800; color: var(--color-texto-suave); margin-right: 2px; }
   .nucleo-card .per-filas { border-top: 0; }
   .nucleo-card .per-filas li:last-child { border-bottom: 0; }
+  div.fila-persona.fila-caja { padding: 8px 2px; min-height: 44px; color: var(--color-texto); }  /* v4.20: el abuelo, que no se toca */
   button.fila-persona.fila-caja { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 2px; }
   .fila-caja .fp-nombre { flex: 1; min-width: 0; }
   .fp-come { flex-basis: 100%; font-size: 14px; color: var(--color-texto-suave); }
@@ -550,7 +548,7 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <footer>Hecho con cariño por Utilo · v4.19.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.20.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -807,6 +805,7 @@
   }
   function vidaTexto(p) {
     const n = p.cumple && p.cumple.length >= 10 ? fechaTexto(p.cumple) : '';
+    if (p.fallecio === 'Sí') return n ? n + ' – falleció' : 'falleció';  // v4.20: sin saber cuándo
     return (n ? n + ' – ' : 'falleció en ') + fechaTexto(p.fallecio);
   }
   function menusTexto(ids) {
@@ -1130,13 +1129,9 @@
       pintarArbol();
       return;
     }
-    // La abuela, arriba: lo que come, para todos. v4.12.6: sin botón de cambiar (se abre al tocarla, sin invitar a hacerlo)
-    $('per-abuela').innerHTML = abuelas().map(function (a) {
-      const e = edadTexto(a);  // v4.15.4: también su edad
-      const come = [e, comeTexto(a, true) || 'sin anotar lo que come'].filter(Boolean).join(' · ');
-      return '<button type="button" class="abuela-ficha" data-comida-abuela aria-label="' + esc(a.apodo) + ': ' + esc(come) + '"><h2>' + esc(a.apodo) + '</h2><p>' + esc(come) + '</p></button>';
-    }).join('');
     const q = sinAcentos($('per-q').value.trim());
+    // v4.20: los abuelos, en una caja como las de las familias («Familia Ribas Coll»), sin más protagonismo que los demás
+    $('per-abuela').innerHTML = q || hayFiltros() ? '' : cajaAbuelos();
     let lista = datos.personas.filter(function (p) { return pasaFiltros(p); });
     if (q) lista = lista.filter(function (p) { return sinAcentos(p.apodo + ' ' + (p.nombre || '') + ' ' + (p.apellido || '') + ' ' + p.familia + ' ' + nombreFamilia(p.familia) + ' ' + deQuien(p)).indexOf(q) !== -1; });
     const $r = $('per-resultado');
@@ -1261,6 +1256,7 @@
       if (esFallecido(p)) {
         const n = p.cumple && p.cumple.length >= 10 ? p.cumple.slice(6, 10) : '';
         const f = p.fallecio.slice(6, 10);
+        if (!f) return n ? '† ' + n : '†';  // v4.20: sin saber cuándo
         return '† ' + (n && n !== f ? n + ' – ' + f : f);
       }
       return edadTexto(p);
@@ -1368,6 +1364,26 @@
     const m = (Number(h.slice(0, 4)) - Number(c.slice(6, 10))) * 12 + Number(h.slice(5, 7)) - mes - (Number(h.slice(8, 10)) < dia ? 1 : 0);
     if (m < 0) return '';
     return m === 0 ? 'menos de un mes' : (m === 1 ? '1 mes' : m + ' meses');
+  }
+  function cajaAbuelos() {
+    const ellos = (datos.editores || []).filter(function (e) { return e.jerarquia === 'Abuelos'; });
+    if (!ellos.length) return '';
+    ellos.sort(function (a, b) { return (a.sexo === 'Hombre' ? 0 : 1) - (b.sexo === 'Hombre' ? 0 : 1); });
+    const apellidos = ellos.map(function (p) { return p.apellido; }).filter(Boolean);
+    const titulo = apellidos.length ? 'Familia ' + apellidos.join(' ') : 'Los abuelos';
+    const casados = ellos.length === 2 && ellos[0].pareja === ellos[1].id && ellos[0].casados === 'Sí';
+    const fila = function (p) {
+      const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
+      const vivo = !esFallecido(p);
+      const dato = vivo ? [edadTexto(p), comeTexto(p)].filter(Boolean).join(' · ') : vidaTexto(p);
+      const dentro = '<span class="fp-nombre"><b>' + esc(p.apodo) + (vivo ? '' : ' †') + '</b>' +
+        (completo && completo !== p.apodo ? '<small>' + esc(completo) + '</small>' : '') +
+        (dato ? '<span class="fp-come' + (p.alergias ? ' con-alergia' : '') + '">' + esc(dato) + '</span>' : '') + '</span>';
+      return '<li>' + (vivo ? '<button type="button" class="fila-persona fila-caja" data-comida-abuela>' + dentro + '</button>' :
+        '<div class="fila-persona fila-caja">' + dentro + '</div>') + '</li>';
+    };
+    return '<section class="familia"><h3 class="per-familia">' + esc(titulo) + (casados ? anillo('casados') : '') + '</h3>' +
+      '<div class="nucleo-card"><ul class="per-filas">' + ellos.map(fila).join('') + '</ul></div></section>';
   }
   function filaCaja(p) {
     const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
@@ -1632,6 +1648,8 @@
   }
   function leerCumple() { const r = leerFecha('c', 'el cumpleaños', 1900); return r.error ? r : { cumple: r.valor }; }
   function campoFallecio(v) {
+    const sinFecha = v === 'Sí';  // v4.20
+    if (sinFecha) v = '';
     const fd = v ? Number(v.slice(0, 2)) : 0, fm = v ? Number(v.slice(3, 5)) : 0;
     return '<fieldset class="solo-familia"><legend>Si ha fallecido</legend><div class="tres">' +
       '<label class="campo" for="dlg-fdia">Día<select id="dlg-fdia"><option value="">—</option>' +
@@ -1639,12 +1657,14 @@
       '<label class="campo" for="dlg-fmes">Mes<select id="dlg-fmes"><option value="">—</option>' +
       MESES.map(function (m, k) { return '<option value="' + (k + 1) + '"' + (fm === k + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-fano">Año<input id="dlg-fano" type="number" inputmode="numeric" min="1850" max="' + hoy().slice(0, 4) + '" placeholder="aaaa" value="' + esc(v ? v.slice(6, 10) : '') + '"></label></div>' +
-      '<p class="ayuda">Lo que sepáis: el día, el mes y el año; el mes y el año; o solo el año.</p></fieldset>';
+      '<p class="ayuda">Lo que sepáis: el día, el mes y el año; el mes y el año; o solo el año.</p>' +
+      '<label class="check"><input id="dlg-fsin" type="checkbox"' + (sinFecha ? ' checked' : '') + '> Ha fallecido, no sabemos cuándo</label></fieldset>';
   }
   function leerFallecio() {
     if (!$('dlg-fano')) return { valor: undefined };
     const r = leerFecha('f', 'el fallecimiento', 1850);
     if (r.error) return r;
+    if (!r.valor && $('dlg-fsin') && $('dlg-fsin').checked) return { valor: 'Sí' };  // v4.20
     if (r.valor && r.valor.length < 10) return { error: 'Para el fallecimiento, pon también el año.' };
     return r;
   }

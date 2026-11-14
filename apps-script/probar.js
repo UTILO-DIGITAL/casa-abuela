@@ -209,6 +209,11 @@ err = ''; try { R.guardarPersona('(N) - Nacio', { fallecio: '31/02/2008' }, M_, 
 ver('una fecha que no existe no se guarda', /fallecimiento/.test(err));
 err = ''; try { R.guardarPersona('(N) - Nacio', { fallecio: '2099' }, M_, V2); } catch (e) { err = e.message; }
 ver('ni una del futuro', /fallecimiento/.test(err));
+// v4.20: fallecido sin saber cuándo
+d = R.guardarPersona('(N) - Nacio', { fallecio: 'si' }, M_, V2);
+ver('«sí» = falleció sin saber cuándo', (d.personas.find(p => p.id === '(N) - Nacio') || {}).fallecio === 'Sí');
+d = R.guardarPersona('(N) - Nacio', { fallecio: '06/2008' }, M_, V2);
+ver('y se le puede volver a poner fecha', (d.personas.find(p => p.id === '(N) - Nacio') || {}).fallecio === '00/06/2008');
 d = R.guardarPersona(M_, { cumple: '1952' }, M_, V2);
 ver('cumpleaños con solo el año', quien(M_).cumple === '00/00/1952');
 
