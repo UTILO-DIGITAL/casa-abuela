@@ -413,6 +413,8 @@
   .arbol-anillo.futuro circle, .arbol-anillo.futuro path { stroke: var(--color-futuro); }
   .arbol-anillo.futuro .arbol-ano { fill: var(--color-futuro); }
   button.fila-persona.fila-caja.futuro { background: var(--color-futuro-claro); border-radius: calc(var(--radio) / 2); padding-left: 10px; padding-right: 10px; }
+  .barra-embarazo { display: block; flex: 0 0 100%; width: 100%; height: 6px; margin: 4px 0 2px; max-width: 220px; border-radius: 3px; background: #fff; overflow: hidden; }
+  .barra-embarazo i { display: block; height: 100%; background: var(--color-futuro); border-radius: 3px; }
   .fila-caja.futuro .fp-come, .fechas-pareja.futuro { color: var(--color-futuro); font-weight: 700; }
   .arbol-raya { stroke: #EADFD2; stroke-width: 1.5; }
   .arbol-anillo rect { fill: #fff; stroke: #E3D6C5; }
@@ -634,7 +636,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.45.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.46.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -953,6 +955,14 @@
     return [p.novios ? 'Empezaron a salir ' + cuando(p.novios) : '', p.boda ? (p.novios ? verbo : verbo.charAt(0).toUpperCase() + verbo.slice(1)) + cuando(p.boda) : ''].filter(Boolean).join(' · ');
   }
   /* v4.23: ¿la fecha aún no ha llegado? (con lo que se sepa: año, mes y día). La boda y, v4.24, el bebé en camino */
+  /* v4.46: de cuántas semanas está (40 en total), según la fecha prevista; si no se sabe el día, la mitad del mes */
+  function semanasEmbarazo(p) {
+    const c = p.cumple || '';
+    if (!enCamino(p) || !Number(c.slice(3, 5))) return null;
+    const prevista = c.slice(6, 10) + '-' + c.slice(3, 5) + '-' + (Number(c.slice(0, 2)) ? c.slice(0, 2) : '15');
+    const faltan = Math.round((aUTC(prevista) - aUTC(hoy())) / 86400000);
+    return Math.max(1, Math.min(42, 40 - Math.ceil(faltan / 7)));
+  }
   function enCamino(p) { const c = p.cumple || ''; return c.length >= 10 && Number(c.slice(6, 10)) > 0 && !esFallecido(p) && bodaQueViene(c); }
   function bodaQueViene(c) {
     const h = hoy().replace(/-/g, ''), a = c.slice(6, 10), m = c.slice(3, 5), d = c.slice(0, 2);
@@ -1838,7 +1848,7 @@
         if (!f) return n ? '† ' + n : '†';  // v4.20: sin saber cuándo
         return '† ' + (n && n !== f ? n + ' – ' + f : f);
       }
-      return enCamino(p) ? 'en camino' : edadTexto(p);  // v4.24
+      return enCamino(p) ? 'en camino' + (semanasEmbarazo(p) ? ' · ' + semanasEmbarazo(p) + ' sem.' : '') : edadTexto(p);  // v4.24; v4.46: y de cuántas semanas
     };
     // v4.25: en la raya de cada pareja, unas pastillas: el corazón con el año en que empezaron a salir y el anillo con el de la boda
     const pastillas = function (n) {
@@ -1993,13 +2003,15 @@
   }
   function filaCaja(p) {
     const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
-    const come = esFallecido(p) ? vidaTexto(p) : enCamino(p) ? 'en camino · nace ' + (Number(p.cumple.slice(0, 2)) ? 'el ' : 'en ') + fechaTexto(p.cumple) : [edadTexto(p), comeTexto(p)].filter(Boolean).join(' · ');  // v4.24
+    const sem = semanasEmbarazo(p);  // v4.46
+    const come = esFallecido(p) ? vidaTexto(p) : enCamino(p) ? 'en camino' + (sem ? ' · de ' + sem + ' semanas' : '') + ' · nace ' + (Number(p.cumple.slice(0, 2)) ? 'el ' : 'en ') + fechaTexto(p.cumple) : [edadTexto(p), comeTexto(p)].filter(Boolean).join(' · ');  // v4.24
     // v4.12.5: un circulito a quien entró en la familia por su pareja (los «+1»: no son de sangre)
     const deFuera = esDeFuera(p) && !esServicio(p) && p.familia !== 'Otros';
     return '<li><button type="button" class="fila-persona fila-caja' + (p.id === yo ? ' soy-yo' : '') + (enCamino(p) ? ' futuro' : '') + '" data-persona="' + esc(p.id) + '"><span class="fp-nombre"><b>' +
       (deFuera ? '<span class="marca-politico" role="img" aria-label="entró en la familia por su pareja" title="Entró en la familia por su pareja"></span>' : '') + esc(p.apodo) + (esFallecido(p) ? ' †' : '') + '</b>' +
       (completo && completo !== p.apodo ? '<small>' + esc(completo) + '</small>' : '') +
       (come ? '<span class="fp-come' + (p.alergias ? ' con-alergia' : '') + '">' + esc(come) + '</span>' : '') +
+      (sem ? '<span class="barra-embarazo" role="img" aria-label="' + sem + ' de 40 semanas"><i style="width:' + Math.round(sem / 40 * 100) + '%"></i></span>' : '') +
       (falta(p).length ? '<span class="fp-falta-corto">' + esc(faltaCorto(p)) + '</span>' : '') + '</span></button></li>';
   }
   /* v4.13: los casados, con un anillo dibujado; los que solo salen juntos, sin nada */
