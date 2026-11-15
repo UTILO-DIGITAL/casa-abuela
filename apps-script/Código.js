@@ -475,13 +475,35 @@ function getPremios(quien, claveAdmin) {
   });
   const familias = Object.keys(fam).map(function (f) { return { familia: f, visitas: fam[f] }; }).sort(function (a, b) { return b.visitas - a.visitas; });
   return { desde: hace30, totales: { comidas: totales.COMIDA, cenas: totales.CENA, noches: totales.DORMIR, personas: Object.keys(gente).length },
-    curiosidades: curiosidades_(ss, v, deP, hace30),  // v5.7: para el informe del mes
+    curiosidades: curiosidades_(ss, config, v, deP, hace30),  // v5.7: para el informe del mes
     categorias: categorias, general: general, medallas: Object.keys(medallas).map(function (k) { return medallas[k]; }), servicio: servicio, familias: familias, puntosMedalla: PUNTOS_MEDALLA };
 }
 
 /** v5.7: cifras bonitas del último mes para el informe (solo la familia; nunca quién va menos) */
-function curiosidades_(ss, v, deP, hace30) {
+function curiosidades_(ss, config, v, deP, hace30) {
   const mesa = {}, dias = {}, dow = [0, 0, 0, 0, 0, 0, 0], fams = {};
+  // v5.8: lo de cada día (para la gráfica), por día de la semana, acompañantes y el mes anterior
+  const hace60 = sumarDias_(hace30, -30), serie = {}, porDow = [0, 0, 0, 0, 0, 0, 0], ant = { comidas: 0, cenas: 0, noches: 0 };
+  let acomp = 0;
+  for (let f = hace30; f < hoy_(); f = sumarDias_(f, 1)) serie[f] = [0, 0, 0];
+  v.ef.forEach(function (a) {
+    const p = deP[a.persona];
+    if (!p || p.familia === 'Servicio' || p.familia === 'Otros') return;
+    const i = { COMIDA: 0, CENA: 1, DORMIR: 2 }[a.turno];
+    if (a.fecha >= hace60 && a.fecha < hace30) ant[['comidas', 'cenas', 'noches'][i]]++;
+    if (a.fecha < hace30) return;
+    if (serie[a.fecha]) serie[a.fecha][i]++;
+    porDow[diaSemana_(a.fecha)]++;
+    acomp += Number(a.acompanantes) || 0;
+  });
+  const horaDe = horasDe_(config), antes = [];
+  leerApuntes_(ss).forEach(function (a) {
+    const p = deP[a.persona];
+    if (!p || p.familia === 'Servicio' || p.familia === 'Otros' || a.no || a.fecha < hace30 || a.fecha >= hoy_()) return;
+    const x = antelacion_(a, horaDe);
+    if (x !== null && x >= 0) antes.push(x);
+  });
+  antes.sort(function (a, b) { return a - b; });
   v.ef.forEach(function (a) {
     const p = deP[a.persona];
     if (!p || a.fecha < hace30 || p.familia === 'Servicio' || p.familia === 'Otros') return;
@@ -497,7 +519,10 @@ function curiosidades_(ss, v, deP, hace30) {
   const vanEv = {};
   ev.forEach(function (e) { e.van.forEach(function (id) { vanEv[id] = true; }); });
   return { dias: Object.keys(dias).length, deDias: 30, mesaLlena: llena, diaFavorito: max ? dow.indexOf(max) : null,
-    familias: Object.keys(fams).length, eventos: ev.length, vanEventos: Object.keys(vanEv).length };
+    familias: Object.keys(fams).length, eventos: ev.length, vanEventos: Object.keys(vanEv).length,
+    serie: Object.keys(serie).sort().map(function (f) { return [f].concat(serie[f]); }), porDow: porDow, acompanantes: acomp,
+    antelacionH: antes.length ? Math.round(antes[Math.floor(antes.length / 2)]) : null, apuntes: antes.length,
+    anterior: v.inicio <= hace60 ? ant : null };
 }
 
 function leerConfig_(ss) { return memo_('config', function () { return leerConfigSin_(ss); }); }

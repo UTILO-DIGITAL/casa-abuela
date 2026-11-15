@@ -455,6 +455,9 @@ ver('premios: fin de semana y entre semana', pr.categorias.find(c => c.id === 's
 ver('premios: el general, ordenado por puntos', pr.general.length > 0 && pr.general.every((g, i) => !i || pr.general[i - 1].puntos >= g.puntos));
 ver('informe: las curiosidades del mes', pr.curiosidades.dias > 0 && pr.curiosidades.dias <= 30 && pr.curiosidades.familias > 0 && pr.curiosidades.mesaLlena && pr.curiosidades.mesaLlena.n >= 1 && pr.curiosidades.diaFavorito >= 0 && pr.curiosidades.diaFavorito <= 6);
 ver('informe: la mesa más llena cuenta a los acompañantes y no la noche', pr.curiosidades.mesaLlena.turno !== 'DORMIR');
+ver('informe: la serie de los 30 días, con comida, cena y noche', pr.curiosidades.serie.length === 30 && pr.curiosidades.serie.every(x => x.length === 4) && pr.curiosidades.serie.reduce((t, x) => t + x[1] + x[2] + x[3], 0) === pr.totales.comidas + pr.totales.cenas + pr.totales.noches);
+ver('informe: por día de la semana suma lo mismo', pr.curiosidades.porDow.length === 7 && pr.curiosidades.porDow.reduce((a, b) => a + b, 0) === pr.totales.comidas + pr.totales.cenas + pr.totales.noches);
+ver('informe: antelación (mediana, en horas) y acompañantes', (pr.curiosidades.antelacionH === null || pr.curiosidades.antelacionH >= 0) && pr.curiosidades.acompanantes >= 0);
 ver('informe: sin el servicio en las curiosidades', typeof pr.curiosidades.eventos === 'number' && typeof pr.curiosidades.vanEventos === 'number');
 ver('premios: las familias y los totales del mes', pr.familias.length > 0 && pr.totales.comidas > 0 && pr.totales.personas > 0);
 ver('la etiqueta dorada llega con los datos', R.getDatos(Object.assign({}, V2, { yo: '(N) - Jan' })).yoTop10 === true);
