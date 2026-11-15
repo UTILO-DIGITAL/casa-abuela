@@ -453,6 +453,14 @@ ver('medallas nuevas: guardián de la memoria y echar una mano', ['memoria', 'ma
 ver('premios: las 9 categorías (con la secretaría), cada una con su gente', pr.categorias.length === 9 && pr.categorias.find(c => c.id === 'comidas').gente.some(g => g.apodo === 'Jan'));
 ver('premios: fin de semana y entre semana', pr.categorias.find(c => c.id === 'semana').gente.some(g => g.apodo === 'Jan'));
 ver('premios: el general, ordenado por puntos', pr.general.length > 0 && pr.general.every((g, i) => !i || pr.general[i - 1].puntos >= g.puntos));
+{  // v5.11: si la web se empezó a usar este mes, nadie es «nuevo en la mesa»
+  const fij = hojas.MESA_FIJOS.filas, apu = hojas.MESA_APUNTES.filas;
+  hojas.MESA_FIJOS.filas = [fij[0]];
+  hojas.MESA_APUNTES.filas = [apu[0]].concat(apu.slice(1).filter(f => String(f[1]) >= '2026-10-20'));
+  const pr2 = R.getPremios(M_);
+  ver('bienvenida: con la web recién estrenada, no se da', !pr2.medallas.some(m => m.id === 'bienvenida') && pr2.totales.comidas + pr2.totales.cenas + pr2.totales.noches > 0);
+  hojas.MESA_FIJOS.filas = fij; hojas.MESA_APUNTES.filas = apu;
+}
 ver('informe: las curiosidades del mes', pr.curiosidades.dias > 0 && pr.curiosidades.dias <= 30 && pr.curiosidades.familias > 0 && pr.curiosidades.mesaLlena && pr.curiosidades.mesaLlena.n >= 1 && pr.curiosidades.diaFavorito >= 0 && pr.curiosidades.diaFavorito <= 6);
 ver('informe: la mesa más llena cuenta a los acompañantes y no la noche', pr.curiosidades.mesaLlena.turno !== 'DORMIR');
 ver('informe: la serie de los 30 días, con comida, cena y noche', pr.curiosidades.serie.length === 30 && pr.curiosidades.serie.every(x => x.length === 7) && pr.curiosidades.serie.reduce((t, x) => t + x[1] + x[2] + x[3], 0) === pr.totales.comidas + pr.totales.cenas + pr.totales.noches);

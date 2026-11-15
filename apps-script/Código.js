@@ -339,7 +339,7 @@ function logros_(ss, v, id) {
     if (leerFijos_(ss).some(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy); })) dif('fijo', 'Tienes tu día', 'Tienes un día fijo con la abuela cada semana.');
     // v4.88: bienvenida (la primera vez, este mes) y guardián de la memoria (ha rellenado datos de la familia)
     const mes = todas.filter(function (a) { return a.fecha >= hace30; });
-    if (mes.length && v.inicio < hace30 && !todas.some(function (a) { return a.fecha < hace30; })) dif('bienvenida', '¡Bienvenido a la mesa!', 'Este mes has ido por primera vez. ¡Qué alegría!');
+    if (mes.length && v.inicio < hace30 && v.ef.some(function (a) { return a.fecha < hace30; }) && !todas.some(function (a) { return a.fecha < hace30; })) dif('bienvenida', '¡Bienvenido a la mesa!', 'Este mes has ido por primera vez. ¡Qué alegría!');
     const cambios = cambios30_(ss).filter(function (x) { return x.quien === id; });
     if (cambios.some(esDatos_)) dif('memoria', 'Guardián de la memoria', 'Has ayudado a completar los datos de la familia.');
     // v4.88: las de participar (casi cualquiera las puede tener)
@@ -1758,7 +1758,8 @@ function guardarEvento(ev, quien, vista) {
       x.v[1] = nombre; x.v[2] = ev.desde; x.v[3] = hasta; x.v[4] = cuando; x.v[5] = texto; x.v[10] = lugar; x.v[11] = hora; x.v[12] = turnos; x.cambiada = true;
       registro = 'Cambia el evento ' + nombre + ' (' + ev.desde + (hasta !== ev.desde ? ' a ' + hasta : '') + ')';
     } else {
-      const id = 'E' + Utilities.formatDate(new Date(), TZ, 'yyyyMMddHHmmss') + Math.floor(Math.random() * 90 + 10);
+      let id;  // v5.11: que no se repita nunca (dos eventos en el mismo segundo)
+      do { id = 'E' + Utilities.formatDate(new Date(), TZ, 'yyyyMMddHHmmss') + Math.floor(Math.random() * 90 + 10); } while (tabla.vivas().some(function (r) { return r.v[0] === id; }));
       tabla.nueva([id, nombre, ev.desde, hasta, cuando, texto, '', '', ahora_(), '', lugar, hora, turnos]);
       registro = 'Añade el evento ' + nombre + ' (' + ev.desde + (hasta !== ev.desde ? ' a ' + hasta : '') + ')';
     }
