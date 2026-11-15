@@ -103,9 +103,9 @@ const API_ = {
   guardarPersonas: function (a) { return guardarPersonas(a[0], a[1], a[2]); },
   guardarDia: function (a) { return guardarDia(a[0], a[1], a[2], a[3]); },
   guardarEvento: function (a) { return guardarEvento(a[0], a[1], a[2]); },
-  getAjustes: function (a) { return getAjustes(a[0]); },
-  getPremios: function (a) { return getPremios(a[0]); },  // v4.85
-  guardarAjustes: function (a) { return guardarAjustes(a[0], a[1], a[2]); },
+  getAjustes: function (a) { return getAjustes(a[0], a[1]); },  // v4.91: a[1], la clave de administrador
+  getPremios: function (a) { return getPremios(a[0], a[1]); },  // v4.85
+  guardarAjustes: function (a) { return guardarAjustes(a[0], a[1], a[2], a[3]); },
   borrarEvento: function (a) { return borrarEvento(a[0], a[1], a[2]); },
   apuntarEvento: function (a) { return apuntarEvento(a[0], a[1], a[2], a[3], a[4], a[5]); },  // v4.67: a[5], los días
   notaEvento: function (a) { return notaEvento(a[0], a[1], a[2], a[3], a[4]); },  // v4.68
@@ -438,11 +438,11 @@ function misNumeros(personaId) {
  * v4.85: el portal de premios (solo para quien lleva la web): cada categoría con quién está, el top 10 general,
  * quién tiene cada medalla, las del servicio, las familias y los totales del último mes.
  */
-function getPremios(quien) {
+function getPremios(quien, claveAdmin) {
   reiniciar_();
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const config = leerConfig_(ss);
-  if (!esAdmin_(config, quien)) throw new Error('Los premios son solo para quien lleva la web.');
+  comprobarAdmin_(config, quien, claveAdmin, 'Los premios son solo para quien lleva la web.');
   const personas = leerPersonas_(ss, config.excluir);
   const apodo = {};
   personas.forEach(function (p) { apodo[p.id] = p.apodo; });
@@ -494,6 +494,7 @@ function leerConfigSin_(ss) {
     clave: String(mapa.CLAVE || '').trim(),
     pista: String(mapa.PISTA || '').trim(),
     admins: String(mapa.ADMIN_IDS || '').split(';').map(function (s) { return s.trim(); }).filter(Boolean),  // v4.58
+    claveAdmin: String(mapa.CLAVE_ADMIN || '').trim(),  // v4.91 (nunca sale hacia la web)
     noCuentan: String(mapa.NO_CUENTAN || '').split(';').map(function (s) { return s.trim(); }).filter(Boolean),  // v4.61: quién no cuenta en «Quién la usa»
   };
 }
@@ -1479,6 +1480,12 @@ function registrarVisita_(cache, yo) {
   } finally { lock.releaseLock(); }
 }
 function esAdmin_(config, quien) { return !!quien && config.admins.indexOf(String(quien).trim()) !== -1; }
+/** v4.91: Ajustes y Premios, solo para quien lleva la web y, si en MESA_CONFIG hay CLAVE_ADMIN, con esa clave (elegir el nombre no basta) */
+function comprobarAdmin_(config, quien, claveAdmin, mensaje) {
+  if (!esAdmin_(config, quien)) throw new Error(mensaje);
+  const n = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
+  if (config.claveAdmin && n(claveAdmin) !== n(config.claveAdmin)) throw new Error('ADMIN: hace falta la clave de administrador.');
+}
 function ponerConfig_(ss, k, v) {
   const hoja = ss.getSheetByName(HOJA_CONFIG);
   const n = Math.max(0, hoja.getLastRow() - 1);
@@ -1490,11 +1497,11 @@ function ponerConfig_(ss, k, v) {
 }
 
 /** Para la pestaña Ajustes: la configuración, quién entra y el historial de cambios. Solo para los de ADMIN_IDS. */
-function getAjustes(quien) {
+function getAjustes(quien, claveAdmin) {
   reiniciar_();
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const config = leerConfig_(ss);
-  if (!esAdmin_(config, quien)) throw new Error('Los ajustes son solo para quien lleva la web.');
+  comprobarAdmin_(config, quien, claveAdmin, 'Los ajustes son solo para quien lleva la web.');
   const hc = ss.getSheetByName(HOJA_CAMBIOS);
   const nc = hc ? Math.max(0, hc.getLastRow() - 1) : 0;
   const desde = Math.max(0, nc - 500);
@@ -1512,10 +1519,10 @@ function getAjustes(quien) {
   };
 }
 
-function guardarAjustes(aj, quien, vista) {
+function guardarAjustes(aj, quien, vista, claveAdmin) {
   return conBloqueo_(function (ss) {
     const config = leerConfig_(ss);
-    if (!esAdmin_(config, quien)) throw new Error('Los ajustes son solo para quien lleva la web.');
+    comprobarAdmin_(config, quien, claveAdmin, 'Los ajustes son solo para quien lleva la web.');
     const autor = autor_(leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir)), quien);
     aj = aj || {};
     const hora = function (v, que) { const t = String(v || '').trim(); if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(t)) throw new Error('La hora de ' + que + ' tiene que ser como 14:00.'); return t.length === 4 ? '0' + t : t; };

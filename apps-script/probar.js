@@ -425,6 +425,14 @@ hojas.MESA_APUNTES.filas = hojas.MESA_APUNTES.filas.filter(f => !/^s\d$/.test(f[
 // v4.85: el portal de premios
 err = ''; try { R.getPremios(JP_); } catch (e) { err = e.message; }
 ver('premios: solo para quien lleva la web', /solo para quien lleva la web/.test(err));
+// v4.91: con CLAVE_ADMIN, elegir el nombre no basta
+hojas.MESA_CONFIG.filas.push(['CLAVE_ADMIN', 'Higuera']);
+err = ''; try { R.getPremios(M_); } catch (e) { err = e.message; }
+ver('admin: sin su clave, no', /^ADMIN/.test(err));
+err = ''; try { R.getAjustes(M_, 'otra'); } catch (e) { err = e.message; }
+ver('admin: con otra clave, tampoco', /^ADMIN/.test(err));
+ver('admin: con su clave, sí (y no sale hacia la web)', !!R.getAjustes(M_, ' HIGUERA ').config && !JSON.stringify(R.getAjustes(M_, 'higuera')).includes('Higuera'));
+hojas.MESA_CONFIG.filas = hojas.MESA_CONFIG.filas.filter(f => f[0] !== 'CLAVE_ADMIN');
 const pr = R.getPremios(M_);
 const secre = pr.categorias.find(c => c.id === 'secretaria');
 ver('secretaría: quien apunta o contesta por otros (Mercedes)', secre.gente.some(g => g.apodo === 'Mercedes'));
