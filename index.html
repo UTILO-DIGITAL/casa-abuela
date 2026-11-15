@@ -129,6 +129,11 @@
   /* v4.75: el resumen de cada comida, cena o noche (al tocarlo, el desglose) */
   .evento-cuantos { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 0; }
   .evento-cuantos > span { display: grid; }
+  .evento-vas { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed rgba(0,0,0,.12); }
+  .evento-vas button { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 12px; }
+  .evento-vas button .ico-marca { width: 16px; height: 16px; }
+  .evento-vas button[data-ev-voy] { color: var(--color-principal-oscuro); border-color: var(--color-principal); }
+  .evento-vas button[data-ev-novoy] { color: var(--color-error); border-color: var(--color-error); }
   .evento-cuantos small { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
   .evento-dia .ev-barra-total { margin: 6px 0 0; height: 7px; }
   .rt-total { display: flex; align-items: center; gap: 8px; width: 100%; padding: 2px 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; color: var(--color-texto); }
@@ -1402,7 +1407,11 @@
           const c = cuentaEvento(e);
           return '<p class="evento-cuantos"><span><b>' + (n ? (n === 1 ? 'Va 1' : 'Van ' + n) : 'Aún no va nadie') + '</b>' +
               '<small>' + esc([c.noVan ? (c.noVan === 1 ? '1 no puede' : c.noVan + ' no pueden') : '', c.faltan ? c.faltan + ' sin contestar' : ''].filter(Boolean).join(' · ')) + '</small></span>' +
-            '<button type="button" class="mini" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></p>' + barraEvento(e);
+            '<button type="button" class="mini" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></p>' + barraEvento(e) +
+            // v4.76: si aún no has contestado, contestas aquí mismo
+            (yo && persona(yo) && !modoAbuela() && e.hasta >= hoy() && e.van.indexOf(yo) === -1 && e.noVan.indexOf(yo) === -1 ?
+              '<p class="evento-vas"><b>¿Vas?</b><button type="button" class="accion" data-ev-voy="' + esc(e.id) + '">' + ICONO_SI + 'Voy</button>' +
+              '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '">' + ICONO_NO + 'No voy</button></p>' : '');
         })() + '</div>';
     });
     const fu = fuera(fecha);
