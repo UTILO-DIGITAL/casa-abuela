@@ -1042,7 +1042,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.2.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.3.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -3899,7 +3899,7 @@
   }
 
   /* v4.36: quién es, para mirar: nombre completo, familia y lo que come (poco, para que se lea de un vistazo) */
-  function datosBasicos(p) {
+  function datosBasicos(p, todo) {  // v5.3: todo = la ficha completa (todo lo que tiene rellenado)
     const completo = [p.nombre, p.apellido].filter(Boolean).join(' ');
     const m = p.menu ? etiquetaMenu(p.menu) : '';
     const l = [
@@ -3909,12 +3909,28 @@
         ['Come', m === 'Entero' ? 'Entero' : (m === 'Medio' ? 'La mitad' : (m === 'Nada' ? 'No come' : (m || 'Sin anotar')))],
       p.alergias && !esFallecido(p) ? ['No come', p.alergias] : null,
     ].filter(Boolean);
+    if (todo) {  // v5.3: el cumpleaños con la edad, de quién es hijo o hija, sus hijos y su día fijo
+      const sitio = l.findIndex(function (b) { return b[0] === 'Familia' || b[0] === 'De'; }) + 1;
+      const extra = [];
+      if (!esFallecido(p) && p.cumple && Number(p.cumple.slice(3, 5))) {
+        const e = edadTexto(p);
+        extra.push([enCamino(p) ? 'Nacerá' : 'Cumpleaños', fechaTexto(p.cumple.length >= 10 && Number(p.cumple.slice(6, 10)) ? p.cumple : p.cumple.slice(0, 5)) + (e && !enCamino(p) ? ' · ' + e : '')]);
+      } else if (!esFallecido(p) && p.cumple && Number(p.cumple.slice(6, 10))) extra.push(['Nació en', p.cumple.slice(6, 10) + (edadTexto(p) ? ' · ' + edadTexto(p) : '')]);
+      const padre = p.hijoDe && quienEs(p.hijoDe), otro = padre && parejaDe(padre);
+      if (padre) extra.push([p.sexo === 'Mujer' ? 'Hija de' : p.sexo === 'Hombre' ? 'Hijo de' : 'Hijo o hija de', padre.apodo + (otro ? ' y ' + otro.apodo : '')]);
+      const pa0 = parejaDe(p), hijos = datos.personas.filter(function (x) { return x.hijoDe && (x.hijoDe === p.id || (pa0 && x.hijoDe === pa0.id)); });
+      if (hijos.length) extra.push([hijos.length === 1 ? 'Hijo' : 'Hijos', porNacimiento(hijos).map(function (x) { return x.apodo; }).join(', ')]);
+      const fj = fijosDe(p.id);
+      if (fj.length) extra.push(['Va siempre', fj.map(function (f) { return DIAS[f.dow].toLowerCase() + (f.turno === 'COMIDA' ? ' a comer' : f.turno === 'CENA' ? ' a cenar' : ' a dormir'); }).join(', ')]);
+      l.splice.apply(l, [sitio, 0].concat(extra));
+    }
     // v4.38: con quién está casado y cuándo, y sus otras fechas (bautizo, santo…)
     const pa = parejaDe(p);
     if (pa) {
       const cuando = function (c) { return (Number(c.slice(0, 2)) ? 'el ' : 'en ') + fechaTexto(c); };
       const casado = p.casados === 'Sí';
       l.push([casado ? (p.sexo === 'Mujer' ? 'Casada con' : 'Casado con') : 'Pareja', pa.apodo + (p.boda ? (bodaQueViene(p.boda) ? ' · se casan ' : ' · se casaron ') + cuando(p.boda) : '')]);
+      if (todo && p.novios) l.push(['Juntos desde', fechaTexto(p.novios)]);  // v5.3
     }
     (p.fechas || []).forEach(function (x) { l.push([x.que, fechaTexto(x.fecha)]); });
     return '<dl class="basico">' + l.map(function (b) { return '<div' + (b[0] === 'No come' ? ' class="alergia"' : '') + '><dt>' + b[0] + '</dt><dd>' + esc(b[1]) + '</dd></div>'; }).join('') + '</dl>';
@@ -3926,7 +3942,7 @@
     // v4.93: desde Personas, la ficha se abre primero para leer; lo que falta, arriba, y «Editar» lleva al formulario
     const fl = conEditar && persona(id) ? falta(p) : [];
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2></div><div class="dlg-cuerpo">' +
-      (fl.length ? '<p class="falta-ficha falta-suave">Falta: ' + esc(lista(fl)) + '. <button type="button" class="enlace" id="dlg-completar">Completarlo</button></p>' : '') + datosBasicos(p) + '</div>' +
+      (fl.length ? '<p class="falta-ficha falta-suave">Falta: ' + esc(lista(fl)) + '. <button type="button" class="enlace" id="dlg-completar">Completarlo</button></p>' : '') + datosBasicos(p, true) + '</div>' +
       '<div class="dlg-pie"><div class="botones">' + (conEditar ? '<button type="button" class="principal" id="dlg-editar">Editar</button>' : '') +
       '<button type="button" class="' + (conEditar ? 'accion quitar' : 'principal') + '" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
