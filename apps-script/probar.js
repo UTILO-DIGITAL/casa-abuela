@@ -60,7 +60,7 @@ const ctx = {
   ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, guardarPersonas, getAjustes, guardarAjustes, api_ };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, misNumeros, guardarPersonas, getAjustes, guardarAjustes, api_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -382,6 +382,42 @@ ver('el fallecimiento sin año, no', /fallecimiento/.test(err));
 d = R.guardarPersona('(A) - Abuela', { fallecio: '' }, JP_, V2);
 ver('(se deshace)', !quien('(A) - Abuela').fallecio);
 
+// ---------- v4.79: Mis números ----------
+hojas.MESA_APUNTES.filas.push(['n1', '2026-11-01', 'COMIDA', '(N) - Jan', '2026-10-31T14:00:00', '', '', '', '', ''],
+  ['n2', '2026-11-08', 'COMIDA', '(N) - Jan', '2026-11-05T10:00:00', '', '', '', '', ''],
+  ['n3', '2026-11-10', 'CENA', '(N) - Jan', '', '', '', '', '', ''],
+  ['n4', '2026-11-11', 'COMIDA', '(N) - Jan', '2026-11-01T10:00:00', '', 'NO', '', '', '']);
+R.guardarAjustes({ inicio: '2026-10-01' }, M_, V2);
+const mn = R.misNumeros('(N) - Jan');
+ver('mis números: cuántas veces (sin el «no voy» ni lo de hoy)', mn.total >= 4 && mn.cenas >= 1 && mn.ultima === '2026-11-10' && mn.mes >= 4);
+ver('mi día: el martes (sus comidas fijas cuentan)', mn.diaFav === 2);
+ver('con cuánta antelación aviso (horas, la mediana)', mn.antelacionHoras === 76);
+ver('los 7 días, para la gráfica', mn.porDia.length === 7 && mn.porDia.reduce((x, y) => x + y, 0) === mn.total);
+ver('top 10 general: con puntos (y menos de 10 con puntos), dentro', mn.puntos > 0 && mn.top10 === true);
+const nadie = R.misNumeros(M_);
+ver('sin puntos, fuera del top 10 general', nadie.top10 === (nadie.puntos > 0));
+const dis = (mn.distinciones || []).map(x => x.id);
+const janFijo = R.getDatos(V2).fijos.some(f => f.persona === '(N) - Jan');
+ver('distinciones: top de comidas y cuatro semanas seguidas', dis.indexOf('comidas') !== -1 && dis.indexOf('semanas') !== -1);
+ver('«tienes tu día» solo si tiene un fijo', (dis.indexOf('fijo') !== -1) === janFijo);
+ver('distinciones: cada una con su título y su explicación', (mn.distinciones || []).every(x => x.titulo && x.texto));
+ver('los puntos son la suma de las categorías y de las medallas (3 cada una)', mn.puntos === (mn.distinciones || []).reduce((t, x) => t + x.puntos, 0) && (mn.distinciones || []).filter(x => !x.categoria).every(x => x.puntos === 3));
+ver('quien no ha ido no tiene las de ir (solo en positivo)', !(R.misNumeros(M_).distinciones || []).some(x => x.id === 'comidas' && !nadie.total));
+// v4.84: el servicio, con sus medallas (sin competir con la familia ni entrar en el top)
+const anchoP = hojas.PERSONAS.filas[0].length;
+hojas.PERSONAS.filas.push(['(O) - Soledad', 'Soledad', 'Otros', 'Servicio', '', '🌕 Entero', '', ''].concat(Array(Math.max(0, anchoP - 8)).fill('')));
+['2026-10-20', '2026-10-21', '2026-10-22', '2026-10-27', '2026-10-28', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-10'].forEach((f, i) => hojas.MESA_APUNTES.filas.push(['s' + i, f, 'DORMIR', '(O) - Soledad', '', '', '', '', '', '']));
+const sol = R.misNumeros('(O) - Soledad'), dsol = (sol.distinciones || []).map(x => x.id);
+ver('servicio: la que más noches le hace compañía', sol.servicio === true && dsol.indexOf('mas-noches') !== -1);
+ver('servicio: cuatro semanas seguidas', dsol.indexOf('semanas') !== -1);
+ver('servicio: sin puntos ni top 10 de la familia', !sol.top10 && !sol.puntos && !dsol.some(x => x === 'comidas' && (sol.distinciones.find(d => d.id === x) || {}).categoria));
+ver('servicio: no sale en las medallas de la familia', R.misNumeros('(N) - Jan').puntos === mn.puntos);
+hojas.PERSONAS.filas = hojas.PERSONAS.filas.filter(f => f[0] !== '(O) - Soledad');
+hojas.MESA_APUNTES.filas = hojas.MESA_APUNTES.filas.filter(f => !/^s\d$/.test(f[0]));
+ver('la etiqueta dorada llega con los datos', R.getDatos(Object.assign({}, V2, { yo: '(N) - Jan' })).yoTop10 === true);
+err = ''; try { R.misNumeros('(X) - Nadie'); } catch (e) { err = e.message; }
+ver('de alguien que no está, no', /No encontramos/.test(err));
+
 // ---------- v4.17: la clave de la familia ----------
 ver('sin CLAVE en MESA_CONFIG, no se pide', R.api_('getDatos', [V2], undefined).ok === true);
 hojas.MESA_CONFIG.filas.push(['CLAVE', 'Paella']);
@@ -394,3 +430,5 @@ ver('sin PISTA, el aviso no lleva pista', !/PISTA/.test(R.api_('getDatos', [V2],
 hojas.MESA_CONFIG.filas.push(['PISTA', 'Lo que se come en verano…']);
 ver('con PISTA, va en el aviso', /PISTA: Lo que se come en verano…$/.test(R.api_('getDatos', [V2], 'no').error || ''));
 ver('y con la clave buena, entra igual', R.api_('getDatos', [V2], 'paella').ok === true);
+const conPista = R.api_('getDatos', [V2], 'paella').r;
+ver('la pista llega con los datos, la clave no', conPista.config.pista === 'Lo que se come en verano…' && !('clave' in conPista.config));

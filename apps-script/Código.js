@@ -108,6 +108,7 @@ const API_ = {
   borrarEvento: function (a) { return borrarEvento(a[0], a[1], a[2]); },
   apuntarEvento: function (a) { return apuntarEvento(a[0], a[1], a[2], a[3], a[4], a[5]); },  // v4.67: a[5], los días
   notaEvento: function (a) { return notaEvento(a[0], a[1], a[2], a[3], a[4]); },  // v4.68
+  misNumeros: function (a) { return misNumeros(a[0]); },  // v4.79
   guardarAusencia: function (a) { return guardarAusencia(a[0], a[1], a[2], a[3], a[4], a[5]); },
   crearPersona: function (a) { return crearPersona(a[0], a[1], a[2]); },
   darDeBaja: function (a) { return darDeBaja(a[0], a[1], a[2]); },
@@ -192,7 +193,7 @@ function datos_(ss, p) {
   return {
     hoy: hoy,
     url: url,
-    config: { inicio: config.inicio, horaComida: config.horaComida, horaCena: config.horaCena, horaDormir: config.horaDormir, avisoHoras: config.avisoHoras },
+    config: { inicio: config.inicio, horaComida: config.horaComida, horaCena: config.horaCena, horaDormir: config.horaDormir, avisoHoras: config.avisoHoras, pista: config.pista || '' },  // v4.78: la pista (no la clave), para salir del modo sencillo
     personas: personas,
     editores: leerEditores_(ss, config.excluir),
     menus: opcionesMenu_(personas),
@@ -202,10 +203,163 @@ function datos_(ss, p) {
     dias: leerDias_(ss).filter(function (d) { return d.fecha >= desde && d.fecha <= hasta; }),
     admins: config.admins,  // v4.58: quién ve los Ajustes
     eventos: leerEventos_(ss).filter(function (e) { return e.hasta >= (desde < sumarDias_(hoy, -60) ? desde : sumarDias_(hoy, -60)); }),  // v4.28
+    yoTop10: p.yo ? enTop_(categorias_(ss, config, personas).puntos, p.yo) : false,  // v4.81: la etiqueta dorada; v4.83: del top 10 general
     misProximas: p.yo ? efectivos_(crudos, fijos, hoy, sumarDias_(hoy, 60)).filter(function (a) { return a.persona === p.yo; }).slice(0, 12) : [],
     bajas: leerBajas_(ss).map(function (b) { return { id: b.id, apodo: b.apodo, jerarquia: b.jerarquia, familia: b.familia, menu: b.menu, baja: b.baja }; }),
     huerfanos: huerfanos_(crudos, fijos, personas.concat(leerEditores_(ss, config.excluir), leerBajas_(ss)), hoy),
   };
+}
+
+/** v4.81: lo que ha ido cada uno desde que empezó el calendario hasta ayer (efectivos, también los fijos) */
+function visitas_(ss, config) {
+  return memo_('visitas', function () {
+    const hoy = hoy_(), ayer = sumarDias_(hoy, -1);
+    const inicio = esFecha_(config.inicio) ? config.inicio : sumarDias_(hoy, -365);
+    return { ef: inicio <= ayer ? efectivos_(leerApuntes_(ss), leerFijos_(ss), inicio, ayer) : [], inicio: inicio };
+  });
+}
+function horasDe_(config) { return { COMIDA: config.horaComida || '14:00', CENA: config.horaCena || '21:00', DORMIR: config.horaDormir || '22:30' }; }
+/** Horas entre que se apuntó y la hora de esa comida, cena o noche (o null si no se sabe) */
+function antelacion_(a, horaDe) {
+  if (!a.creado || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(a.creado)) return null;
+  const h = String(horaDe[a.turno] || '14:00');
+  const x = (aUTC_(a.fecha) + (Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))) * 60000 - aUTC_(a.creado.slice(0, 10)) - (Number(a.creado.slice(11, 13)) * 60 + Number(a.creado.slice(14, 16))) * 60000) / 3600000;
+  return x >= 0 ? x : null;
+}
+/** v4.82: ¿está en el top 10 de este mapa (id → número)? Con empates */
+function enTop_(mapa, id) {
+  if (!(id in mapa) || !(mapa[id] > 0)) return false;
+  const v = Object.keys(mapa).map(function (k) { return mapa[k]; }).filter(function (x) { return x > 0; }).sort(function (a, b) { return b - a; });
+  return mapa[id] >= v[Math.min(9, v.length - 1)];
+}
+/** v4.83: los puntos de una categoría: 10 al primero, 9 al segundo… 1 al décimo (los empatados, igual) */
+function puntosCat_(mapa) {
+  const out = {};
+  Object.keys(mapa).forEach(function (id) {
+    if (!(mapa[id] > 0)) return;
+    const puesto = 1 + Object.keys(mapa).filter(function (k) { return mapa[k] > mapa[id]; }).length;
+    if (puesto <= 10) out[id] = 11 - puesto;
+  });
+  return out;
+}
+/**
+ * v4.83: las categorías de los últimos 30 días (comidas, cenas, noches, eventos y avisar con tiempo), cada una con su top 10,
+ * y los puntos de cada uno: la suma de lo que le da cada categoría. El top 10 general sale de esa suma.
+ */
+const CATEGORIAS = {
+  comidas: { titulo: 'Top 10 en comidas', texto: 'De los que más han comido con la abuela.' },
+  cenas: { titulo: 'Top 10 en cenas', texto: 'De los que más han cenado con ella.' },
+  noches: { titulo: 'Top 10 en noches', texto: 'De los que más noches le han hecho compañía.' },
+  eventos: { titulo: 'Top 10 en eventos', texto: 'De los que más se apuntan a los planes de la familia.' },
+  avisa: { titulo: 'De los que antes avisan', texto: 'Te apuntas con tiempo: así se organiza mejor la casa.' },
+};
+function categorias_(ss, config, personas) {
+  return memo_('categorias', function () {
+    const hoy = hoy_(), hace30 = sumarDias_(hoy, -30), v = visitas_(ss, config);
+    const deFamilia = {};
+    personas.forEach(function (x) { if (x.familia !== 'Servicio' && x.familia !== 'Otros') deFamilia[x.id] = true; });
+    const cats = { comidas: {}, cenas: {}, noches: {}, eventos: {}, avisa: {} };
+    const k = { COMIDA: 'comidas', CENA: 'cenas', DORMIR: 'noches' };
+    v.ef.forEach(function (a) { if (deFamilia[a.persona] && a.fecha >= hace30) cats[k[a.turno]][a.persona] = (cats[k[a.turno]][a.persona] || 0) + 1; });
+    leerEventos_(ss).filter(function (e) { return e.hasta >= hace30; }).forEach(function (e) { e.van.forEach(function (id) { if (deFamilia[id]) cats.eventos[id] = (cats.eventos[id] || 0) + 1; }); });
+    const horaDe = horasDe_(config), ante = {};
+    leerApuntes_(ss).forEach(function (a) {
+      if (!deFamilia[a.persona] || a.no || a.fecha < hace30 || a.fecha > hoy) return;
+      const x = antelacion_(a, horaDe);
+      if (x !== null) (ante[a.persona] = ante[a.persona] || []).push(x);
+    });
+    Object.keys(ante).forEach(function (id) { if (ante[id].length >= 2) { const l = ante[id].sort(function (a, b) { return a - b; }); cats.avisa[id] = Math.max(0.01, l[Math.floor(l.length / 2)]); } });
+    const pts = {}, puntos = {};
+    Object.keys(cats).forEach(function (c) { pts[c] = puntosCat_(cats[c]); Object.keys(pts[c]).forEach(function (id) { puntos[id] = (puntos[id] || 0) + pts[c][id]; }); });
+    // v4.84: las medallas que no compiten con nadie suman PUNTOS_MEDALLA cada una
+    Object.keys(deFamilia).forEach(function (id) { const m = logros_(ss, v, id).length; if (m) puntos[id] = (puntos[id] || 0) + m * PUNTOS_MEDALLA; });
+    return { cats: cats, pts: pts, puntos: puntos };
+  });
+}
+/** v4.82: las medallas de una persona, solo en positivo: las de cada categoría y las que no compiten con nadie */
+function distinciones_(ss, config, personas, id) {
+  const hoy = hoy_(), ayer = sumarDias_(hoy, -1), v = visitas_(ss, config), c = categorias_(ss, config, personas);
+  const out = [];
+  const pon = function (clave, titulo, texto, extra) { out.push(Object.assign({ id: clave, titulo: titulo, texto: texto }, extra || {})); };
+  const yoP = personas.filter(function (x) { return x.id === id; })[0];
+  if (yoP && yoP.familia === 'Servicio') { medallasServicio_(ss, personas, v, id, pon); return out; }  // v4.84: las suyas, sin competir con la familia
+  Object.keys(CATEGORIAS).forEach(function (k) { if (c.pts[k][id]) pon(k, CATEGORIAS[k].titulo, CATEGORIAS[k].texto, { puntos: c.pts[k][id], categoria: true }); });
+  logros_(ss, v, id).forEach(function (l) { pon(l[0], l[1], l[2], { puntos: PUNTOS_MEDALLA }); });
+  return out;
+}
+/** v4.84: las medallas que no compiten con nadie (cada una suma PUNTOS_MEDALLA): [id, título, texto] */
+const PUNTOS_MEDALLA = 3;
+function logros_(ss, v, id) {
+  const hoy = hoy_(), ayer = sumarDias_(hoy, -1), out = [];
+  const eventos = leerEventos_(ss).filter(function (e) { return e.desde >= v.inicio; });
+  const pasados = eventos.filter(function (e) { return e.hasta < hoy; });
+  if (pasados.length >= 2 && pasados.every(function (e) { return e.van.indexOf(id) !== -1; })) out.push(['ni-uno', 'No te pierdes ni uno', 'Has ido a todos los eventos que ha habido.']);
+  if (eventos.length >= 2 && eventos.every(function (e) { return e.van.indexOf(id) !== -1 || e.noVan.indexOf(id) !== -1; })) out.push(['contesta', 'Siempre contestas', 'Has dicho si vas o no a todos los eventos. ¡Gracias!']);
+  const mias = v.ef.filter(function (a) { return a.persona === id; }).map(function (a) { return a.fecha; });
+  if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) out.push(['semanas', 'Cuatro semanas seguidas', 'Has ido al menos una vez cada semana del último mes.']);
+  if (leerFijos_(ss).some(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy); })) out.push(['fijo', 'Tienes tu día', 'Tienes un día fijo con la abuela cada semana.']);
+  return out;
+}
+
+/** v4.84: las medallas del servicio, solo en positivo y entre el servicio */
+function medallasServicio_(ss, personas, v, id, pon) {
+  const hoy = hoy_(), hace30 = sumarDias_(hoy, -30), ayer = sumarDias_(hoy, -1);
+  const serv = personas.filter(function (x) { return x.familia === 'Servicio'; }).map(function (x) { return x.id; });
+  const n = {};
+  v.ef.forEach(function (a) { if (a.fecha >= hace30 && serv.indexOf(a.persona) !== -1) { n[a.persona] = n[a.persona] || { COMIDA: 0, CENA: 0, DORMIR: 0 }; n[a.persona][a.turno]++; } });
+  const mio = n[id] || { COMIDA: 0, CENA: 0, DORMIR: 0 };
+  // no falla nunca: tiene días fijos y en el último mes no ha dicho «no voy» a ninguno
+  const fijos = leerFijos_(ss).filter(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hace30); });
+  const faltas = leerApuntes_(ss).filter(function (a) { return a.persona === id && a.no && a.fecha >= hace30 && a.fecha <= ayer; }).length;
+  if (fijos.length && !faltas && (mio.COMIDA + mio.CENA + mio.DORMIR) > 0) pon('nunca-falla', 'No fallas nunca', 'Este último mes no has faltado ni un día de los tuyos.');
+  const masNoches = serv.every(function (o) { return o === id || (n[o] || { DORMIR: 0 }).DORMIR <= mio.DORMIR; });
+  if (mio.DORMIR > 0 && masNoches) pon('mas-noches', 'La que más noches le hace compañía', mio.DORMIR + (mio.DORMIR === 1 ? ' noche' : ' noches') + ' este último mes. Gracias.');
+  else if (mio.DORMIR >= 8) pon('noches', 'Noches con la abuela', mio.DORMIR + ' noches este último mes.');
+  if (mio.COMIDA >= 8) pon('comidas', 'Comidas con la abuela', mio.COMIDA + ' comidas este último mes.');
+  if (mio.CENA >= 8) pon('cenas', 'Cenas con la abuela', mio.CENA + ' cenas este último mes.');
+  const mias = v.ef.filter(function (a) { return a.persona === id; }).map(function (a) { return a.fecha; });
+  if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) pon('semanas', 'Cuatro semanas seguidas', 'Has estado con ella todas las semanas del último mes.');
+}
+
+/**
+ * v4.79: los números de una persona, desde que empezó el calendario hasta ayer; v4.83: con sus medallas, sus puntos
+ * y si está en el top 10 general (la suma de los puntos de las categorías). Solo lee.
+ */
+function misNumeros(personaId) {
+  reiniciar_();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const config = leerConfig_(ss);
+  const personas = leerPersonas_(ss, config.excluir);
+  const p = personas.filter(function (x) { return x.id === personaId; })[0];
+  if (!p) throw new Error('No encontramos ese nombre en la lista.');
+  const hoy = hoy_(), ayer = sumarDias_(hoy, -1);
+  const inicio = esFecha_(config.inicio) ? config.inicio : sumarDias_(hoy, -365);
+  const crudos = leerApuntes_(ss);
+  const v = visitas_(ss, config), ef = v.ef;
+  const mios = ef.filter(function (a) { return a.persona === personaId; });
+  const cuenta = { COMIDA: 0, CENA: 0, DORMIR: 0 }, porDia = [0, 0, 0, 0, 0, 0, 0];
+  let mes = 0, ultima = '';
+  mios.forEach(function (a) {
+    cuenta[a.turno] = (cuenta[a.turno] || 0) + 1;
+    porDia[diaSemana_(a.fecha)]++;
+    if (a.fecha.slice(0, 7) === hoy.slice(0, 7)) mes++;
+    if (a.fecha > ultima) ultima = a.fecha;
+  });
+  const maxDia = Math.max.apply(null, porDia);
+  const diaFav = maxDia >= 2 ? porDia.indexOf(maxDia) : -1;
+  // con cuánta antelación avisa: de cuándo se apuntó a la hora de esa comida, cena o noche (la mediana, en horas)
+  const horaDe = horasDe_(config);
+  const antes = crudos.filter(function (a) { return a.persona === personaId && !a.no && a.creado && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(a.creado); }).map(function (a) {
+    const h = String(horaDe[a.turno] || '14:00');
+    const cuando = aUTC_(a.fecha) + (Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))) * 60000;
+    const creado = aUTC_(a.creado.slice(0, 10)) + (Number(a.creado.slice(11, 13)) * 60 + Number(a.creado.slice(14, 16))) * 60000;
+    return (cuando - creado) / 3600000;
+  }).filter(function (x) { return x >= 0; }).sort(function (a, b) { return a - b; });
+  const antelacion = antes.length >= 2 ? Math.round(antes[Math.floor(antes.length / 2)]) : null;
+  // v4.83: las medallas, los puntos y el top 10 general (la suma de las categorías)
+  const c = categorias_(ss, config, personas), yo = mios.length;
+  return { servicio: p.familia === 'Servicio', distinciones: distinciones_(ss, config, personas, personaId), puntos: c.puntos[personaId] || 0, top10: enTop_(c.puntos, personaId), desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav, porDia: porDia,
+    antelacionHoras: antelacion, ultima: ultima };
 }
 
 function leerConfig_(ss) { return memo_('config', function () { return leerConfigSin_(ss); }); }
@@ -303,7 +457,7 @@ function leerApuntesSin_(ss) {
   const alias = resolverAlias_(ss);
   return abrirTabla_(ss.getSheetByName(HOJA_APUNTES), COLS_APUNTES, aFilaApunte_).vivas().map(function (x) {
     const f = x.v;
-    return { id: f[0], fecha: f[1], turno: f[2], persona: alias(f[3]), nota: f[5], no: f[6] === 'NO', notaPor: f[7], notaEn: f[8], acompanantes: Number(f[9]) || 0 };
+    return { id: f[0], fecha: f[1], turno: f[2], persona: alias(f[3]), creado: f[4], nota: f[5], no: f[6] === 'NO', notaPor: f[7], notaEn: f[8], acompanantes: Number(f[9]) || 0 };
   });
 }
 
