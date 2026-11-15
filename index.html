@@ -3586,19 +3586,25 @@
     const e = evento(id) || { nombre: 'Evento', van: [], noVan: [], desde: hoy(), hasta: hoy(), cuando: 'DIA' };
     const enlace = datos.url ? '\n\n👉 Di si vas aquí: ' + datos.url.replace(/#.*$/, '') + '#evento-' + e.id : '';  // v4.51: abre este evento
     const c = cuentaEvento(e), dias = diasDelEvento(e);
-    const resumen = (c.van ? '*Van ' + c.van + '*' : '*Aún no va nadie*') + (c.noVan ? ' · no pueden ' + c.noVan : '') + (c.faltan ? ' · sin contestar ' + c.faltan : '') +
-      (dias.length > 1 && c.van ? '\n_' + dias.map(function (f) {
+    // v4.71: cada número en su línea
+    const resumen = '*Van: ' + c.van + '*' +
+      (dias.length > 1 && c.van ? dias.map(function (f) {
         const n = e.van.filter(function (id) { const d = diasDe(e, id); return !d || d.indexOf(f) !== -1; }).length;
-        return diaMes(f) + ': ' + n;
-      }).join(' · ') + '_' : '');
+        return '\n   ' + diaCortoEv(f) + ': ' + n;
+      }).join('') : '') +
+      (c.noVan ? '\nNo pueden: ' + c.noVan : '') + (c.faltan ? '\nSin contestar: ' + c.faltan : '');
+    // v4.71: la fecha en corto («19-20/12 · 9:00»)
+    const dm = function (f) { return f.slice(8, 10) + '/' + f.slice(5, 7); };
+    const cuando = (e.hasta > e.desde ? (e.desde.slice(5, 7) === e.hasta.slice(5, 7) ? e.desde.slice(8, 10) + '-' + dm(e.hasta) : dm(e.desde) + ' a ' + dm(e.hasta)) : dm(e.desde)) +
+      (e.hora ? ' · ' + e.hora : e.cuando && e.cuando !== 'DIA' && e.hasta === e.desde ? ' · ' + CUANDO_EV[e.cuando] : '');
     const familias = porFamiliaEvento(e).filter(function (x) { return x.van; }).map(function (x) {
       const sueltos = x.gente.filter(function (p) { return e.van.indexOf(p.id) !== -1 && diasDe(e, p.id); })
         .map(function (p) { return p.apodo + ' ' + textoDias(diasDe(e, p.id)); });
       return '• ' + cortoFamilia(x.f) + ': ' + x.van + ' de ' + x.gente.length + (sueltos.length ? ' _(' + sueltos.join('; ') + ')_' : '');
     });
     const notas = e.van.filter(function (id) { return notaDe(e, id) && quienEs(id); }).map(function (id) { return '• ' + quienEs(id).apodo + ': _' + notaDe(e, id) + '_'; });
-    return '🎉 *' + e.nombre + '*\n📅 ' + fechaEvento(e) + '\n' + resumen +
-      (e.lugar || e.texto ? '\n' + (e.lugar ? '\n📍 ' + e.lugar : '') + (e.texto ? '\n' + e.texto : '') : '') +
+    return '🎉 *' + e.nombre + '*\n📅 ' + cuando + (e.lugar ? '\n📍 ' + e.lugar : '') + '\n\n' + resumen +
+      (e.texto ? '\n\n' + e.texto : '') +
       (familias.length ? '\n\n*Por familias*\n' + familias.join('\n') : '') +
       (notas.length ? '\n\n*Notas*\n' + notas.join('\n') : '') + enlace;
   }
