@@ -793,8 +793,7 @@
   .arbol-caja.muerto { fill: #F3EFE9; }
   .arbol-caja.futuro { fill: var(--color-futuro-claro); stroke: var(--color-futuro); stroke-dasharray: 4 3; }
   .arbol-persona.futuro .arbol-nombre, .arbol-persona.futuro .arbol-dato { fill: var(--color-futuro); }
-  .arbol-raya.futuro { stroke: var(--color-futuro); stroke-dasharray: 5 4; }
-  .arbol-anillo.futuro rect { fill: var(--color-futuro-claro); stroke: var(--color-futuro); }
+  .arbol-anillo.futuro rect { fill: var(--color-futuro-claro); stroke: var(--color-futuro); stroke-dasharray: 4 3; stroke-width: 1.5; }  /* v5.4: la boda que viene, con el borde discontinuo (como los bebés en camino) */
   .arbol-anillo.futuro circle, .arbol-anillo.futuro path { stroke: var(--color-futuro); }
   .arbol-anillo.futuro .arbol-ano { fill: var(--color-futuro); }
   button.fila-persona.fila-caja.futuro { background: var(--color-futuro-claro); border-radius: calc(var(--radio) / 2); padding-left: 10px; padding-right: 10px; }
@@ -1043,7 +1042,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.4.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.5.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -3019,8 +3018,7 @@
       if (n.cabezas.length > 1) {
         const yr = 6 + altoP(n.cabezas[0]) + aire(n);
         const l = pastillas(n), bx0 = x;
-        const bodaFutura = l.some(function (z) { return z.icono === 'anillo' && z.futuro; });  // v5.4: la boda aún no ha llegado: la raya, discontinua y azul (como lo de los bebés en camino)
-        dentro += '<path class="arbol-raya' + (bodaFutura ? ' futuro' : '') + '" d="M' + PAD + ' ' + yr + 'H' + (bw - PAD) + '"/>';
+        dentro += '<path class="arbol-raya" d="M' + PAD + ' ' + yr + 'H' + (bw - PAD) + '"/>';
         let px = bw / 2 - anchoPastillas(n) / 2;
         l.forEach(function (x) {
           const icono = x.icono === 'anillo' ? '<circle cx="12" cy="15" r="6"/><path d="M12 3.5l2.5 2.5L12 8.5 9.5 6z"/>' :
