@@ -3581,18 +3581,20 @@
     const e = evento(id) || { nombre: 'Evento', van: [], noVan: [], desde: hoy(), hasta: hoy(), cuando: 'DIA' };
     const enlace = datos.url ? '\n\n👉 Di si vas aquí: ' + datos.url.replace(/#.*$/, '') + '#evento-' + e.id : '';  // v4.51: abre este evento
     return '🎉 *' + e.nombre + '*\n📅 ' + fechaEvento(e) + (e.lugar ? '\n📍 ' + e.lugar : '') + (e.texto ? '\n\n' + e.texto : '') + '\n\n' +
-      (e.van.length ? '*Van ya (' + e.van.length + '):*\n' + e.van.map(function (id) { return '• ' + extraEv(e, id, true); }).join('\n') : 'Aún no se ha apuntado nadie.') +
-      // v4.70: cuántos van cada día (si alguien va solo algunos) y quién no puede, en una línea
-      (diasDelEvento(e).length > 1 && e.van.some(function (id) { return diasDe(e, id); }) ? '\n_' + diasDelEvento(e).map(function (f) {
-        const n = e.van.filter(function (id) { const d = diasDe(e, id); return !d || d.indexOf(f) !== -1; }).length;
-        return diaCortoEv(f) + ', ' + (n === 1 ? 'va 1' : 'van ' + n);
-      }).join(' · ') + '_' : '') +
-      (e.noVan.length ? '\n\n*No pueden (' + e.noVan.length + '):* ' + e.noVan.map(function (id) { return extraEv(e, id, false); }).join(', ') : '') + enlace;
+      (e.van.length ? '*Van ya (' + e.van.length + '):*\n' + e.van.map(function (id) { return '• ' + extraEv(e, id); }).join('\n') : 'Aún no se ha apuntado nadie.') +
+      // v4.70: un resumen con números (sin la lista de quién no puede): cuántos van (y cada día), no pueden y sin contestar
+      (function () {
+        const c = cuentaEvento(e), dias = diasDelEvento(e);
+        const porDia = dias.length > 1 && e.van.length ? dias.map(function (f) {
+          return '\n   – ' + diaMes(f) + ': ' + e.van.filter(function (id) { const d = diasDe(e, id); return !d || d.indexOf(f) !== -1; }).length;
+        }).join('') : '';
+        return '\n\n*En resumen*\nVan: ' + c.van + porDia + (c.noVan ? '\nNo pueden: ' + c.noVan : '') + (c.faltan ? '\nSin contestar: ' + c.faltan : '');
+      })() + enlace;
   }
   /* v4.70: «Marcos (solo dom 20) · _llego a las 11_»: sus días y su nota, sin ruido */
-  function extraEv(e, id, conDias) {
-    const d = conDias ? diasDe(e, id) : null, n = notaDe(e, id);
-    return ((quienEs(id) || {}).apodo || id) + (d ? ' (' + textoDias(d) + ')' : '') + (n ? (conDias ? ' · _' + n + '_' : ' (_' + n + '_)') : '');
+  function extraEv(e, id) {
+    const d = diasDe(e, id), n = notaDe(e, id);
+    return ((quienEs(id) || {}).apodo || id) + (d ? ' (' + textoDias(d) + ')' : '') + (n ? ' · _' + n + '_' : '');
   }
   function mensaje(tipo) {
     if (tipo.indexOf('ev:') === 0) return mensajeEv(tipo.slice(3));
