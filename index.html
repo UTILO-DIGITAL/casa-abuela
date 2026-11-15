@@ -3632,11 +3632,13 @@
     const enlace = datos.url ? '\n\n👉 Apúntate aquí: ' + datos.url : '';
     const titulo = '🏡 *Casa Abuela*\n_Semana del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '_';
     const apodo = function (id) { return (persona(id) || {}).apodo || id; };
-    if (tipo === 'huecos') {
+    if (tipo.indexOf('huecos') === 0) {
       // Lo mismo que la pestaña Huecos: sin nadie o solo con el servicio (no cuentan si no hace falta o la abuela no está)
+      // v4.73: de los próximos N días (desde hoy), no de la semana: un domingo, «esta semana» ya no dice nada
+      const n = Number(tipo.split(':')[1]) || 7;
+      const diasH = Array.from({ length: n }, function (_, i) { return sumar(hoy(), i); });
       const lineas = [];
-      dias.forEach(function (f) {
-        if (f < hoy()) return;
+      diasH.forEach(function (f) {
         const faltan = [];
         TURNOS.forEach(function (t) {
           if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id) || yaPaso(f, t.id)) return;  // v4.63
@@ -3646,7 +3648,8 @@
         });
         if (faltan.length) lineas.push('• *' + diaLargo(f) + '*: ' + lista(faltan));
       });
-      return titulo + '\n\n' + (lineas.length ? '⚠️ *Falta alguien para:*\n' + lineas.join('\n') : '✅ Están todas las comidas, cenas y noches cubiertas. ¡Gracias a todos!') + enlace;
+      return '🏡 *Casa Abuela*\n_Lo que falta los próximos ' + n + ' días: del ' + ddmm(diasH[0]) + ' al ' + ddmm(diasH[n - 1]) + '_\n\n' +
+        (lineas.length ? '⚠️ *Falta alguien para:*\n' + lineas.join('\n') : '✅ Están todas las comidas, cenas y noches cubiertas. ¡Gracias a todos!') + enlace;
     }
     // v4.73: los próximos N días, desde hoy (de hoy, solo lo que aún no ha pasado)
     const prox = tipo.indexOf('prox:') === 0 ? Number(tipo.slice(5)) : 0;
@@ -3698,7 +3701,7 @@
         { v: 'prox:3', t: 'Los próximos 3 días' }, { v: 'prox:5', t: 'Los próximos 5 días' }, { v: 'prox:7', t: 'Los próximos 7 días' }])
       .concat([2, 3, 4, 5, 6].map(function (n) { const f = sumar(hoy(), n); return { v: f, t: 'Quién viene el ' + diaLargo(f).toLowerCase() }; }))
       .concat(lunesSel > lunesDe(hoy()) ? [{ v: 'semana', t: 'Quién viene la semana del ' + ddmm(dias[0]) }] : [])
-      .concat([{ v: 'huecos', t: 'Lo que falta esta semana' }]);
+      .concat([{ v: 'huecos:3', t: 'Lo que falta los próximos 3 días' }, { v: 'huecos:7', t: 'Lo que falta los próximos 7 días' }]);
     const inicial = inicialPedido || (lunesSel > lunesDe(hoy()) ? 'semana' : hoy());
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Compartir por WhatsApp</h2></div>' +
       '<div class="dlg-cuerpo"><label class="campo" for="dlg-que">Qué quieres compartir<select id="dlg-que">' +
