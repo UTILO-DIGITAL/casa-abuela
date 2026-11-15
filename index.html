@@ -653,7 +653,7 @@
   #vista-eventos { padding-bottom: 110px; }
   .ev-fab { transition: transform .2s; }
   .ev-fab.escondido { transform: translateY(140%); }
-  .ev-fab[hidden] { display: none; }
+  .ev-fab[hidden], #per-arbol-btn[hidden] { display: none; }
   .ev-secciones { display: grid; grid-template-columns: 1fr 1fr; margin: 0 0 12px; border-bottom: 2px solid var(--color-linea); }
   .ev-secciones button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 0; background: none; font: inherit; font-weight: 800; font-size: 17px; color: var(--color-texto-suave); cursor: pointer; margin-bottom: -2px; border-bottom: 3px solid transparent; }
   .ev-secciones button[aria-selected="true"] { color: var(--color-principal-oscuro); border-bottom-color: var(--color-principal-oscuro); }
@@ -973,7 +973,7 @@
   #impresion { display: none; }
   @media print {
     body { background: #fff; }
-    .cabecera, .pagina, dialog, .toast { display: none !important; }
+    .cabecera, .pagina, dialog, .toast, .flotantes { display: none !important; }
     #impresion { display: block; font-family: var(--letra-texto); color: #000; padding: 0; }
     #impresion h1 { font-size: 20px; margin: 0 0 8px; }
     #impresion table { width: 100%; border-collapse: collapse; font-size: 12pt; }
@@ -1014,7 +1014,6 @@
     <div class="personas-cab">
       <label class="buscar" for="per-q"><span class="oculto">Buscar</span><input id="per-q" type="search" autocomplete="off" placeholder="Buscar"></label>
       <button type="button" class="accion" id="per-filtros-btn" aria-expanded="false" aria-controls="per-filtros">Filtros</button>
-      <button type="button" class="accion" id="per-arbol-btn" aria-pressed="false">Árbol</button>
       <button type="button" class="accion" data-nueva-persona>Añadir</button>
     </div>
     <div id="per-filtros" class="per-filtros-panel" hidden></div>
@@ -1024,7 +1023,6 @@
   </section>
 
   <section id="vista-eventos" hidden>
-    <div class="eventos-barra"><button type="button" class="principal boton-evento ev-fab" id="ev-anadir"><span aria-hidden="true">+</span> Añadir evento</button></div>
     <div id="eventos-lista"><p class="vacio">Cargando…</p></div>
   </section>
   <section id="vista-rellenar" hidden>
@@ -1054,7 +1052,12 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.11.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.12.0</footer>
+</div>
+<!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
+<div class="flotantes">
+    <div class="eventos-barra"><button type="button" class="principal boton-evento ev-fab" id="ev-anadir" hidden><span aria-hidden="true">+</span> Añadir evento</button></div>
+    <button type="button" class="accion" id="per-arbol-btn" aria-pressed="false" hidden>Árbol</button>
 </div>
 
 <div id="impresion"></div>
@@ -3180,7 +3183,7 @@
     const pest = [modoAbuela() || !persona(yo) ? null : ['confirmar', 'Por confirmar', porConfirmar.length], ['proximos', 'Próximos', proximos.length], ['pasados', 'Pasados', pasados.length]].filter(Boolean);
     const lista = evFiltro === 'confirmar' ? porConfirmar : evFiltro === 'pasados' ? pasados : proximos;
     const enFechas = evFiltro === 'fechas';
-    $('ev-anadir').hidden = enFechas;  // v4.92: en las fechas señaladas no se añaden eventos
+    $('ev-anadir').hidden = enFechas || vista !== 'eventos';  // v4.92; v5.12: y solo en Eventos: en las fechas señaladas no se añaden eventos
     $l.innerHTML = '<div class="ev-secciones" role="tablist"><button type="button" role="tab" data-ev-filtro="' + (porConfirmar.length && !modoAbuela() ? 'confirmar' : 'proximos') + '" aria-selected="' + !enFechas + '">Eventos' + (porConfirmar.length && !modoAbuela() ? ' <span class="ev-filtro-n alerta">' + porConfirmar.length + '</span>' : '') + '</button>' +
         '<button type="button" role="tab" data-ev-filtro="fechas" aria-selected="' + enFechas + '">Fechas señaladas</button></div>' +
       (enFechas ? '' : '<div class="ev-filtros" role="tablist">' + pest.map(function (x) {
@@ -5141,6 +5144,8 @@
     if (v === 'rellenar') { rfSucio = true; const y = yo && persona(yo); if (!rfFamilia && y && !esServicio(y) && y.familia !== 'Otros') rfFamilia = familiaDe(y); }  // v4.40; v4.65: directamente la tuya
     vista = SUBTITULOS[v] ? v : 'semana';
     ['semana', 'eventos', 'personas', 'huecos', 'rellenar', 'ajustes'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
+    $('per-arbol-btn').hidden = vista !== 'personas';  // v5.12: ya no están dentro de su sección
+    if (vista !== 'eventos') $('ev-anadir').hidden = true;
     $('subtitulo').textContent = SUBTITULOS[vista];
     document.querySelectorAll('nav.vistas a').forEach(function (a) {
       if (a.dataset.vista === vista) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
