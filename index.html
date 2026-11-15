@@ -431,13 +431,29 @@
   .aj-kpi { padding: 10px 12px; border-radius: 10px; background: var(--color-fondo); border: 1px solid var(--color-linea); display: grid; gap: 2px; }
   .aj-kpi b { font-size: 26px; line-height: 1.1; color: var(--color-principal-oscuro); font-variant-numeric: tabular-nums; }
   .mn-kpis { margin: 4px 0 8px; }
+  .mn-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--color-principal-claro); }
+  .mn-hero b { font-size: 40px; line-height: 1; color: var(--color-principal-oscuro); font-variant-numeric: tabular-nums; }
+  .mn-hero > div:first-child span { font-size: 17px; font-weight: 800; }
+  .mn-hero small { display: block; margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
+  .mn-mes { flex: none; display: grid; justify-items: end; }
+  .mn-mes b { font-size: 28px; }
+  .mn-mes span { font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
+  .mn-top-caja { display: grid; gap: 2px; padding: 10px 14px; border-radius: 12px; background: linear-gradient(135deg, #FFF3CF, #FBE3A0); border: 1px solid #F1C85A; }
+  .mn-top-caja b { font-size: 17px; color: #7A5300; }
+  .mn-top-caja span { font-size: 15px; font-weight: 700; }
+  .mn-top-caja small { font-size: 12px; color: #6B5A2E; }
+  .mn-top-caja.fuera { background: #fff; border-color: var(--color-linea); }
+  .mn-top-caja.fuera b { color: var(--color-texto); }
+  .mn-datos { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font-size: 15px; color: var(--color-texto-suave); }
+  .mn-datos b { color: var(--color-texto); }
+  #mis-numeros { display: grid; gap: 10px; }
   /* v4.81: el top 10 (la etiqueta, dorada) y la gráfica de los días */
   .yo-chip.top { background: linear-gradient(135deg, #F7D774, #E3A82B); border-color: #FBE7A6; color: #3B2A00; box-shadow: 0 0 0 2px rgba(247, 215, 116, .35); }
   .yo-chip.top .yo-ini { background: #3B2A00; color: #F7D774; }
   .aj-kpi .mn-top { font-size: 22px; background: linear-gradient(135deg, #D99A1E, #B8860B); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .mn-dias { margin: 4px 0 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--color-linea); }
+  .mn-dias { margin: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--color-linea); }
   .mn-dias-tit { margin: 0 0 6px; font-size: 14px; font-weight: 800; }
-  .mn-barras { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 96px; }
+  .mn-barras { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 76px; }
   .mn-barra { display: grid; grid-template-rows: auto 1fr auto; align-items: end; justify-items: center; height: 100%; gap: 2px; }
   .mn-barra b { font-size: 11px; color: var(--color-texto-suave); }
   .mn-barra i { display: block; width: 100%; max-width: 26px; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--color-principal-claro); align-self: end; }
@@ -3816,13 +3832,14 @@
     const dias = n.porDia ? [1, 2, 3, 4, 5, 6, 0] : [], max = n.porDia ? Math.max.apply(null, n.porDia) : 0;
     const grafica = dias.length && max ? '<div class="mn-dias"><p class="mn-dias-tit">Tus días' + (n.diaFav >= 0 ? ': sobre todo los ' + DIAS[n.diaFav].toLowerCase() + (/s$/.test(DIAS[n.diaFav]) ? '' : 's') : '') + '</p><div class="mn-barras">' +
       dias.map(function (d) { const v = n.porDia[d]; return '<span class="mn-barra' + (v === max ? ' max' : '') + '" title="' + DIAS[d] + ': ' + v + '"><b>' + (v || '') + '</b><i style="height:' + Math.round(v / max * 100) + '%"></i><small>' + 'DLMXJVS'.charAt(d) + '</small></span>'; }).join('') + '</div></div>' : '';
-    return '<p class="mn-animo">' + (n.top10 ? '¡Estás en el top 10 de la familia este último mes! ' : '') + 'Gracias por acompañar a la abuela.</p><div class="aj-kpis mn-kpis">' +
-      cifra(n.total, n.total === 1 ? 'vez con la abuela' : 'veces con la abuela', esc(detalle + ' · ' + desde)) +
-      cifra(n.mes, 'este mes', '') +
-      (aviso ? cifra('<span class="mn-txt">' + aviso + '</span>', 'sueles avisar', '') : '') +
-      (n.ultima ? cifra('<span class="mn-txt">' + esc(haceCuanto(n.ultima)) + '</span>', 'la última vez', '') : '') +
-      (n.top10 ? cifra('<span class="mn-top">Top 10</span>', 'de la familia, en los últimos 30 días', '') : n.faltanTop10 ? cifra(n.faltanTop10, (n.faltanTop10 === 1 ? 'visita más' : 'visitas más') + ' y entras en el top 10 (últimos 30 días)', '') : '') +
-      '</div>' + grafica;
+    // v4.81: compacto: lo grande arriba, el top 10 explicado, dos datos en una línea y la gráfica
+    const criterio = 'Cuenta las comidas, cenas y noches de los últimos 30 días (el servicio no cuenta). Entran los 10 que más han ido y los empatados con el décimo.';
+    return '<div class="mn-hero"><div><b>' + n.total + '</b> <span>' + (n.total === 1 ? 'vez con la abuela' : 'veces con la abuela') + '</span><small>' + esc(detalle) + ' · ' + esc(desde) + '</small></div>' +
+        '<div class="mn-mes"><b>' + n.mes + '</b><span>este mes</span></div></div>' +
+      (n.top10 ? '<div class="mn-top-caja"><b>Top 10 de la familia</b><span>¡Estás entre los que más acompañan a la abuela! Por eso tu nombre sale en dorado.</span><small>' + criterio + '</small></div>'
+        : n.faltanTop10 ? '<div class="mn-top-caja fuera"><b>' + (n.faltanTop10 === 1 ? 'Te falta 1 visita' : 'Te faltan ' + n.faltanTop10 + ' visitas') + ' para el top 10</b><span>Si entras, tu nombre saldrá en dorado.</span><small>' + criterio + '</small></div>' : '') +
+      ((aviso || n.ultima) ? '<p class="mn-datos">' + (aviso ? '<span>Sueles avisar <b>' + aviso + '</b></span>' : '') + (n.ultima ? '<span>La última vez <b>' + esc(haceCuanto(n.ultima)) + '</b></span>' : '') + '</p>' : '') +
+      grafica;
   }
 
   /* ---------- Compartir por WhatsApp ---------- */
