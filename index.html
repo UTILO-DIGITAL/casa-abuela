@@ -422,6 +422,23 @@
   .aj-con-sufijo { display: flex; align-items: center; gap: 10px; }
   .aj-con-sufijo input { width: 6em; flex: none; }
   .aj-con-sufijo span { font-weight: 600; color: var(--color-texto-suave); }
+  /* v4.85: el portal de premios */
+  .aj-sub { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
+  .pr-totales { margin: 0; }
+  .pr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .pr-card { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--color-linea); background: var(--color-fondo); display: grid; gap: 4px; align-content: start; }
+  .pr-card h3 { margin: 0; font-size: 16px; }
+  .pr-card.pr-oro { background: linear-gradient(135deg, #FFF3CF, #FBE3A0); border-color: #F1C85A; }
+  .pr-card.pr-ancha { grid-column: 1 / -1; }
+  .pr-texto { margin: 0; font-size: 12px; color: var(--color-texto-suave); }
+  .pr-card ol { margin: 4px 0 0; padding-left: 22px; display: grid; gap: 2px; font-size: 14px; }
+  .pr-card ol li span { font-weight: 700; }
+  .pr-card ol li b { float: right; font-size: 13px; }
+  .pr-card ol li small { float: right; margin-right: 6px; font-size: 11px; color: #B8860B; font-weight: 800; }
+  .pr-nadie { list-style: none; margin-left: -22px; color: var(--color-texto-suave); }
+  .pr-mas { margin: 0; font-size: 12px; color: var(--color-texto-suave); }
+  .pr-medallas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+  .pr-medallas span { color: var(--color-texto-suave); }
   .aj-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
   .aj-tabla th { text-align: left; font-size: 12px; color: var(--color-texto-suave); font-weight: 800; padding: 4px 6px 4px 0; }
   .aj-tabla td { padding: 6px 6px 6px 0; border-top: 1px solid var(--color-linea); vertical-align: top; }
@@ -609,6 +626,9 @@
   .nav-badge[hidden] { display: none; }
   nav.vistas a#nav-rellenar { color: #FFE2A8; }
   nav.vistas a#nav-rellenar[aria-current="page"] { color: var(--color-principal-oscuro); }
+  /* v4.86: el servicio ve lo suyo */
+  .modo-servicio nav.vistas a[data-vista="personas"], .modo-servicio nav.vistas a[data-vista="huecos"], .modo-servicio #nav-rellenar, .modo-servicio #nav-ajustes,
+  .modo-servicio .eventos-barra, .modo-servicio #dlg-ev-cambiar, .modo-servicio .ev-compartir, .modo-servicio [data-nueva-persona], .modo-servicio #aj-pedir { display: none !important; }
   .ev-notas { margin: 8px 0 4px; padding: 8px 12px; border-radius: var(--radio); background: #FFF6D9; border-left: 4px solid #E9B949; }
   .ev-notas-tit { margin: 0 0 2px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #8A6A10; }
   .ev-notas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 15px; }
@@ -898,7 +918,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.84.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.86.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1374,8 +1394,11 @@
     $('salir-sencillo').hidden = !sencillo;
     if (sencillo && (vista === 'huecos' || vista === 'rellenar')) { ponerVista('semana'); return; }
     $('nav-ajustes').hidden = !esAdmin();  // v4.58
+    const serv = servicioYo();  // v4.86: el servicio ve la Semana y los Eventos
+    document.body.classList.toggle('modo-servicio', serv);
+    if (serv && ['personas', 'huecos', 'rellenar', 'ajustes'].indexOf(vista) !== -1) { ponerVista('semana'); return; }
     const mios = rfMios();  // v4.65
-    $('nav-rellenar').hidden = !mios.length && vista !== 'rellenar';
+    $('nav-rellenar').hidden = serv || (!mios.length && vista !== 'rellenar');
     // v4.80: los avisos de las pestañas: eventos por contestar y personas por rellenar
     const pend = sencillo ? 0 : (datos.eventos || []).filter(function (e) { return e.hasta >= hoy() && sinContestar(e); }).length;
     $('badge-eventos').hidden = !pend; $('badge-eventos').textContent = pend; $('badge-eventos').setAttribute('aria-label', pend + ' por contestar');
@@ -1583,15 +1606,16 @@
       (al.length ? '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>' : '') +
       orden.map(function (f) { return '<h3 class="dt-fam">' + esc(f === '?' ? 'Otros' : cortoFamilia(f)) + ' <small>' + grupos[f].length + '</small></h3><div class="gente">' + grupos[f].map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>'; }).join('') +
       (serv.length ? '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '') +
-      '<p class="ayuda">Toca a alguien para cambiar lo suyo.</p></div>' +
-      '<div class="dlg-pie"><div class="botones">' + (sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">Añadir a alguien</button>' : '') +
+      '<p class="ayuda">' + (servicioYo() ? 'Toca a alguien para ver quién es.' : 'Toca a alguien para cambiar lo suyo.') + '</p></div>' +
+      '<div class="dlg-pie"><div class="botones">' + (sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">' + (servicioYo() ? 'Apuntarme' : 'Añadir a alguien') + '</button>' : '') +
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
-    if ($('dlg-dt-anadir')) $('dlg-dt-anadir').addEventListener('click', function () { cerrarDialogo(); abrirAnadir(fecha, turno); });
+    if ($('dlg-dt-anadir')) $('dlg-dt-anadir').addEventListener('click', function () { cerrarDialogo(); if (servicioYo()) apuntarme(fecha, turno); else abrirAnadir(fecha, turno); });
     $dlg.querySelector('.dlg-cuerpo').addEventListener('click', function (e) {
       const b = e.target.closest('[data-persona]');
       if (!b) return;
-      cerrarDialogo(); abrirPersona(b.dataset.persona, fecha, turno);
+      cerrarDialogo();
+      if (servicioYo() && b.dataset.persona !== yo) abrirInfoPersona(b.dataset.persona); else abrirPersona(b.dataset.persona, fecha, turno);  // v4.86
     });
   }
   function pintarSemana() {
@@ -1982,6 +2006,65 @@
     llamar('getAjustes', [yo]).then(function (a) { ajCargando = false; ajustes = a; pintarAjustes(); })
       .catch(function (err) { ajCargando = false; if (esErrorClave(err)) { pedirClave(err); return; } $('ajustes').innerHTML = '<p class="vacio">' + esc(mensajeError(err)) + '</p>'; });
   }
+  /* ---------- v4.85: el portal de premios (solo para quien lleva la web) ---------- */
+  const UNIDAD_CAT = { comidas: ['comida', 'comidas'], cenas: ['cena', 'cenas'], noches: ['noche', 'noches'], eventos: ['evento', 'eventos'], finde: ['visita', 'visitas'], semana: ['visita', 'visitas'], compania: ['acompañante', 'acompañantes'] };
+  function valorCat(k, v) {
+    if (k === 'avisa') return v < 24 ? Math.round(v) + ' h antes' : Math.round(v / 24) + (Math.round(v / 24) === 1 ? ' día antes' : ' días antes');
+    const u = UNIDAD_CAT[k] || ['', ''];
+    return v + ' ' + (v === 1 ? u[0] : u[1]);
+  }
+  function htmlPremios(pr) {
+    const t = pr.totales, top = pr.general.filter(function (g) { return g.top; });
+    return '<h2>Premios <small class="aj-sub">del último mes (desde el ' + esc(ddmm(pr.desde)) + ')</small></h2>' +
+      '<p class="pr-totales">Entre todos: <b>' + t.comidas + '</b> comidas, <b>' + t.cenas + '</b> cenas y <b>' + t.noches + '</b> noches con la abuela · <b>' + t.personas + '</b> personas distintas.</p>' +
+      '<div><button type="button" class="principal" id="pr-compartir">Compartir el resumen del mes</button></div>' +
+      '<div class="pr-grid">' +
+        '<article class="pr-card pr-oro"><h3>Top 10 general</h3><ol>' + (top.length ? top.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + g.puntos + ' pts</b></li>'; }).join('') : '<li>Aún nadie.</li>') + '</ol>' +
+          (pr.general.length > top.length ? '<p class="pr-mas">Y ' + (pr.general.length - top.length) + ' más con puntos.</p>' : '') + '</article>' +
+        (pr.familias.length ? '<article class="pr-card"><h3>Familias del mes</h3><ol>' + pr.familias.map(function (f) { return '<li><span>' + esc(cortoFamilia(f.familia)) + '</span><b>' + f.visitas + '</b></li>'; }).join('') + '</ol></article>' : '') +
+        pr.categorias.map(function (c) {
+          return '<article class="pr-card"><h3>' + esc(c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^./, function (x) { return x.toUpperCase(); })) + '</h3><p class="pr-texto">' + esc(c.texto) + '</p><ol>' +
+            (c.gente.length ? c.gente.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + esc(valorCat(c.id, g.valor)) + '</b><small>+' + g.puntos + '</small></li>'; }).join('') : '<li class="pr-nadie">Aún nadie.</li>') + '</ol></article>';
+        }).join('') +
+        (pr.medallas.length ? '<article class="pr-card pr-ancha"><h3>Medallas (+' + pr.puntosMedalla + ' cada una)</h3><ul class="pr-medallas">' + pr.medallas.map(function (m) { return '<li><b>' + esc(m.titulo) + '</b> <span>' + esc(m.gente.join(', ')) + '</span></li>'; }).join('') + '</ul></article>' : '') +
+        (pr.servicio.length ? '<article class="pr-card pr-ancha"><h3>El servicio</h3><ul class="pr-medallas">' + pr.servicio.map(function (x) { return '<li><b>' + esc(x.apodo) + '</b> <span>' + esc(x.medallas.length ? x.medallas.map(function (m) { return m.titulo; }).join(' · ') : 'sin medallas este mes') + '</span></li>'; }).join('') + '</ul></article>' : '') +
+      '</div><p class="ayuda">Solo lo ves tú. En el resumen para el grupo solo van los destacados y las gracias: nunca quién va menos.</p>';
+  }
+  /* en el mensaje al grupo, las medallas dichas de los demás */
+  const PARA_GRUPO = { 'Siempre contestas': 'Siempre contestan', 'Tienes tu día': 'Tienen su día fijo', 'No te pierdes ni uno': 'No se pierden ni un evento', 'No fallas nunca': 'No falla nunca' };
+  function resumenPremios(pr) {
+    const t = pr.totales, top = pr.general.filter(function (g) { return g.top; });
+    const nombres = function (l, max) { return l.slice(0, max).join(', ') + (l.length > max ? ' y ' + (l.length - max) + ' más' : ''); };
+    const primeros = function (c) { const m = c.gente.length ? c.gente[0].puntos : 0; return c.gente.filter(function (g) { return g.puntos === m; }).map(function (g) { return g.apodo; }); };
+    const ICONO = { comidas: '🍽️', cenas: '🌙', noches: '🛏️', eventos: '🎉', avisa: '⏰', finde: '☀️', semana: '📅', compania: '👥' };
+    const enlace = datos.url ? '\n\n👉 ' + datos.url.replace(/#.*$/, '') : '';
+    return '🏆 *Casa Abuela · el último mes*\n¡Gracias a todos! Entre todos, ' + t.comidas + ' comidas, ' + t.cenas + ' cenas y ' + t.noches + ' noches con la abuela (' + t.personas + ' personas distintas).' +
+      (pr.familias.length ? '\n\n👑 *Familia del mes:* ' + cortoFamilia(pr.familias[0].familia) : '') +
+      (top.length ? '\n\n⭐ *Top 10:* ' + top.map(function (g) { return g.apodo; }).join(', ') : '') +
+      '\n\n*Los que más*\n' + pr.categorias.filter(function (c) { return c.gente.length; }).map(function (c) {
+        return (ICONO[c.id] || '•') + ' ' + c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^De los que antes avisan$/, 'avisan con tiempo').replace(/^./, function (x) { return x.toUpperCase(); }) + ': ' + primeros(c).join(', ');
+      }).join('\n') +
+      (pr.medallas.length ? '\n\n🏅 *Medallas*\n' + pr.medallas.map(function (m) { return (PARA_GRUPO[m.titulo] || m.titulo) + ': ' + nombres(m.gente, 8); }).join('\n') : '') +
+      (pr.servicio.some(function (x) { return x.medallas.length; }) ? '\n\n💛 *Gracias al servicio:* ' + pr.servicio.filter(function (x) { return x.medallas.length; }).map(function (x) { return x.apodo + ' (' + x.medallas.map(function (m) { return (PARA_GRUPO[m.titulo] || m.titulo).toLowerCase(); }).join(', ') + ')'; }).join('; ') : '') +
+      '\n\nEn la web, tocando tu nombre, ves tus medallas.' + enlace;
+  }
+  function montarPremios(pr) {
+    const b = $('pr-compartir');
+    if (!b) return;
+    b.addEventListener('click', function () {
+      abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Resumen del mes</h2></div>' +
+        '<div class="dlg-cuerpo"><p class="ayuda">Solo los destacados y las gracias. Cópialo y pégalo en el grupo.</p>' +
+        '<label class="campo" for="dlg-texto">Mensaje (puedes cambiarlo)<textarea id="dlg-texto" rows="14"></textarea></label></div>' +
+        '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-copiar">Copiar el mensaje</button><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+      $('dlg-texto').value = resumenPremios(pr);
+      $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+      $('dlg-copiar').addEventListener('click', function () {
+        const t = $('dlg-texto'), hecho = function () { aviso('Mensaje copiado. Pégalo en el grupo.'); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(hecho).catch(function () { t.select(); document.execCommand('copy'); hecho(); });
+        else { t.select(); document.execCommand('copy'); hecho(); }
+      });
+    });
+  }
   function pintarAjustes() {
     const $a = $('ajustes');
     if (!ajustes) { $a.innerHTML = '<p class="vacio">Cargando…</p>'; cargarAjustes(); return; }
@@ -2009,6 +2092,7 @@
           campo('inicio', 'El calendario empieza el', 'date', c.inicio) + '</fieldset>' +
         '<div><button type="button" class="principal" id="aj-guardar">Guardar ajustes</button></div></section>' +
       panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan) +
+      '<section class="aj-sec" id="aj-premios"><h2>Premios</h2><p class="ayuda">Contando los premios del último mes…</p></section>' +  // v4.85
       '<section class="aj-sec"><h2>Historial de cambios</h2>' +
         '<label class="buscar" for="aj-q"><span class="oculto">Buscar</span><input id="aj-q" type="search" autocomplete="off" placeholder="Buscar (persona, fecha, qué)"></label>' +
         '<ul class="aj-hist" id="aj-hist"></ul></section>';
@@ -2021,6 +2105,8 @@
       }).join('') : '<li>Nada con eso.</li>';
     };
     $('aj-q').addEventListener('input', pintarHist);
+    llamar('getPremios', [yo]).then(function (pr) { const $p = $('aj-premios'); if ($p) { $p.innerHTML = htmlPremios(pr); montarPremios(pr); } })
+      .catch(function (err) { const $p = $('aj-premios'); if ($p) $p.innerHTML = '<h2>Premios</h2><p class="ayuda">' + esc(mensajeError(err)) + '</p>'; });
 
     if ($('aj-pedir')) $('aj-pedir').addEventListener('click', function () {  // v4.61: el mensaje para el grupo, con el enlace a Rellenar
       const url = (datos.url || location.href).replace(/#.*$/, '') + '#rellenar';
@@ -2128,16 +2214,17 @@
     const varios = diasDelEvento(e).length > 1;  // v4.67
     const fila = function (x) {
       const p = x.p, st = estado(p);
+      const soloVer = pasado || (servicioYo() && p.id !== yo);  // v4.86: desde el servicio, los demás solo para mirar
       const dd = st === 'si' && varios ? diasDe(e, p.id) : null;  // v4.67
-      const chip = st === 'si' && varios ? (pasado ? (dd ? '<span class="ev-chip">' + esc(textoDias(dd)) + '</span>' : '') :
+      const chip = st === 'si' && varios ? (soloVer ? (dd ? '<span class="ev-chip">' + esc(textoDias(dd)) + '</span>' : '') :
         '<button type="button" class="ev-chip' + (diasAbiertos[p.id] ? ' listo' : '') + '" data-ev-dias="' + esc(e.id) + '|' + esc(p.id) + '" aria-expanded="' + !!diasAbiertos[p.id] + '">' + esc(diasAbiertos[p.id] ? 'Listo' : dd ? textoDias(dd) : 'todos los días') + '</button>') : '';  // v4.68: abierto, «Listo» (los días ya se ven debajo)
       const tiene = !!notaDe(e, p.id);
-      const lapiz = !pasado && (st || tiene) ? '<button type="button" class="ev-lapiz' + (tiene ? ' con-nota' : '') + '" data-ev-nota="' + esc(e.id) + '|' + esc(p.id) + '" aria-label="' + (tiene ? 'Cambiar la nota de ' : 'Añadir una nota de ') + esc(p.apodo) + '" title="' + (tiene ? 'Tiene nota' : 'Añadir una nota') + '">' + ICONO_LAPIZ + '</button>' : '';  // v4.68
+      const lapiz = !soloVer && (st || tiene) ? '<button type="button" class="ev-lapiz' + (tiene ? ' con-nota' : '') + '" data-ev-nota="' + esc(e.id) + '|' + esc(p.id) + '" aria-label="' + (tiene ? 'Cambiar la nota de ' : 'Añadir una nota de ') + esc(p.apodo) + '" title="' + (tiene ? 'Tiene nota' : 'Añadir una nota') + '">' + ICONO_LAPIZ + '</button>' : '';  // v4.68
       return '<li class="ev-fila" style="padding-left:' + (x.nivel * 18) + 'px"><span class="ev-nombre">' + esc(p.apodo) + '</span>' + lapiz + chip +
-        (pasado ? '<span class="ev-estado">' + (st === 'si' ? '<span class="ev-marca si" role="img" aria-label="va">' + ICONO_SI + '</span>' : st === 'no' ? '<span class="ev-marca no" role="img" aria-label="no va">' + ICONO_NO + '</span>' : '<span class="ev-marca nada" role="img" aria-label="sin contestar"></span>') + '</span>' :
+        (soloVer ? '<span class="ev-estado">' + (st === 'si' ? '<span class="ev-marca si" role="img" aria-label="va">' + ICONO_SI + '</span>' : st === 'no' ? '<span class="ev-marca no" role="img" aria-label="no va">' + ICONO_NO + '</span>' : '<span class="ev-marca nada" role="img" aria-label="sin contestar"></span>') + '</span>' :
           '<span class="ev-bots"><button type="button" class="ev-si" data-ev-p="' + esc(e.id) + '|' + esc(p.id) + '|si" aria-pressed="' + (st === 'si') + '" aria-label="' + esc(p.apodo) + ' va" title="Va">' + ICONO_SI + '</button>' +
           '<button type="button" class="ev-no" data-ev-p="' + esc(e.id) + '|' + esc(p.id) + '|no" aria-pressed="' + (st === 'no') + '" aria-label="' + esc(p.apodo) + ' no puede" title="No puede">' + ICONO_NO + '</button></span>') +
-        (chip && !pasado && diasAbiertos[p.id] ? botonesDias(e, p.id, '¿Qué días?') : '') +
+        (chip && !soloVer && diasAbiertos[p.id] ? botonesDias(e, p.id, '¿Qué días?') : '') +
         '</li>';
     };
     return '<p class="evento-cuando">' + esc(fechaEvento(e)) + '</p>' +
@@ -2156,7 +2243,7 @@
         return diaCortoEv(f) + ': ' + (n === 1 ? 'va 1' : 'van ' + n);
       }).join(' · ')) + '</p>' : '') +
       listaNotas(e, 0, !pasado) +  // v4.68
-      (modoAbuela() ? '' : '<p class="ayuda">En verde, quien va; en rojo, quien no puede; sin marcar, quien aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).' + (varios ? ' Si alguien va solo algún día, toca «todos los días» junto a su nombre.' : '') + ' Con el lápiz, una nota.</p>') +
+      (modoAbuela() ? '' : '<p class="ayuda">En verde, quien va; en rojo, quien no puede; sin marcar, quien aún no ha contestado.' + (servicioYo() ? ' Tú contesta arriba, en «¿Vas?».' : ' Puedes contestar también por otros (por tus hijos, por ejemplo).') + (varios ? ' Si alguien va solo algún día, toca «todos los días» junto a su nombre.' : '') + ' Con el lápiz, una nota.</p>') +
       // v4.30: una sola lista: cada familia con sus números y, al tocar «Ver», quién es justo debajo
       '<div class="ev-resumen">' + porFamiliaEvento(e).map(function (x) {
         return '<details class="ev-familia" data-fam="' + esc(x.f) + '"' + (abiertasEv[x.f] ? ' open' : '') + '><summary>' +
@@ -2262,6 +2349,7 @@
   function confirmarEnEvento(id, personaId, va, dias, fuera) {
     conQuien(function () {
       if (!personaId) { personaId = yo; if (!persona(personaId)) return; }  // v4.51: «¿Vas tú?» antes de saber quién eres
+      if (servicioYo() && personaId !== yo) return;  // v4.86: desde el servicio, solo lo suyo
       if (!$('dlg-ev-detalle') && !fuera) abrirDetalleEvento(id);  // v4.68: desde la tarjeta, se queda en la tarjeta
       const e = evento(id);
       if (!e) return;
@@ -2300,6 +2388,15 @@
     return out;
   }
   let evFiltro = '';  // v4.80
+  /* v4.86: quien entra es del servicio: ve lo suyo y solo cambia lo suyo */
+  function servicioYo() { const p = yo && datos && persona(yo); return !!(p && esServicio(p)); }
+  function apuntarme(fecha, turno) {
+    conQuien(function () {
+      if (idsDe(fecha, turno).indexOf(yo) !== -1) { aviso('Ya estás apuntada a la ' + nombreTurno(fecha, turno) + '.'); return; }
+      const cambio = { fecha: fecha, turno: turno, apuntado: true };
+      confirmarTarde([cambio], yo, function () { guardarCambios(yo, { turnos: [cambio] }, '¡Gracias! Apuntada a la ' + nombreTurno(fecha, turno) + '.'); });
+    });
+  }
   function sinContestar(e) { return !!(yo && persona(yo)) && e.van.indexOf(yo) === -1 && e.noVan.indexOf(yo) === -1; }
   document.addEventListener('click', function (ev) { const b = ev.target.closest('[data-ev-filtro]'); if (!b) return; evFiltro = b.dataset.evFiltro; pintarEventos(); });
   function pintarEventos() {
@@ -4090,6 +4187,8 @@
     const el = e.target.closest('[data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
     if (modoAbuela() && el.hasAttribute('data-persona')) { abrirInfoPersona(el.dataset.persona); return; }  // v4.36: quién es, para mirar
+    if (servicioYo() && el.hasAttribute('data-persona') && el.dataset.persona !== yo) { abrirInfoPersona(el.dataset.persona); return; }  // v4.86
+    if (servicioYo() && el.hasAttribute('data-anadir')) { apuntarme(el.dataset.fecha, el.dataset.turno); return; }  // v4.86: el «+», a ella misma
     if (el.hasAttribute('data-rt-fam')) { const k = el.dataset.rtFam; if (famAbiertas.has(k)) famAbiertas.delete(k); else famAbiertas.add(k); pintarSemana(); return; }  // v4.75
     if (el.hasAttribute('data-detalle-turno')) { const x = el.dataset.detalleTurno.split('|'); abrirDetalleTurno(x[0], x[1]); return; }  // v4.75
     if (el.hasAttribute('data-preguntar')) { preguntarDia(el.dataset.preguntar); return; }  // v4.38
