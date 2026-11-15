@@ -166,6 +166,15 @@
   .dia.hoy .dia-cab .dia-hoja { background: #fff; color: var(--color-principal-oscuro); }
   .dia-cab { align-items: center; }
   .dias-semana { gap: 18px; }
+  /* v5.0: en columnas estrechas (ordenador), que nada se salga y la columna de color llegue a los bordes */
+  .dias-semana .dia .comida { padding: 0; }
+  .rt-total { flex-wrap: wrap; row-gap: 2px; }
+  .rt-total b { min-width: 0; }
+  .tu-vas { flex-wrap: wrap; }
+  .tu-vas span { white-space: nowrap; }
+  .tu-vas button { flex: none; margin-left: auto; }
+  .turno-cont > * { min-width: 0; max-width: 100%; }
+  .comida-cab .nadie.suave { border: 0; padding: 0; background: none; font-weight: 700; color: var(--color-texto-suave); }
   /* v4.99: el borde de cada día, más marcado: hoy en verde, los demás en tostado (como su cabecera), los pasados en gris */
   .dias-semana .dia { border: 2.5px solid #D49A5E; box-shadow: 0 3px 10px rgba(120, 80, 30, .08); }
   .dias-semana .dia.hoy { border: 2.5px solid var(--color-principal); box-shadow: 0 4px 14px rgba(14, 124, 110, .18); }
@@ -1016,7 +1025,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.99.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.0.0</footer>
 </div>
 
 <div id="impresion"></div>
