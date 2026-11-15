@@ -129,11 +129,16 @@
   /* v4.75: el resumen de cada comida, cena o noche (al tocarlo, el desglose) */
   .evento-cuantos { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 0; }
   .evento-cuantos > span { display: grid; }
-  .evento-vas { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed rgba(0,0,0,.12); }
-  .evento-vas button { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 12px; }
-  .evento-vas button .ico-marca { width: 16px; height: 16px; }
-  .evento-vas button[data-ev-voy] { color: var(--color-principal-oscuro); border-color: var(--color-principal); }
-  .evento-vas button[data-ev-novoy] { color: var(--color-error); border-color: var(--color-error); }
+  .evento-cuantos { flex-wrap: wrap; }
+  .evento-cuantos > span { min-width: 0; }
+  .evento-vas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed rgba(0,0,0,.12); }
+  .evento-vas b { font-size: 15px; }
+  .evento-vas > span { display: flex; flex-wrap: wrap; gap: 6px; }
+  .evento-vas button { display: inline-flex; align-items: center; gap: 4px; min-height: 34px; padding: 0 10px; font-size: 14px; }
+  .evento-vas button .ico-marca { width: 15px; height: 15px; }
+  .evento-vas button[aria-pressed="false"] { background: #fff; color: var(--color-texto-suave); border-color: var(--color-linea); }
+  .evento-vas button[data-ev-dia-yo$="|si"][aria-pressed="true"] { background: var(--color-principal); border-color: var(--color-principal); color: #fff; }
+  .evento-vas button[data-ev-dia-yo$="|no"][aria-pressed="true"] { background: var(--color-error); border-color: var(--color-error); color: #fff; }
   .evento-cuantos small { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
   .evento-dia .ev-barra-total { margin: 6px 0 0; height: 7px; }
   .rt-total { display: flex; align-items: center; gap: 8px; width: 100%; padding: 2px 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; color: var(--color-texto); }
@@ -1408,10 +1413,15 @@
           return '<p class="evento-cuantos"><span><b>' + (n ? (n === 1 ? 'Va 1' : 'Van ' + n) : 'Aún no va nadie') + '</b>' +
               '<small>' + esc([c.noVan ? (c.noVan === 1 ? '1 no puede' : c.noVan + ' no pueden') : '', c.faltan ? c.faltan + ' sin contestar' : ''].filter(Boolean).join(' · ')) + '</small></span>' +
             '<button type="button" class="mini" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></p>' + barraEvento(e) +
-            // v4.76: si aún no has contestado, contestas aquí mismo
-            (yo && persona(yo) && !modoAbuela() && e.hasta >= hoy() && e.van.indexOf(yo) === -1 && e.noVan.indexOf(yo) === -1 ?
-              '<p class="evento-vas"><b>¿Vas?</b><button type="button" class="accion" data-ev-voy="' + esc(e.id) + '">' + ICONO_SI + 'Voy</button>' +
-              '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '">' + ICONO_NO + 'No voy</button></p>' : '');
+            // v4.76: lo tuyo, siempre a la vista y para cambiarlo aquí; en un evento de varios días, para este día
+            (yo && persona(yo) && !modoAbuela() && e.hasta >= hoy() ? (function () {
+              const varios = diasDelEvento(e).length > 1, d = diasDe(e, yo), voy = e.van.indexOf(yo) !== -1;
+              const si = voy && (!varios || !d || d.indexOf(fecha) !== -1);
+              const no = e.noVan.indexOf(yo) !== -1 || (voy && varios && d && d.indexOf(fecha) === -1);
+              return '<p class="evento-vas"><b>' + (varios ? '¿Vas este día?' : '¿Vas?') + '</b><span>' +
+                '<button type="button" class="accion" data-ev-dia-yo="' + esc(e.id) + '|' + fecha + '|si" aria-pressed="' + si + '">' + ICONO_SI + 'Voy</button>' +
+                '<button type="button" class="accion" data-ev-dia-yo="' + esc(e.id) + '|' + fecha + '|no" aria-pressed="' + no + '">' + ICONO_NO + 'No voy</button></span></p>';
+            })() : '');
         })() + '</div>';
     });
     const fu = fuera(fecha);
@@ -2114,6 +2124,24 @@
       return '<button type="button" data-ev-dia="' + esc(e.id) + '|' + esc(id) + '|' + f + '" aria-pressed="' + (!d || d.indexOf(f) !== -1) + '">' + esc(diaCortoEv(f)) + '</button>';
     }).join('') + '</span>';
   }
+  /* v4.76: desde el día de la Semana: voy o no voy a este día (en uno de un solo día, al evento) */
+  function marcarYoEnDia(id, fecha, va) {
+    const e = evento(id);
+    if (!e) return;
+    const todos = diasDelEvento(e);
+    if (todos.length < 2) { apuntarEv(id, va); return; }
+    conQuien(function () {
+      const voy = e.van.indexOf(yo) !== -1, actual = voy ? (diasDe(e, yo) || todos.slice()) : [];
+      if (va) {
+        if (actual.indexOf(fecha) !== -1) return;  // ya va ese día
+        confirmarEnEvento(id, yo, true, actual.concat([fecha]).sort(), true);
+      } else {
+        const quedan = actual.filter(function (f) { return f !== fecha; });
+        if (quedan.length) confirmarEnEvento(id, yo, true, quedan, true);
+        else if (e.noVan.indexOf(yo) === -1) confirmarEnEvento(id, yo, false, null, true);
+      }
+    });
+  }
   /* v4.67: quitar o poner un día (si va todos, queda «todos los días») */
   function marcarDiaEvento(id, personaId, fecha, fuera) {
     const e = evento(id);
@@ -2273,7 +2301,7 @@
   $('ev-anadir').addEventListener('click', function () { abrirEvento(null); });
   document.addEventListener('click', function (ev) {
     if (ev.target.closest('[data-salir-sencillo]')) { salirSencillo(); return; }
-    const b = ev.target.closest('[data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p], [data-ev-dias], [data-ev-dia], [data-ev-nota], [data-ev-compartir]');
+    const b = ev.target.closest('[data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p], [data-ev-dias], [data-ev-dia], [data-ev-nota], [data-ev-compartir], [data-ev-dia-yo]');
     if (!b) return;
     if (modoAbuela() && !b.dataset.evVer) return;  // v4.35: en el modo sencillo, solo ver
     if (b.dataset.evVoy) apuntarEv(b.dataset.evVoy, true);
@@ -2285,6 +2313,7 @@
       const d = $('dlg-ev-detalle'); if (d && evento(x[0])) d.innerHTML = htmlDetalleEvento(evento(x[0]));
     } else if (b.dataset.evDia) { const x = b.dataset.evDia.split('|'); marcarDiaEvento(x[0], x[1], x[2], !!b.closest('.evento-card')); }
     else if (b.dataset.evCompartir) abrirCompartir('ev:' + b.dataset.evCompartir);  // v4.71
+    else if (b.dataset.evDiaYo) { const x = b.dataset.evDiaYo.split('|'); marcarYoEnDia(x[0], x[1], x[2] === 'si'); }  // v4.76
     else if (b.dataset.evNota) { const x = b.dataset.evNota.split('|'); abrirNotaEvento(x[0], x[1], !b.closest('.evento-card')); }  // v4.68
   });
 
