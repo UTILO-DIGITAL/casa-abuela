@@ -453,6 +453,9 @@ ver('medallas nuevas: guardián de la memoria y echar una mano', ['memoria', 'ma
 ver('premios: las 9 categorías (con la secretaría), cada una con su gente', pr.categorias.length === 9 && pr.categorias.find(c => c.id === 'comidas').gente.some(g => g.apodo === 'Jan'));
 ver('premios: fin de semana y entre semana', pr.categorias.find(c => c.id === 'semana').gente.some(g => g.apodo === 'Jan'));
 ver('premios: el general, ordenado por puntos', pr.general.length > 0 && pr.general.every((g, i) => !i || pr.general[i - 1].puntos >= g.puntos));
+ver('informe: las curiosidades del mes', pr.curiosidades.dias > 0 && pr.curiosidades.dias <= 30 && pr.curiosidades.familias > 0 && pr.curiosidades.mesaLlena && pr.curiosidades.mesaLlena.n >= 1 && pr.curiosidades.diaFavorito >= 0 && pr.curiosidades.diaFavorito <= 6);
+ver('informe: la mesa más llena cuenta a los acompañantes y no la noche', pr.curiosidades.mesaLlena.turno !== 'DORMIR');
+ver('informe: sin el servicio en las curiosidades', typeof pr.curiosidades.eventos === 'number' && typeof pr.curiosidades.vanEventos === 'number');
 ver('premios: las familias y los totales del mes', pr.familias.length > 0 && pr.totales.comidas > 0 && pr.totales.personas > 0);
 ver('la etiqueta dorada llega con los datos', R.getDatos(Object.assign({}, V2, { yo: '(N) - Jan' })).yoTop10 === true);
 err = ''; try { R.misNumeros('(X) - Nadie'); } catch (e) { err = e.message; }

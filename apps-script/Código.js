@@ -475,7 +475,29 @@ function getPremios(quien, claveAdmin) {
   });
   const familias = Object.keys(fam).map(function (f) { return { familia: f, visitas: fam[f] }; }).sort(function (a, b) { return b.visitas - a.visitas; });
   return { desde: hace30, totales: { comidas: totales.COMIDA, cenas: totales.CENA, noches: totales.DORMIR, personas: Object.keys(gente).length },
+    curiosidades: curiosidades_(ss, v, deP, hace30),  // v5.7: para el informe del mes
     categorias: categorias, general: general, medallas: Object.keys(medallas).map(function (k) { return medallas[k]; }), servicio: servicio, familias: familias, puntosMedalla: PUNTOS_MEDALLA };
+}
+
+/** v5.7: cifras bonitas del último mes para el informe (solo la familia; nunca quién va menos) */
+function curiosidades_(ss, v, deP, hace30) {
+  const mesa = {}, dias = {}, dow = [0, 0, 0, 0, 0, 0, 0], fams = {};
+  v.ef.forEach(function (a) {
+    const p = deP[a.persona];
+    if (!p || a.fecha < hace30 || p.familia === 'Servicio' || p.familia === 'Otros') return;
+    dias[a.fecha] = true; fams[p.familia] = true;
+    if (a.turno !== 'DORMIR') { const k = a.fecha + '|' + a.turno; mesa[k] = (mesa[k] || 0) + 1 + (Number(a.acompanantes) || 0); }
+  });
+  Object.keys(dias).forEach(function (f) { dow[diaSemana_(f)]++; });
+  let llena = null;
+  Object.keys(mesa).forEach(function (k) { if (!llena || mesa[k] > llena.n || (mesa[k] === llena.n && k > llena.fecha + '|' + llena.turno)) llena = { fecha: k.split('|')[0], turno: k.split('|')[1], n: mesa[k] }; });
+  const max = Math.max.apply(null, dow);
+  const hoy = hoy_();
+  const ev = leerEventos_(ss).filter(function (e) { return e.hasta >= hace30 && e.desde < hoy; });
+  const vanEv = {};
+  ev.forEach(function (e) { e.van.forEach(function (id) { vanEv[id] = true; }); });
+  return { dias: Object.keys(dias).length, deDias: 30, mesaLlena: llena, diaFavorito: max ? dow.indexOf(max) : null,
+    familias: Object.keys(fams).length, eventos: ev.length, vanEventos: Object.keys(vanEv).length };
 }
 
 function leerConfig_(ss) { return memo_('config', function () { return leerConfigSin_(ss); }); }

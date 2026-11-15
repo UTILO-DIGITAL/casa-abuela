@@ -632,6 +632,8 @@
   .aj-hist li { padding: 7px 0; border-top: 1px solid var(--color-linea); }
   .aj-hist small { display: block; color: var(--color-texto-suave); font-weight: 700; font-size: 12px; }
   .comida.ya-paso .comida-cab h4 { color: var(--color-texto-suave); }
+  .inf-prev { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 10px; }
+  .inf-prev img { flex: 0 0 72%; max-width: 300px; aspect-ratio: 4 / 5; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.18); scroll-snap-align: center; }
   .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
   .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
   .turno-evento svg { width: 16px; height: 16px; flex: none; color: var(--color-accion); }
@@ -1044,7 +1046,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.6.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.7.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -2266,7 +2268,7 @@
     const t = pr.totales, top = pr.general.filter(function (g) { return g.top; });
     return '<h2>Premios <small class="aj-sub">del último mes (desde el ' + esc(ddmm(pr.desde)) + ')</small></h2>' +
       '<p class="pr-totales">Entre todos: <b>' + t.comidas + '</b> comidas, <b>' + t.cenas + '</b> cenas y <b>' + t.noches + '</b> noches con la abuela · <b>' + t.personas + '</b> personas distintas.</p>' +
-      '<div><button type="button" class="principal" id="pr-compartir">Compartir el resumen del mes</button></div>' +
+      '<div><button type="button" class="principal" id="pr-compartir">Informe del mes para el grupo</button></div>' +
       '<div class="pr-grid">' +
         '<article class="pr-card pr-oro"><h3>Top 10 general</h3><ol>' + (top.length ? top.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + g.puntos + ' puntos</b></li>'; }).join('') : '<li>Aún nadie.</li>') + '</ol>' +
           (pr.general.length > top.length ? '<p class="pr-mas">Y ' + (pr.general.length - top.length) + ' más con puntos.</p>' : '') + '</article>' +
@@ -2293,15 +2295,310 @@
       '\n\n*Destacados del mes*\n' + pr.categorias.filter(function (c) { return c.gente.length; }).map(function (c) {
         return (ICONO[c.id] || '•') + ' ' + c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^De los que antes avisan$/, 'avisan con tiempo').replace(/^./, function (x) { return x.toUpperCase(); }) + ': ' + primeros(c).join(', ');
       }).join('\n') +
-      (pr.medallas.length ? '\n\n🏅 *Medallas*\n' + pr.medallas.map(function (m) { return (PARA_GRUPO[m.titulo] || m.titulo) + ': ' + nombres(m.gente, 8); }).join('\n') : '') +
-      (pr.servicio.some(function (x) { return x.medallas.length; }) ? '\n\n💛 *Gracias al servicio:* ' + pr.servicio.filter(function (x) { return x.medallas.length; }).map(function (x) { return x.apodo + ' (' + x.medallas.map(function (m) { return (PARA_GRUPO[m.titulo] || m.titulo).toLowerCase(); }).join(', ') + ')'; }).join('; ') : '') +
+      (pr.medallas.length ? '\n\n🏅 *Medallas*\n' + pr.medallas.map(function (m) { return (PARA_GRUPO[m.titulo] || m.titulo) + ': ' + (m.gente.length > 5 ? m.gente.length + ' personas' : lista(m.gente)); }).join('\n') : '') +
+      (pr.servicio.length ? '\n\n💛 *Gracias al servicio:* ' + infServicioMedallas(pr).map(function (x) { return x.apodo + ' (' + x.medallas.map(function (m) { return (PARA_GRUPO[m.titulo] || m.titulo).toLowerCase(); }).join(', ') + ')'; }).join('; ') : '') +
       '\n\nEn la web, tocando tu nombre, ves tus medallas.' + enlace;
   }
   function montarPremios(pr) {
     const b = $('pr-compartir');
-    if (!b) return;
-    b.addEventListener('click', function () {
-      abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Resumen del mes</h2></div>' +
+    if (b) b.addEventListener('click', function () { abrirInforme(pr); });  // v5.7: el informe visual
+  }
+  /* ---------- v5.7: el informe del mes, como un mini PowerPoint (diapositivas dibujadas aquí, en PDF o en fotos) ----------
+     Siempre en positivo: cifras de todos, destacados, medallas (cuanta más gente, mejor) y el servicio, siempre con su medalla. */
+  const INF_W = 1080, INF_H = 1350;
+  const INF_C = { verde: '#0E8A7A', verdeOsc: '#0A6559', coral: '#D9480F', crema: '#FFFCF7', oro: '#F2B632', oroClaro: '#FFF1C9', tinta: '#1F2A2E', suave: '#5B6B70', blanco: '#FFFFFF', menta: '#E3F4F1' };
+  const INF_TRAZOS = {
+    casa: 'M3 10.5 12 3l9 7.5V21H3z M9 21v-6h6v6', cubiertos: 'M7 2v20 M4 2v6a3 3 0 0 0 6 0V2 M17 2c-2 2-3 5-3 8h3v12', calendario: 'M4 5h16v16H4z M4 9h16 M8 3v4 M16 3v4',
+    gente: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M2 21v-1a6 6 0 0 1 12 0v1 M16 3.5a4 4 0 0 1 0 7.5 M22 21v-1a6 6 0 0 0-4-5.6', estrella: 'M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z',
+    luna: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', sol: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M12 2v2 M12 20v2 M4.9 4.9l1.4 1.4 M17.7 17.7l1.4 1.4 M2 12h2 M20 12h2 M4.9 19.1l1.4-1.4 M17.7 6.3l1.4-1.4',
+    cama: 'M2 4v16 M2 8h18a2 2 0 0 1 2 2v10 M2 17h20 M6 8v9', reloj: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7v5l3 2',
+    portapapeles: 'M8 3h8v4H8z M16 5h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2 M8 12h8 M8 16h5', corazon: 'M12 21s-8-5.3-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.7-8 11-8 11z',
+    ayuda: 'M12 21s-8-5.3-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.7-8 11-8 11z M12 9v6 M9 12h6', check: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M8 12l3 3 5-6',
+    repetir: 'M17 2l4 4-4 4 M3 11V9a3 3 0 0 1 3-3h15 M7 22l-4-4 4-4 M21 13v2a3 3 0 0 1-3 3H3', chincheta: 'M12 22s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+    brillo: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z', camara: 'M4 7h4l2-3h4l2 3h4v13H4z M12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z',
+    carta: 'M3 5h18v14H3z M3 6l9 7 9-7', medalla: 'M12 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z M8.5 13 7 22l5-3 5 3-1.5-9', globo: 'M12 2a6 6 0 0 0-6 6c0 4 3 7 6 7s6-3 6-7a6 6 0 0 0-6-6z M12 15l-1 2h2z M12 17c0 2-2 3-1 5',
+    diana: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'
+  };
+  // un icono de línea, centrado en (x, y); con fondo, dentro de un círculo
+  function infIcono(c, nombre, x, y, tam, color, fondo) {
+    if (fondo) { c.beginPath(); c.arc(x, y, tam * .95, 0, Math.PI * 2); c.fillStyle = fondo; c.fill(); }
+    c.save(); c.translate(x - tam / 2, y - tam / 2); c.scale(tam / 24, tam / 24);
+    c.strokeStyle = color; c.lineWidth = tam > 100 ? 1.4 : 2; c.lineCap = 'round'; c.lineJoin = 'round';
+    c.stroke(new Path2D(INF_TRAZOS[nombre] || INF_TRAZOS.medalla)); c.restore();
+  }
+  const INF_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const INF_DIAS = ['domingos', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados'];
+  const INF_DIA1 = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const INF_ICONO_CAT = { secretaria: 'portapapeles', comidas: 'cubiertos', cenas: 'luna', noches: 'cama', eventos: 'brillo', avisa: 'reloj', finde: 'sol', semana: 'calendario', compania: 'gente' };
+  const INF_CAT = { comidas: 'Más comidas', cenas: 'Más cenas', noches: 'Más noches', eventos: 'Más planes', avisa: 'Avisan con tiempo', finde: 'Fin de semana', semana: 'Entre semana', compania: 'Traen compañía', secretaria: 'Secretaría' };
+  const INF_ICONO_MED = { 'ni-uno': 'diana', contesta: 'check', semanas: 'repetir', fijo: 'chincheta', bienvenida: 'globo', memoria: 'camara', noche: 'luna', 'finde-uno': 'sol', doble: 'cubiertos', 'en-familia': 'gente', trae: 'gente', notas: 'carta', previsor: 'calendario', planes: 'brillo', mano: 'ayuda',
+    'nunca-falla': 'estrella', 'mas-noches': 'luna', noches: 'cama', comidas: 'cubiertos', cenas: 'luna', dias: 'corazon', 'tu-dia': 'calendario', gracias: 'corazon' };
+  const INF_GRUPO = { 'Previsor': 'Previsores', 'Guardián de la memoria': 'Guardianes de la memoria', 'Compañía de noche': 'Compañía de noche', 'Comida y cena': 'Comida y cena el mismo día' };
+  function infFecha(iso) { const d = new Date(iso + 'T12:00:00'); return d.getDate() + ' de ' + INF_MESES[d.getMonth()]; }
+  function infNombres(l, max) { return l.length <= max ? lista(l) : l.slice(0, max).join(', ') + ' y ' + (l.length - max) + ' más'; }
+  function infLineas(c, t, maxW) {
+    const out = [];
+    let l = '';
+    String(t).split(' ').forEach(function (w) { const p = l ? l + ' ' + w : w; if (c.measureText(p).width > maxW && l) { out.push(l); l = w; } else l = p; });
+    if (l) out.push(l);
+    return out;
+  }
+  function infLetra(c, peso, tam, fam) { c.font = peso + ' ' + tam + 'px ' + (fam === 't' ? 'Fredoka, "Trebuchet MS", sans-serif' : 'Nunito, "Trebuchet MS", sans-serif'); }
+  // texto en una línea que se encoge si no cabe
+  function infTexto(c, t, x, y, tam, peso, color, fam, align, maxW) {
+    let s = tam;
+    infLetra(c, peso, s, fam);
+    while (maxW && c.measureText(t).width > maxW && s > 14) { s -= 2; infLetra(c, peso, s, fam); }
+    c.fillStyle = color; c.textAlign = align || 'left'; c.textBaseline = 'alphabetic';
+    c.fillText(t, x, y);
+  }
+  function infParrafo(c, t, x, y, maxW, tam, peso, color, alto, fam, align, maxL) {
+    infLetra(c, peso, tam, fam);
+    let ls = infLineas(c, t, maxW);
+    if (maxL && ls.length > maxL) { ls = ls.slice(0, maxL); ls[maxL - 1] = ls[maxL - 1].replace(/[ ,]*\S*$/, '') + '…'; }
+    c.fillStyle = color; c.textAlign = align || 'left'; c.textBaseline = 'alphabetic';
+    ls.forEach(function (l, i) { c.fillText(l, x, y + i * alto); });
+    return y + ls.length * alto;
+  }
+  function infCaja(c, x, y, w, h, r, color, borde) {
+    c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+    c.fillStyle = color; c.fill();
+    if (borde) { c.strokeStyle = borde; c.lineWidth = 3; c.stroke(); }
+  }
+  function infConfeti(c, n, semilla, colores) {
+    let s = semilla;
+    const r = function () { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    for (let i = 0; i < n; i++) {
+      c.save(); c.globalAlpha = .55; c.fillStyle = colores[i % colores.length];
+      const x = r() * INF_W, y = semilla === 11 || semilla === 23 ? (r() < .5 ? r() * 300 : INF_H - r() * 260) : (r() < .5 ? r() * 70 : INF_H - 20 - r() * 20);
+      c.translate(x, y); c.rotate(r() * Math.PI);
+      if (i % 3) c.fillRect(-9, -4, 18, 8); else { c.beginPath(); c.arc(0, 0, 7, 0, Math.PI * 2); c.fill(); }
+      c.restore();
+    }
+  }
+  function infLienzo(fondo) {
+    const cv = document.createElement('canvas');
+    cv.width = INF_W; cv.height = INF_H;
+    const c = cv.getContext('2d');
+    c.fillStyle = fondo; c.fillRect(0, 0, INF_W, INF_H);
+    return { cv: cv, c: c };
+  }
+  function infCabecera(c, titulo, sub, color) {
+    infConfeti(c, 26, titulo.length * 7 + 3, [INF_C.oro, INF_C.coral, INF_C.verde]);
+    infTexto(c, titulo, 70, 170, 76, 600, color || INF_C.verde, 't', 'left', INF_W - 140);
+    if (sub) infTexto(c, sub, 72, 228, 34, 700, INF_C.suave, 'n', 'left', INF_W - 140);
+  }
+  function infPie(c, n, total, claro) {
+    infTexto(c, 'Casa Abuela', 70, INF_H - 56, 28, 600, claro ? 'rgba(255,255,255,.8)' : INF_C.verde, 't');
+    infTexto(c, n + ' / ' + total, INF_W - 70, INF_H - 56, 26, 700, claro ? 'rgba(255,255,255,.7)' : INF_C.suave, 'n', 'right');
+  }
+  // reparte tarjetas de alto variable en una o más diapositivas
+  function infPaginar(titulo, sub, items, gap) {
+    const pags = [];
+    let pag = null, y = 0;
+    const nueva = function () { pag = infLienzo(INF_C.crema); infCabecera(pag.c, pags.length ? titulo + ' (sigue)' : titulo, pags.length ? '' : sub); pags.push(pag); y = 290; };
+    nueva();
+    // si no cabe en una, se reparten a partes iguales (nada de una página con una sola tarjeta)
+    const hs = items.map(function (it) { return it.alto(pag.c) + gap; }), libre = INF_H - 100 - 290 + gap;
+    let n = 1, acu = 0;
+    hs.forEach(function (h) { if (acu + h > libre && acu) { n++; acu = 0; } acu += h; });
+    const cupo = n > 1 ? Math.min(libre, hs.reduce(function (a, b) { return a + b; }, 0) / n * 1.12) : libre;
+    items.forEach(function (it, i) {
+      if ((y - 290) + hs[i] > (y - 290 + hs[i] > libre ? 0 : cupo) && y > 290) nueva();
+      it.pintar(pag.c, y); y += hs[i];
+    });
+    return pags;
+  }
+  function infServicioMedallas(pr) {
+    return (pr.servicio || []).map(function (x) {
+      const m = x.medallas.length ? x.medallas.slice() : [];
+      m.push({ id: 'gracias', titulo: 'Gracias por cuidar de la abuela' });  // v5.7: el servicio, siempre con su medalla
+      return { apodo: x.apodo, medallas: m };
+    });
+  }
+  /* las diapositivas (canvas) del informe */
+  function diapositivasInforme(pr) {
+    const t = pr.totales, cu = pr.curiosidades || {}, ayer = sumar(hoy(), -1);
+    const hojas = [];
+    // 1. portada
+    let h = infLienzo(INF_C.verde);
+    infConfeti(h.c, 60, 11, [INF_C.oro, '#FFFFFF', '#FF8A5B']);
+    infIcono(h.c, 'casa', INF_W / 2, 450, 200, INF_C.blanco);
+    infTexto(h.c, 'Casa Abuela', INF_W / 2, 700, 128, 600, INF_C.blanco, 't', 'center', INF_W - 120);
+    infTexto(h.c, 'El mes en casa de la abuela', INF_W / 2, 790, 50, 700, INF_C.blanco, 'n', 'center', INF_W - 120);
+    const rango = 'Del ' + infFecha(pr.desde) + ' al ' + infFecha(ayer);
+    infLetra(h.c, 800, 36, 'n');
+    const rw = h.c.measureText(rango).width + 70;
+    infCaja(h.c, (INF_W - rw) / 2, 840, rw, 74, 37, 'rgba(255,255,255,.18)');
+    infTexto(h.c, rango, INF_W / 2, 890, 36, 800, INF_C.blanco, 'n', 'center');
+    infTexto(h.c, '¡Gracias, familia!', INF_W / 2, 1090, 64, 600, INF_C.oro, 't', 'center');
+    hojas.push(h);
+    // 2. cinco cifras (solo las que salen bonitas: nada a cero)
+    const filas = [];
+    if (t.comidas + t.cenas) filas.push(['cubiertos', String(t.comidas + t.cenas), t.comidas + ' comidas y ' + t.cenas + ' cenas', t.noches ? 'y ' + t.noches + (t.noches === 1 ? ' noche' : ' noches') + ' de compañía' : 'con la abuela']);
+    if (cu.dias) filas.push(['calendario', String(cu.dias), 'días con familia en casa', 'de los últimos ' + (cu.deDias || 30)]);
+    if (cu.mesaLlena && cu.mesaLlena.n > 1) filas.push(['estrella', String(cu.mesaLlena.n), 'en la mesa más llena', 'el ' + INF_DIA1[new Date(cu.mesaLlena.fecha + 'T12:00:00').getDay()] + ' ' + infFecha(cu.mesaLlena.fecha) + (cu.mesaLlena.turno === 'CENA' ? ', cenando' : ', comiendo')]);
+    if (t.personas) filas.push(['gente', String(t.personas), 'personas distintas', cu.familias ? 'de ' + cu.familias + (cu.familias === 1 ? ' familia' : ' familias') : 'han pasado por la mesa']);
+    if (cu.vanEventos && cu.eventos) filas.push(['brillo', String(cu.vanEventos), 'en los planes de la familia', cu.eventos === 1 ? 'en el evento del mes' : 'en ' + cu.eventos + ' eventos']);
+    if (cu.diaFavorito !== null && cu.diaFavorito !== undefined && filas.length < 5) filas.push(['sol', INF_DIAS[cu.diaFavorito].replace(/^./, function (x) { return x.toUpperCase(); }), 'el día favorito', 'el que más se va a casa de la abuela']);
+    if (filas.length) {
+      h = infLienzo(INF_C.crema);
+      infCabecera(h.c, 'El mes en cifras', 'Entre todos lo hemos hecho posible');
+      const alto = Math.min(190, (INF_H - 420) / filas.length);
+      filas.slice(0, 5).forEach(function (f, i) {
+        const y = 290 + i * alto;
+        infCaja(h.c, 70, y, INF_W - 140, alto - 22, 30, i % 2 ? INF_C.blanco : INF_C.menta);
+        infIcono(h.c, f[0], 150, y + (alto - 22) / 2, 46, i % 2 ? INF_C.coral : INF_C.verde, i % 2 ? '#FCE6DC' : INF_C.blanco);
+        const esNum = /^\d+$/.test(f[1]);
+        infTexto(h.c, f[1], 230, y + (alto - 22) / 2 + (esNum ? 30 : 20), esNum ? 92 : 58, 600, i % 2 ? INF_C.coral : INF_C.verde, 't', 'left', esNum ? 250 : 330);
+        infLetra(h.c, 600, esNum ? 92 : 58, 't');
+        const nx = 230 + Math.min(h.c.measureText(f[1]).width, esNum ? 250 : 330) + 30;
+        infTexto(h.c, f[2], nx, y + (alto - 22) / 2 - 4, 36, 800, INF_C.tinta, 'n', 'left', INF_W - 110 - nx);
+        infTexto(h.c, f[3], nx, y + (alto - 22) / 2 + 40, 28, 700, INF_C.suave, 'n', 'left', INF_W - 110 - nx);
+      });
+      hojas.push(h);
+    }
+    // 3. destacados (los primeros de cada categoría; empates, todos)
+    const cats = pr.categorias.filter(function (c) { return c.gente.length; });
+    if (cats.length) {
+      h = infLienzo(INF_C.crema);
+      infCabecera(h.c, 'Destacados del mes', '¡Un aplauso!');
+      const col = 2, w = (INF_W - 140 - 30) / col, alto = Math.min(185, (INF_H - 420) / Math.ceil(cats.length / col));
+      cats.forEach(function (c, i) {
+        const x = 70 + (i % col) * (w + 30), y = 290 + Math.floor(i / col) * alto;
+        const m = c.gente[0].puntos, prim = c.gente.filter(function (g) { return g.puntos === m; }).map(function (g) { return g.apodo; });
+        infCaja(h.c, x, y, w, alto - 20, 28, INF_C.blanco, '#EADFCB');
+        infIcono(h.c, INF_ICONO_CAT[c.id], x + 58, y + 60, 34, INF_C.coral, '#FCE6DC');
+        infTexto(h.c, INF_CAT[c.id] || c.titulo, x + 106, y + 72, 30, 800, INF_C.coral, 'n', 'left', w - 126);
+        infParrafo(h.c, infNombres(prim, 3), x + 30, y + 128, w - 60, 36, 600, INF_C.tinta, 42, 't', 'left', 2);
+      });
+      hojas.push(h);
+    }
+    // 4. medallas: todos los que las tienen, con su nombre
+    const meds = (pr.medallas || []).filter(function (m) { return m.gente.length; }).slice().sort(function (a, b) { return b.gente.length - a.gente.length; });
+    if (meds.length) {
+      const todos = {};
+      meds.forEach(function (m) { m.gente.forEach(function (g) { todos[g] = true; }); });
+      const nTodos = Object.keys(todos).length;
+      infPaginar('Medallas del mes', nTodos === 1 ? '1 persona con medalla' : nTodos + ' personas con medalla. ¡Enhorabuena!', meds.map(function (m) {
+        const texto = function (c) { infLetra(c, 700, 28, 'n'); let k = m.gente.length, s; do { s = infNombres(m.gente, k); k--; } while (k > 0 && infLineas(c, s, INF_W - 200).length > 3); return s; };
+        return {
+          alto: function (c) { infLetra(c, 700, 28, 'n'); return 92 + infLineas(c, texto(c), INF_W - 200).length * 36 + 14; },
+          pintar: function (c, y) {
+            const hh = this.alto(c);
+            infCaja(c, 70, y, INF_W - 140, hh, 28, INF_C.oroClaro);
+            infIcono(c, INF_ICONO_MED[m.id], 130, y + 54, 34, INF_C.tinta, INF_C.oro);
+            infTexto(c, PARA_GRUPO[m.titulo] || INF_GRUPO[m.titulo] || m.titulo, 180, y + 68, 40, 600, INF_C.tinta, 't', 'left', INF_W - 420);
+            const n = String(m.gente.length);
+            infLetra(c, 800, 30, 'n');
+            const pw = c.measureText(n).width + 44;
+            infCaja(c, INF_W - 100 - pw, y + 28, pw, 54, 27, INF_C.oro);
+            infTexto(c, n, INF_W - 100 - pw / 2, y + 66, 30, 800, INF_C.tinta, 'n', 'center');
+            infParrafo(c, texto(c), 100, y + 118, INF_W - 200, 28, 700, INF_C.suave, 36, 'n');
+          }
+        };
+      }), 16).forEach(function (p) { hojas.push(p); });
+    }
+    // 5. el servicio: todos, cada uno con sus medallas (al menos una)
+    const serv = infServicioMedallas(pr);
+    if (serv.length) {
+      infPaginar('Gracias al servicio', 'Por cuidar de la abuela cada día', serv.map(function (x) {
+        const pills = function (c) {
+          infLetra(c, 800, 27, 'n');
+          let px = 100, py = 0;
+          return x.medallas.map(function (m) {
+            const tx = m.titulo, w = c.measureText(tx).width + 86;
+            if (px + w > INF_W - 100) { px = 100; py += 62; }
+            const r = { tx: tx, id: m.id, x: px, y: py, w: Math.min(w, INF_W - 200) }; px += w + 16; return r;
+          });
+        };
+        return {
+          alto: function (c) { const p = pills(c); return 100 + p[p.length - 1].y + 62 + 12; },
+          pintar: function (c, y) {
+            const hh = this.alto(c);
+            infCaja(c, 70, y, INF_W - 140, hh, 28, INF_C.blanco, INF_C.oro);
+            infTexto(c, x.apodo, 100, y + 68, 50, 600, INF_C.verde, 't', 'left', INF_W - 200);
+            pills(c).forEach(function (p) {
+              infCaja(c, p.x, y + 92 + p.y, p.w, 50, 25, INF_C.oroClaro);
+              infIcono(c, INF_ICONO_MED[p.id], p.x + 30, y + 92 + p.y + 25, 26, INF_C.tinta);
+              infTexto(c, p.tx, p.x + 56, y + 92 + p.y + 35, 27, 800, INF_C.tinta, 'n', 'left', p.w - 72);
+            });
+          }
+        };
+      }), 18).forEach(function (p) { hojas.push(p); });
+    }
+    // 6. cierre
+    h = infLienzo(INF_C.coral);
+    infConfeti(h.c, 60, 23, [INF_C.oro, '#FFFFFF', INF_C.verde]);
+    infIcono(h.c, 'corazon', INF_W / 2, 450, 190, INF_C.blanco);
+    infTexto(h.c, '¡Gracias a todos!', INF_W / 2, 690, 96, 600, INF_C.blanco, 't', 'center', INF_W - 120);
+    infParrafo(h.c, 'Cada visita cuenta. La abuela lo nota.', INF_W / 2, 790, INF_W - 200, 46, 700, INF_C.blanco, 58, 'n', 'center');
+    infParrafo(h.c, 'En la web, toca tu nombre y mira tus medallas.', INF_W / 2, 960, INF_W - 240, 36, 700, 'rgba(255,255,255,.9)', 48, 'n', 'center');
+    if (datos.url) infTexto(h.c, datos.url.replace(/#.*$/, '').replace(/^https?:\/\//, '').replace(/\/$/, ''), INF_W / 2, 1100, 32, 800, INF_C.blanco, 'n', 'center', INF_W - 140);
+    hojas.push(h);
+    hojas.forEach(function (x, i) { infPie(x.c, i + 1, hojas.length, i === 0 || i === hojas.length - 1); });
+    return hojas.map(function (x) { return x.cv; });
+  }
+  function cargarJsPDF() {
+    if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+    return new Promise(function (ok, ko) {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload = function () { window.jspdf ? ok(window.jspdf.jsPDF) : ko(new Error('No se ha podido preparar el PDF.')); };
+      s.onerror = function () { ko(new Error('No se ha podido preparar el PDF. Mira la conexión.')); };
+      document.head.appendChild(s);
+    });
+  }
+  function infNombre(ext) { return 'Casa Abuela - el mes hasta el ' + infFecha(sumar(hoy(), -1)) + ext; }
+  function pdfInforme(lienzos) {
+    return cargarJsPDF().then(function (JsPDF) {
+      const doc = new JsPDF({ unit: 'pt', format: [INF_W / 2, INF_H / 2], compress: true });
+      lienzos.forEach(function (cv, i) { if (i) doc.addPage([INF_W / 2, INF_H / 2]); doc.addImage(cv.toDataURL('image/jpeg', .9), 'JPEG', 0, 0, INF_W / 2, INF_H / 2); });
+      return new File([doc.output('blob')], infNombre('.pdf'), { type: 'application/pdf' });
+    });
+  }
+  function fotosInforme(lienzos) {
+    return Promise.all(lienzos.map(function (cv, i) {
+      return new Promise(function (ok) { cv.toBlob(function (b) { ok(new File([b], 'Casa Abuela ' + (i + 1) + '.jpg', { type: 'image/jpeg' })); }, 'image/jpeg', .9); });
+    }));
+  }
+  // compartir (móvil: WhatsApp y demás); si no se puede, se descarga
+  function compartirArchivos(files) {
+    if (navigator.canShare && navigator.share && navigator.canShare({ files: files })) {
+      return navigator.share({ files: files, title: 'Casa Abuela · el mes' }).catch(function (e) { if (e && e.name === 'AbortError') return; descargar(files); });
+    }
+    descargar(files); return Promise.resolve();
+  }
+  function descargar(files) {
+    files.forEach(function (f, i) {
+      setTimeout(function () { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000); }, i * 300);
+    });
+    aviso(files.length === 1 ? 'Descargado. Ya lo puedes enviar al grupo.' : 'Descargadas. Ya las puedes enviar al grupo.');
+  }
+  function abrirInforme(pr) {
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Informe del mes</h2></div>' +
+      '<div class="dlg-cuerpo"><p class="ayuda">Para el grupo de la familia: cifras de todos, destacados, medallas y el servicio. Siempre en positivo.</p>' +
+      '<div class="inf-prev" id="inf-prev"><p class="vacio">Preparando el informe…</p></div></div>' +
+      '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="inf-pdf" disabled>Compartir PDF</button><button type="button" class="accion" id="inf-fotos" disabled>Compartir como fotos</button><button type="button" class="accion" id="inf-texto">Mensaje de texto</button><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $('inf-texto').addEventListener('click', function () { abrirMensajePremios(pr); });
+    const letras = document.fonts && document.fonts.load ? Promise.all(['600 60px Fredoka', '700 30px Nunito', '800 30px Nunito'].map(function (f) { return document.fonts.load(f); })).catch(function () {}) : Promise.resolve();
+    letras.then(function () {
+      if (!$('inf-prev')) return;
+      const lienzos = diapositivasInforme(pr);
+      $('inf-prev').innerHTML = lienzos.map(function (cv, i) { return '<img src="' + cv.toDataURL('image/jpeg', .8) + '" alt="Página ' + (i + 1) + ' del informe">'; }).join('');
+      $('inf-pdf').disabled = false; $('inf-fotos').disabled = false;
+      $('inf-pdf').addEventListener('click', function () {
+        const b = this; b.disabled = true; b.textContent = 'Preparando…';
+        pdfInforme(lienzos).then(function (f) { return compartirArchivos([f]); })
+          .catch(function (err) { aviso(mensajeError(err), 7000); })
+          .then(function () { if ($('inf-pdf')) { b.disabled = false; b.textContent = 'Compartir PDF'; } });
+      });
+      $('inf-fotos').addEventListener('click', function () { fotosInforme(lienzos).then(compartirArchivos); });
+    });
+  }
+  function abrirMensajePremios(pr) {
+      abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Mensaje del mes</h2></div>' +
         '<div class="dlg-cuerpo"><p class="ayuda">Solo los destacados y las gracias. Cópialo y pégalo en el grupo.</p>' +
         '<label class="campo" for="dlg-texto">Mensaje (puedes cambiarlo)<textarea id="dlg-texto" rows="14"></textarea></label></div>' +
         '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-wa">Enviar por WhatsApp</button><button type="button" class="accion" id="dlg-copiar">Copiar</button><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
@@ -2313,7 +2610,6 @@
         if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(hecho).catch(function () { t.select(); document.execCommand('copy'); hecho(); });
         else { t.select(); document.execCommand('copy'); hecho(); }
       });
-    });
   }
   function pintarAjustes() {
     const $a = $('ajustes');
