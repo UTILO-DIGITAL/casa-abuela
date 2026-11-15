@@ -61,6 +61,11 @@
     font-weight: 800; color: #fff; text-decoration: none; border-radius: var(--radio) var(--radio) 0 0; white-space: nowrap;
   }
   @media (max-width: 420px) { nav.vistas { gap: 0; } nav.vistas a { padding: 8px 9px; font-size: 15px; } }
+  /* v4.65: con «Por rellenar» (y Ajustes) caben justas: si no, se desliza de lado */
+  nav.vistas { overflow-x: auto; scrollbar-width: none; }
+  nav.vistas::-webkit-scrollbar { display: none; }
+  .nav-corto { display: none; }
+  @media (max-width: 420px) { nav.vistas.muchas a { padding: 8px 5px; font-size: 14px; } .nav-largo { display: none; } .nav-corto { display: inline; } }
   nav.vistas a[aria-current="page"] { background: var(--color-fondo); color: var(--color-principal-oscuro); }
 
   .pagina { max-width: 1360px; margin: 0 auto; padding: 20px 16px 48px; }
@@ -333,6 +338,8 @@
   .rf-txt small { font-size: 13px; color: var(--color-texto-suave); }
   .rf-txt .rf-pend { color: var(--color-accion); font-weight: 800; }
   .rf-txt .rf-ok { color: var(--color-principal-oscuro); font-weight: 800; }
+  .rf-grupo { margin: 18px 0 4px; font-size: 16px; }
+  .rf-grupo + .ayuda { margin-top: 0; }
   .rf-sec { margin: 6px 0 0; font-size: 16px; padding-top: 10px; border-top: 1px solid var(--color-linea); }
   .rf-sec:first-child { border-top: 0; padding-top: 0; }
   .rf-todo { margin: 0; font-weight: 800; color: var(--color-principal-oscuro); }
@@ -659,6 +666,7 @@
       <a href="#eventos" data-vista="eventos">Eventos</a>
       <a href="#personas" data-vista="personas">Personas</a>
       <a href="#huecos" data-vista="huecos">Huecos</a>
+      <a href="#rellenar" data-vista="rellenar" id="nav-rellenar" hidden><span class="nav-largo">Por rellenar</span><span class="nav-corto">Rellenar</span></a>
       <a href="#ajustes" data-vista="ajustes" id="nav-ajustes" hidden>Ajustes</a>
     </nav>
   </div>
@@ -718,7 +726,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.64.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.65.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1181,6 +1189,9 @@
     $('salir-sencillo').hidden = !sencillo;
     if (sencillo && (vista === 'huecos' || vista === 'rellenar')) { ponerVista('semana'); return; }
     $('nav-ajustes').hidden = !esAdmin();  // v4.58
+    const mios = rfMios();  // v4.65
+    $('nav-rellenar').hidden = !mios.length && vista !== 'rellenar';
+    document.querySelector('nav.vistas').classList.toggle('muchas', !$('nav-rellenar').hidden);
     if (vista === 'ajustes') { if (!esAdmin()) { ponerVista('semana'); return; } if (!ajustes) pintarAjustes(); }  // v4.35: la Semana, los Eventos y (v4.37) las Personas, para mirar
     pintarNavegador();
     pintarSemana();
@@ -1403,19 +1414,31 @@
     return datos.personas.filter(function (p) { return familiaDe(p) === f && !esServicio(p) && p.familia !== 'Otros' && !esFallecido(p) && !enCamino(p); });
   }
   function rfFalta(p) {
-    const f = [];
+    const f = [], abuelo = !!editor(p.id), muerto = esFallecido(p);  // v4.65
     const c = p.cumple || '';
     if (!c || !Number(c.slice(0, 2)) || !Number(c.slice(3, 5)) || !Number(c.slice(6, 10))) f.push('cumple');
+    if (muerto && (p.fallecio === 'Sí' || !Number(String(p.fallecio).slice(3, 5)) || !Number(String(p.fallecio).slice(0, 2)))) f.push('fallecio');
     if (!p.sexo) f.push('sexo');
     if (!p.apellido) f.push('apellido');
-    if (!p.menu) f.push('menu');
+    if (!p.menu && !muerto) f.push('menu');
     const pa = parejaDe(p);
     if (pa && !p.novios) f.push('novios');  // v4.42; v4.44: a los dos (se guarda en los dos)
     if (pa && p.casados === 'Sí' && (!p.boda || !Number(p.boda.slice(6, 10)))) f.push('boda');
     if (!(p.fechas || []).some(function (x) { return /^santo$/i.test(x.que); })) f.push('santo');  // v4.44
+    if (abuelo && !(p.fechas || []).some(function (x) { return /^bautizo$/i.test(x.que); })) f.push('bautizo');  // v4.65: de los abuelos, también el bautizo
     return f;
   }
-  const RF_NOMBRES = { cumple: 'cumpleaños', sexo: 'hombre o mujer', apellido: 'apellido', menu: 'menú', novios: 'inicio del noviazgo', boda: 'boda', santo: 'santo' };
+  /* v4.65: los abuelos, que se preguntan a todas las familias (alguien lo sabrá) */
+  function rfAbuelos() { return (datos.editores || []).filter(function (p) { return rfFalta(p).length; }); }
+  /* v4.65: «Por rellenar» sale a quien entra mientras a su familia o a los abuelos les falte algo */
+  function rfMios() {
+    const y = yo && quienEs(yo);
+    if (!y || editor(yo) || modoAbuela()) return [];
+    const fam = esServicio(y) || y.familia === 'Otros' ? [] : rfGente(familiaDe(y)).filter(function (p) { return rfFalta(p).length; });
+    return fam.concat(rfAbuelos());
+  }
+  function rfNombre(p, k) { return k === 'cumple' && esFallecido(p) ? 'nacimiento' : RF_NOMBRES[k]; }
+  const RF_NOMBRES = { bautizo: 'bautizo', fallecio: 'fallecimiento', cumple: 'cumpleaños', sexo: 'hombre o mujer', apellido: 'apellido', menu: 'menú', novios: 'inicio del noviazgo', boda: 'boda', santo: 'santo' };
   function rfContexto(p) {
     const padre = p.hijoDe && quienEs(p.hijoDe), otro = padre && parejaDe(padre), pa = parejaDe(p);
     if (padre) return (p.sexo === 'Mujer' ? 'Hija de ' : p.sexo === 'Hombre' ? 'Hijo de ' : 'Hijo o hija de ') + padre.apodo + (otro ? ' y ' + otro.apodo : '');
@@ -1439,27 +1462,34 @@
     }
     const orden = ordenPorNucleos(rfGente(rfFamilia));
     const quedan = orden.filter(function (x) { return rfFalta(x.p).length; }).length;
+    const abuelos = rfAbuelos();  // v4.65
     $r.innerHTML = '<p><button type="button" class="enlace" data-rf-fam="">‹ Todas las familias</button></p>' +
       '<div class="rf-intro"><p class="rf-paso">Paso 2 de 2</p><h2>' + esc(nombreFamilia(rfFamilia)) + '</h2>' +
       '<p class="ayuda">' + (quedan ? 'Toca un nombre para rellenar lo que le falta. ' + (quedan === 1 ? 'Queda 1 persona.' : 'Quedan ' + quedan + ' personas.') : '¡Esta familia está completa! Gracias.') + '</p></div>' +
-      '<ul class="rf-lista">' + orden.map(function (x) {
+      (abuelos.length ? '<h3 class="rf-grupo">De los abuelos</h3><p class="ayuda">Lo preguntamos a todas las familias: si sabes algo, rellénalo. A la abuela le hará ilusión.</p>' +
+        '<ul class="rf-lista">' + abuelos.map(function (p) { return filaRF({ p: p, nivel: 0 }); }).join('') + '</ul>' +
+        '<h3 class="rf-grupo">' + esc(nombreFamilia(rfFamilia)) + '</h3>' : '') +
+      '<ul class="rf-lista">' + orden.map(filaRF).join('') + '</ul>';
+    function filaRF(x) {
         const p = x.p, f = rfFalta(p);
         const sangria = x.nivel ? ' style="margin-left:' + (x.nivel * 14) + 'px"' : '';
-        const txt = '<span class="rf-txt"><b>' + esc(p.apodo) + (p.nombre || p.apellido ? ' <span class="rf-nombre">' + esc([p.nombre, p.apellido].filter(Boolean).join(' ')) + '</span>' : '') + '</b>' +
-          (rfContexto(p) ? '<small>' + esc(rfContexto(p)) + '</small>' : '') +
-          (f.length ? '<small class="rf-pend">Falta: ' + esc(f.map(function (k) { return RF_NOMBRES[k]; }).join(' · ')) + '</small>' : '<small class="rf-ok">✓ Completo</small>') + '</span>';
+        const txt = '<span class="rf-txt"><b>' + esc(p.apodo) + (esFallecido(p) ? ' †' : '') + (p.nombre || p.apellido ? ' <span class="rf-nombre">' + esc([p.nombre, p.apellido].filter(Boolean).join(' ')) + '</span>' : '') + '</b>' +
+          (rfContexto(p) && !editor(p.id) ? '<small>' + esc(rfContexto(p)) + '</small>' : '') +
+          (f.length ? '<small class="rf-pend">Falta: ' + esc(f.map(function (k) { return rfNombre(p, k); }).join(' · ')) + '</small>' : '<small class="rf-ok">✓ Completo</small>') + '</span>';
         return '<li' + sangria + '><button type="button" class="rf-fila' + (f.length ? '' : ' hecha') + '" data-rf-persona="' + esc(p.id) + '">' + txt + '<span class="rf-flecha" aria-hidden="true">›</span></button></li>';
-      }).join('') + '</ul>';
+    }
   }
   /* v4.45: arriba lo que falta; debajo, lo que ya tenemos de esa persona, para corregirlo si algo está mal */
   function abrirRellenarPersona(id) {
-    const p = persona(id);
+    const p = persona(id) || editor(id);  // v4.65: también los abuelos
     if (!p) return;
-    const f = rfFalta(p), pa = parejaDe(p);
+    const f = rfFalta(p), pa = parejaDe(p), esAbuelo = !!editor(id), muerto = esFallecido(p);
     const falta = function (k) { return f.indexOf(k) !== -1; };
     const fecha = function (pre, titulo, v, futuro) { return '<fieldset><legend>' + titulo + '</legend>' + campoFechaPareja(pre, '', v || '', futuro || 0) + '</fieldset>'; };
     const campo = {
-      cumple: function () { return fecha('rfc', 'Cumpleaños', p.cumple, 1); },
+      cumple: function () { return fecha('rfc', muerto ? 'Cuándo nació' : 'Cumpleaños', p.cumple, 1); },
+      fallecio: function () { return fecha('rff', 'Cuándo falleció', p.fallecio === 'Sí' ? '' : p.fallecio, 0); },  // v4.65
+      bautizo: function () { return fecha('rfz', 'Bautizo', ''); },
       nombre: function () { return '<label class="campo" for="dlg-rfnom">Nombre<input id="dlg-rfnom" type="text" maxlength="40" autocomplete="off" value="' + esc(p.nombre || '') + '"></label>'; },
       apellido: function () { return '<label class="campo" for="dlg-rfap">Apellido<input id="dlg-rfap" type="text" maxlength="40" autocomplete="off" value="' + esc(p.apellido || '') + '"></label>'; },
       sexo: function () { return '<label class="campo" for="dlg-rfsexo">Es<select id="dlg-rfsexo"><option value="">Sin decir</option>' + ['Hombre', 'Mujer'].map(function (v) { return '<option' + (p.sexo === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') + '</select></label>'; },
@@ -1471,15 +1501,15 @@
     };
     // lo que falta, arriba
     let arriba = '';
-    ['cumple', 'sexo', 'apellido', 'menu', 'novios', 'boda', 'santo'].forEach(function (k) { if (falta(k)) arriba += campo[k](); });
+    ['cumple', 'fallecio', 'sexo', 'apellido', 'menu', 'novios', 'boda', 'santo', 'bautizo'].forEach(function (k) { if (falta(k)) arriba += campo[k](); });
     // v4.48: si son pareja y no están casados (ni hay boda puesta), se pregunta si se casan; no cuenta como pendiente
-    const pregunta = pa && p.casados !== 'Sí' && !p.boda ? '<fieldset><legend>¿Os casáis? <small class="leyenda-suave">· si ya hay fecha de boda con ' + esc(pa.apodo) + '</small></legend>' +
+    const pregunta = pa && !esAbuelo && p.casados !== 'Sí' && !p.boda ? '<fieldset><legend>¿Os casáis? <small class="leyenda-suave">· si ya hay fecha de boda con ' + esc(pa.apodo) + '</small></legend>' +
       campoFechaPareja('rfb', '', '', 10) + '<p class="ayuda">Si no hay boda a la vista, déjalo en blanco. Vale aunque sea solo el mes o el año.</p></fieldset>' : '';
     // v4.48: sin pareja (y sin ser un niño), si quiere ponerla: de la lista o escribiendo su nombre
     const ed = edad(p), jerPareja = p.jerarquia && !/\+1$/.test(p.jerarquia) ? p.jerarquia + ' +1' : '';
-    const sinPareja = !pa && !esDeFuera(p) && (ed !== null ? ed >= 16 : p.jerarquia !== 'Biznietos');
+    const sinPareja = !pa && !esAbuelo && !esDeFuera(p) && (ed !== null ? ed >= 16 : p.jerarquia !== 'Biznietos');
     // v4.49: si están casados (y no hay ya un bebé en camino), si esperan uno
-    const madreBebe = pa && p.casados === 'Sí' ? (!esDeFuera(p) ? p : (!esDeFuera(pa) ? pa : p)) : null;  // v4.51: solo a los casados
+    const madreBebe = pa && !esAbuelo && p.casados === 'Sí' ? (!esDeFuera(p) ? p : (!esDeFuera(pa) ? pa : p)) : null;  // v4.51: solo a los casados
     const yaEnCamino = madreBebe && datos.personas.some(function (x) { return enCamino(x) && (x.hijoDe === p.id || x.hijoDe === pa.id); });
     const preguntaBebe = madreBebe && GEN_HIJOS[madreBebe.jerarquia] && !yaEnCamino ? '<fieldset><legend>¿Esperáis un bebé?</legend>' +
       '<button type="button" class="accion" id="dlg-rfbebe">+ Sí, añadir el bebé en camino</button><p class="ayuda">Si no, nada.</p></fieldset>' : '';
@@ -1490,9 +1520,10 @@
     // lo que ya tenemos, abajo (para corregir)
     let abajo = '';
     if (!falta('cumple') && p.cumple) abajo += campo.cumple();
+    if (muerto && !falta('fallecio')) abajo += campo.fallecio();  // v4.65
     abajo += '<div class="dos dos-iguales">' + campo.nombre() + (falta('apellido') ? '' : campo.apellido()) + '</div>';
     if (!falta('sexo')) abajo += campo.sexo();
-    if (!falta('menu')) abajo += campo.menu();
+    if (!falta('menu') && !muerto) abajo += campo.menu();
     if (pa && !falta('novios') && p.novios) abajo += campo.novios();
     if (pa && !falta('boda') && p.boda) abajo += campo.boda();
     const filaFecha = function (pre, x) {
@@ -1500,9 +1531,9 @@
         '<button type="button" class="enlace" data-rf-quitar="' + pre + '">Quitar</button></div>' + campoFechaPareja(pre, '', x.fecha || '', 0) + '</fieldset>';
     };
     abajo += (p.fechas || []).map(function (x, i) { return filaFecha('rfe' + i, x); }).join('');
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2><div><small>' + esc([[p.nombre, p.apellido].filter(Boolean).join(' '), rfContexto(p)].filter(Boolean).join(' · ')) + '</small></div></div>' +
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2><div><small>' + esc([[p.nombre, p.apellido].filter(Boolean).join(' '), esAbuelo ? '' : rfContexto(p)].filter(Boolean).join(' · ')) + '</small></div></div>' +
       '<div class="dlg-cuerpo">' +
-      (arriba ? '<h3 class="rf-sec">Lo que falta</h3><p class="ayuda">Rellena lo que sepas; lo que no, déjalo en blanco.' + (falta('novios') || falta('boda') ? ' Las fechas de la pareja valen para los dos.' : '') + '</p>' + arriba : '<p class="rf-todo">✓ No le falta nada.</p>') +
+      (arriba ? '<h3 class="rf-sec">Lo que falta</h3><p class="ayuda">' + (esAbuelo ? 'Lo que sepas ' + esc(p.apodo === 'Abuelo' || p.apodo === 'Abuela' ? (p.sexo === 'Mujer' ? 'de la abuela' : 'del abuelo') : 'de ' + p.apodo) + ', aunque sea solo el año; lo que no, déjalo en blanco.' : 'Rellena lo que sepas; lo que no, déjalo en blanco.') + (falta('novios') || falta('boda') ? ' Las fechas de la pareja valen para los dos.' : '') + '</p>' + arriba : '<p class="rf-todo">✓ No le falta nada.</p>') +
       pregunta + preguntaPareja + preguntaBebe +
       '<h3 class="rf-sec">Lo que ya tenemos de ' + esc(p.apodo) + '</h3><p class="ayuda">Si algo no está bien, corrígelo aquí.</p>' + abajo +
       '<div id="dlg-rfotras"></div><button type="button" class="enlace" id="dlg-rfmas">+ Añadir otra fecha (bautizo, comunión…)</button></div>' + pie('Guardar'));
@@ -1517,11 +1548,18 @@
       texto('dlg-rfnom', 'nombre'); texto('dlg-rfap', 'apellido'); texto('dlg-rfal', 'alergias');
       if ($('dlg-rfsexo') && $('dlg-rfsexo').value !== (p.sexo || '')) cambios.sexo = $('dlg-rfsexo').value;
       if ($('dlg-rfmenu') && $('dlg-rfmenu').value && $('dlg-rfmenu').value !== (p.menu || '')) cambios.menu = $('dlg-rfmenu').value;
+      if ($('dlg-rffdia')) {  // v4.65: el fallecimiento (si no se pone nada, sigue «falleció, sin saber cuándo»)
+        const r = leerFecha('rff', 'el fallecimiento', 1850, 0);
+        if (r.error) { return { error: r.error }; }
+        if (r.valor && r.valor.length < 10) return { error: 'Para el fallecimiento, pon también el año.' };
+        if (r.valor && r.valor !== p.fallecio) cambios.fallecio = r.valor;
+      }
       if ($('dlg-rfndia')) { const r = leerFechaPareja('rfn', 'el inicio del noviazgo', 0); if (r.error) { return { error: r.error }; } if (r.valor !== (p.novios || '')) cambios.novios = r.valor; }
       if ($('dlg-rfbdia')) { const r = leerFechaPareja('rfb', 'la boda', 10); if (r.error) { return { error: r.error }; } if (r.valor !== (p.boda || '')) cambios.boda = r.valor; }
       // las otras fechas: las que había (como queden), el santo nuevo y las nuevas
       const fechas = [];
       if ($('dlg-rfsdia')) { const r = leerFechaPareja('rfs', 'el santo', 0); if (r.error) { return { error: r.error }; } if (r.valor) fechas.push({ que: 'Santo', fecha: r.valor }); }
+      if ($('dlg-rfzdia')) { const r = leerFechaPareja('rfz', 'el bautizo', 0); if (r.error) { return { error: r.error }; } if (r.valor) fechas.push({ que: 'Bautizo', fecha: r.valor }); }  // v4.65
       const filas = Array.from($dlg.querySelectorAll('[data-rfe]'));
       for (let o = 0; o < filas.length; o++) {
         const pre = filas[o].dataset.rfe, que = $('dlg-' + pre + 'que').value.trim();
@@ -3607,7 +3645,7 @@
   const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', eventos: 'Lo que viene y quién va', rellenar: 'Rellenar lo que falta', ajustes: 'Solo para quien lleva la web', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
   function ponerVista(v) {
     if (v === 'ajustes') ajustes = null;  // v4.58: al entrar, lo último
-    if (v === 'rellenar') rfSucio = true;  // v4.40
+    if (v === 'rellenar') { rfSucio = true; const y = yo && persona(yo); if (!rfFamilia && y && !esServicio(y) && y.familia !== 'Otros') rfFamilia = familiaDe(y); }  // v4.40; v4.65: directamente la tuya
     vista = SUBTITULOS[v] ? v : 'semana';
     ['semana', 'eventos', 'personas', 'huecos', 'rellenar', 'ajustes'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
     $('subtitulo').textContent = SUBTITULOS[vista];

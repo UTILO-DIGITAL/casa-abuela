@@ -339,6 +339,17 @@ hojas.MESA_CONFIG.filas = hojas.MESA_CONFIG.filas.filter(f => f[0] !== 'CLAVE' &
 d = R.getDatos(Object.assign({}, V2, { yo: JP_ }));
 ver('al entrar, se apunta la visita (una vez)', !!hojas.MESA_VISITAS && hojas.MESA_VISITAS.filas.some(f => f[0] === JP_ && f[2] === '1'));
 
+// ---------- v4.65: «Por rellenar» también para los abuelos (lo rellena cualquiera) ----------
+d = R.guardarPersona('(A) - Abuela', { cumple: '12/02/1930', apellido: 'Coll', fechas: [{ que: 'Santo', fecha: '24/06' }, { que: 'Bautizo', fecha: '00/00/1930' }] }, JP_, V2);
+ver('de la abuela: nacimiento, apellido, santo y bautizo', quien('(A) - Abuela').cumple === '12/02/1930' && quien('(A) - Abuela').apellido === 'Coll' &&
+  JSON.stringify(quien('(A) - Abuela').fechas) === JSON.stringify([{ que: 'Santo', fecha: '24/06' }, { que: 'Bautizo', fecha: '00/00/1930' }]));
+d = R.guardarPersona('(A) - Abuela', { fallecio: '03/05/1999' }, JP_, V2);
+ver('y la fecha de fallecimiento', quien('(A) - Abuela').fallecio === '03/05/1999');
+err = ''; try { R.guardarPersona('(A) - Abuela', { fallecio: '03/05' }, JP_, V2); } catch (e) { err = e.message; }
+ver('el fallecimiento sin año, no', /fallecimiento/.test(err));
+d = R.guardarPersona('(A) - Abuela', { fallecio: '' }, JP_, V2);
+ver('(se deshace)', !quien('(A) - Abuela').fallecio);
+
 // ---------- v4.17: la clave de la familia ----------
 ver('sin CLAVE en MESA_CONFIG, no se pide', R.api_('getDatos', [V2], undefined).ok === true);
 hojas.MESA_CONFIG.filas.push(['CLAVE', 'Paella']);
