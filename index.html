@@ -495,6 +495,12 @@
   .ev-fila .ev-nota { font-style: italic; }
   .ev-nota-linea .enlace { font-size: 14px; }
   .ev-yo .ev-dias, .ev-yo .ev-nota-linea { flex-basis: 100%; }
+  /* v4.69: los iconos de ✓ y ✗ */
+  .ico-marca { width: 20px; height: 20px; flex: none; }
+  .ev-bots button, .evento-botones button[data-ev-voy], .evento-botones button[data-ev-novoy] { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .ev-bots .ev-si { color: var(--color-principal); }
+  .ev-bots button.grande .ico-marca, .evento-botones .ico-marca { width: 18px; height: 18px; }
+  .ev-marca .ico-marca { width: 18px; height: 18px; }
   .ev-notas { margin: 8px 0 4px; padding: 8px 12px; border-radius: var(--radio); background: #FFF6D9; border-left: 4px solid #E9B949; }
   .ev-notas-tit { margin: 0 0 2px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #8A6A10; }
   .ev-notas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 15px; }
@@ -779,7 +785,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.68.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.69.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1894,8 +1900,8 @@
       (function () { const l = porFamiliaEvento(e).filter(function (x) { return x.van; }); return l.length ? '<p class="evento-gente"><span>' + esc(l.map(function (x) { return cortoFamilia(x.f) + ' ' + x.van; }).join(' · ')) + '</span></p>' : ''; })() +
       listaNotas(e, 3, false) +  // v4.68
       '<div class="evento-botones">' + (pasado || modoAbuela() ? '' :
-        '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? 'Voy ✓' : 'Voy') + '</button>' +
-        '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '" aria-pressed="' + noVoy + '">' + (noVoy ? 'No voy ✓' : 'No voy') + '</button>') +
+        '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? ICONO_SI + 'Voy' : 'Voy') + '</button>' +
+        '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '" aria-pressed="' + noVoy + '">' + (noVoy ? ICONO_NO + 'No voy' : 'No voy') + '</button>') +
       '<button type="button" class="principal boton-evento" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></div>' +
       (pasado || modoAbuela() || !(voy || noVoy) ? '' : '<div class="ev-mio">' +  // v4.68: tus días y tu nota, sin abrir el evento
         (voy && diasDelEvento(e).length > 1 ? botonesDias(e, yo, 'Qué días vas:') : '') + lineaNota(e, yo) + '</div>') +
@@ -1918,9 +1924,9 @@
       const tiene = !!notaDe(e, p.id);
       const lapiz = !pasado && (st || tiene) ? '<button type="button" class="ev-lapiz' + (tiene ? ' con-nota' : '') + '" data-ev-nota="' + esc(e.id) + '|' + esc(p.id) + '" aria-label="' + (tiene ? 'Cambiar la nota de ' : 'Añadir una nota de ') + esc(p.apodo) + '" title="' + (tiene ? 'Tiene nota' : 'Añadir una nota') + '">' + ICONO_LAPIZ + '</button>' : '';  // v4.68
       return '<li class="ev-fila" style="padding-left:' + (x.nivel * 18) + 'px"><span class="ev-nombre">' + esc(p.apodo) + '</span>' + lapiz + chip +
-        (pasado ? '<span class="ev-estado">' + (st === 'si' ? '<span class="ev-marca si" role="img" aria-label="va">✓</span>' : st === 'no' ? '<span class="ev-marca no" role="img" aria-label="no va">✗</span>' : '<span class="ev-marca nada" role="img" aria-label="sin contestar"></span>') + '</span>' :
-          '<span class="ev-bots"><button type="button" class="ev-si" data-ev-p="' + esc(e.id) + '|' + esc(p.id) + '|si" aria-pressed="' + (st === 'si') + '" aria-label="' + esc(p.apodo) + ' va" title="Va">✓</button>' +
-          '<button type="button" class="ev-no" data-ev-p="' + esc(e.id) + '|' + esc(p.id) + '|no" aria-pressed="' + (st === 'no') + '" aria-label="' + esc(p.apodo) + ' no puede" title="No puede">✗</button></span>') +
+        (pasado ? '<span class="ev-estado">' + (st === 'si' ? '<span class="ev-marca si" role="img" aria-label="va">' + ICONO_SI + '</span>' : st === 'no' ? '<span class="ev-marca no" role="img" aria-label="no va">' + ICONO_NO + '</span>' : '<span class="ev-marca nada" role="img" aria-label="sin contestar"></span>') + '</span>' :
+          '<span class="ev-bots"><button type="button" class="ev-si" data-ev-p="' + esc(e.id) + '|' + esc(p.id) + '|si" aria-pressed="' + (st === 'si') + '" aria-label="' + esc(p.apodo) + ' va" title="Va">' + ICONO_SI + '</button>' +
+          '<button type="button" class="ev-no" data-ev-p="' + esc(e.id) + '|' + esc(p.id) + '|no" aria-pressed="' + (st === 'no') + '" aria-label="' + esc(p.apodo) + ' no puede" title="No puede">' + ICONO_NO + '</button></span>') +
         (chip && !pasado && diasAbiertos[p.id] ? botonesDias(e, p.id, '¿Qué días?') : '') +
         '</li>';
     };
@@ -1930,8 +1936,8 @@
       (!pasado ? (function () {  // v4.51: lo primero, si vas tú
         const yoP = yo && persona(yo), st = yoP ? estado(yoP) : '';
         return '<div class="ev-yo"><b>' + (yoP ? '¿Vas, ' + esc(yoP.apodo) + '?' : '¿Vas tú?') + '</b><span class="ev-bots">' +
-          '<button type="button" class="ev-si grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|si" aria-pressed="' + (st === 'si') + '">✓ Voy</button>' +
-          '<button type="button" class="ev-no grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|no" aria-pressed="' + (st === 'no') + '">✗ No voy</button></span>' +
+          '<button type="button" class="ev-si grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|si" aria-pressed="' + (st === 'si') + '">' + ICONO_SI + 'Voy</button>' +
+          '<button type="button" class="ev-no grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|no" aria-pressed="' + (st === 'no') + '">' + ICONO_NO + 'No voy</button></span>' +
           (st === 'si' && varios ? botonesDias(e, yoP.id, 'Qué días vas:') : '') + (st ? lineaNota(e, yoP.id) : '') + '</div>';
       })() : '') +
       '<p class="ev-total"><b>' + esc(resumenEvento(e)) + '</b></p>' + barraEvento(e) +
@@ -1940,11 +1946,11 @@
         return diaCortoEv(f) + ': ' + (n === 1 ? 'va 1' : 'van ' + n);
       }).join(' · ')) + '</p>' : '') +
       listaNotas(e, 0, !pasado) +  // v4.68
-      (modoAbuela() ? '' : '<p class="ayuda">✓ va · ✗ no puede · sin marcar, aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).' + (varios ? ' Si alguien va solo algún día, toca «todos los días» junto a su nombre.' : '') + ' Con el lápiz, una nota.</p>') +
+      (modoAbuela() ? '' : '<p class="ayuda">En verde, quien va; en rojo, quien no puede; sin marcar, quien aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).' + (varios ? ' Si alguien va solo algún día, toca «todos los días» junto a su nombre.' : '') + ' Con el lápiz, una nota.</p>') +
       // v4.30: una sola lista: cada familia con sus números y, al tocar «Ver», quién es justo debajo
       '<div class="ev-resumen">' + porFamiliaEvento(e).map(function (x) {
         return '<details class="ev-familia" data-fam="' + esc(x.f) + '"' + (abiertasEv[x.f] ? ' open' : '') + '><summary>' +
-          '<b class="ev-fam-nombre">' + esc(cortoFamilia(x.f)) + '</b><span class="ev-van">' + (x.van && x.van === x.gente.length ? '✓ van todos' : x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : '—') + '</span>' +
+          '<b class="ev-fam-nombre">' + esc(cortoFamilia(x.f)) + '</b><span class="ev-van">' + (x.van && x.van === x.gente.length ? 'van todos' : x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : '—') + '</span>' +
           '<span class="ev-barra" aria-hidden="true"><i class="si" style="width:' + (x.van / x.gente.length * 100) + '%"></i><i class="no" style="width:' + (x.no / x.gente.length * 100) + '%"></i></span>' +
           '<span class="ev-resto">' + [x.no ? (x.no === 1 ? '1 no puede' : x.no + ' no pueden') : '', x.pend ? x.pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</span>' +
           '<span class="mini ev-ver" aria-hidden="true"></span></summary>' +
@@ -1953,6 +1959,9 @@
   }
   /* v4.68: la nota de cada uno en el evento */
   const ICONO_LAPIZ = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  /* v4.69: ✓ y ✗ dibujados (los de la letra se ven distintos en cada móvil) */
+  const ICONO_SI = '<svg class="ico-marca" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const ICONO_NO = '<svg class="ico-marca" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>';
   function notaDe(e, id) { return (e.notas || {})[id] || ''; }
   function lineaNota(e, id) {
     return '<span class="ev-nota-linea"><button type="button" class="enlace" data-ev-nota="' + esc(e.id) + '|' + esc(id) + '">' + (notaDe(e, id) ? 'Cambiar tu nota' : '+ Añadir una nota') + '</button></span>';
