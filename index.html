@@ -791,7 +791,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.72.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.73.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -3648,7 +3648,10 @@
       });
       return titulo + '\n\n' + (lineas.length ? '⚠️ *Falta alguien para:*\n' + lineas.join('\n') : '✅ Están todas las comidas, cenas y noches cubiertas. ¡Gracias a todos!') + enlace;
     }
-    const bloques = (tipo === 'semana' ? dias : [tipo]).map(function (f) {
+    // v4.73: los próximos N días, desde hoy (de hoy, solo lo que aún no ha pasado)
+    const prox = tipo.indexOf('prox:') === 0 ? Number(tipo.slice(5)) : 0;
+    const losDias = prox ? Array.from({ length: prox }, function (_, i) { return sumar(hoy(), i); }) : tipo === 'semana' ? dias : [tipo];
+    const bloques = losDias.map(function (f) {
       let b = '📅 *' + diaLargo(f) + '*';
       const evDia = eventoEn(f, 'COMIDA') || eventoEn(f, 'CENA');  // v4.31
       if (fueraTodo(f)) return b + (evDia ? '\n🎉 ' + evDia.nombre : '\n🧳 La abuela no está' + ((fuera(f) || {}).motivoFuera ? ' (' + fuera(f).motivoFuera + ')' : '') + '.');
@@ -3659,6 +3662,7 @@
       const nd = notaDia(f);
       if (nd && nd.nota) b += '\n📝 ' + nd.nota;
       TURNOS.forEach(function (t) {
+        if (prox && yaPaso(f, t.id)) return;  // v4.73
         const ids = idsDe(f, t.id), comp = compania(ids, t.id), serv = servicioDe(ids, t.id), motivo = sinTurno(f, t.id);
         const total = comp.length + acompanantesDe(comp, f, t.id);
         b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (total > 1 ? ' (' + total + ')' : '');
@@ -3672,7 +3676,8 @@
       });
       return b;
     });
-    return (tipo === 'semana' ? titulo + '\n\n' : '🏡 *Casa Abuela*\n\n') + bloques.join('\n\n— — —\n\n') + enlace;
+    const tituloProx = '🏡 *Casa Abuela*\n_Los próximos ' + prox + ' días: del ' + ddmm(losDias[0]) + ' al ' + ddmm(losDias[losDias.length - 1]) + '_';  // v4.73
+    return (tipo === 'semana' ? titulo + '\n\n' : prox ? tituloProx + '\n\n' : '🏡 *Casa Abuela*\n\n') + bloques.join('\n\n— — —\n\n') + enlace;
   }
 
 
@@ -3688,9 +3693,13 @@
     const pedidoEv = inicialPedido && inicialPedido.indexOf('ev:') === 0 ? evento(inicialPedido.slice(3)) : null;
     if (pedidoEv && evs.indexOf(pedidoEv) === -1) evs.unshift(pedidoEv);
     const opciones = evs.map(function (e) { return { v: 'ev:' + e.id, t: 'El evento: ' + e.nombre }; }).concat(conEvento.map(function (f) { return { v: 'evento:' + f, t: 'El evento: ' + notaDia(f).evento + ' (' + diaLargo(f).toLowerCase() + ')' }; }))
-      .concat([{ v: 'huecos', t: 'Lo que falta esta semana' }, { v: 'semana', t: 'Quién viene toda la semana' }])
-      .concat(dias.map(function (f) { return { v: f, t: 'Quién viene el ' + diaLargo(f).toLowerCase() }; }));
-    const inicial = inicialPedido || (dias.indexOf(hoy()) !== -1 ? hoy() : 'huecos');
+      // v4.73: lo que viene, desde hoy (lo que ya pasó no): hoy, mañana, los próximos días y cada uno de la semana que viene
+      .concat([{ v: hoy(), t: 'Quién viene hoy' }, { v: sumar(hoy(), 1), t: 'Quién viene mañana' },
+        { v: 'prox:3', t: 'Los próximos 3 días' }, { v: 'prox:5', t: 'Los próximos 5 días' }, { v: 'prox:7', t: 'Los próximos 7 días' }])
+      .concat([2, 3, 4, 5, 6].map(function (n) { const f = sumar(hoy(), n); return { v: f, t: 'Quién viene el ' + diaLargo(f).toLowerCase() }; }))
+      .concat(lunesSel > lunesDe(hoy()) ? [{ v: 'semana', t: 'Quién viene la semana del ' + ddmm(dias[0]) }] : [])
+      .concat([{ v: 'huecos', t: 'Lo que falta esta semana' }]);
+    const inicial = inicialPedido || (lunesSel > lunesDe(hoy()) ? 'semana' : hoy());
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Compartir por WhatsApp</h2></div>' +
       '<div class="dlg-cuerpo"><label class="campo" for="dlg-que">Qué quieres compartir<select id="dlg-que">' +
       opciones.map(function (o) { return '<option value="' + o.v + '"' + (o.v === inicial ? ' selected' : '') + '>' + esc(o.t) + '</option>'; }).join('') + '</select></label>' +
