@@ -1584,7 +1584,7 @@
     $c.hidden = false;
     $c.classList.toggle('sin-yo', !q);
     $c.classList.toggle('top', !!(p && datos.yoTop10));  // v4.81: en el top 10 de la familia, dorada
-    $c.title = p && datos.yoTop10 ? 'Top 10 de la familia' : '';
+    $c.title = p && datos.yoTop10 ? 'Top 10 de la familia en los últimos 30 días' : '';
     $c.innerHTML = q ? '<span class="yo-ini" aria-hidden="true">' + esc((q.apodo || '?').trim().charAt(0).toUpperCase()) + '</span><span class="yo-nom">' + esc(q.apodo) + '</span>' : '<span class="yo-nom">¿Quién eres?</span>';
     $c.setAttribute('aria-label', q ? 'Eres ' + q.apodo + '. Tus datos o cambiar de persona' : 'Decir quién eres');
     $q.hidden = !!q;  // v4.35: en el modo sencillo lo esconde el estilo
@@ -3815,13 +3815,13 @@
     // v4.81: la gráfica de los días (de lunes a domingo)
     const dias = n.porDia ? [1, 2, 3, 4, 5, 6, 0] : [], max = n.porDia ? Math.max.apply(null, n.porDia) : 0;
     const grafica = dias.length && max ? '<div class="mn-dias"><p class="mn-dias-tit">Tus días' + (n.diaFav >= 0 ? ': sobre todo los ' + DIAS[n.diaFav].toLowerCase() + (/s$/.test(DIAS[n.diaFav]) ? '' : 's') : '') + '</p><div class="mn-barras">' +
-      dias.map(function (d) { const v = n.porDia[d]; return '<span class="mn-barra' + (v === max ? ' max' : '') + '" title="' + DIAS[d] + ': ' + v + '"><b>' + (v || '') + '</b><i style="height:' + Math.round(v / max * 100) + '%"></i><small>' + DIAS[d].charAt(0) + '</small></span>'; }).join('') + '</div></div>' : '';
-    return '<p class="mn-animo">' + (n.top10 ? '¡Estás en el top 10 de la familia! ' : '') + 'Gracias por acompañar a la abuela.</p><div class="aj-kpis mn-kpis">' +
+      dias.map(function (d) { const v = n.porDia[d]; return '<span class="mn-barra' + (v === max ? ' max' : '') + '" title="' + DIAS[d] + ': ' + v + '"><b>' + (v || '') + '</b><i style="height:' + Math.round(v / max * 100) + '%"></i><small>' + 'DLMXJVS'.charAt(d) + '</small></span>'; }).join('') + '</div></div>' : '';
+    return '<p class="mn-animo">' + (n.top10 ? '¡Estás en el top 10 de la familia este último mes! ' : '') + 'Gracias por acompañar a la abuela.</p><div class="aj-kpis mn-kpis">' +
       cifra(n.total, n.total === 1 ? 'vez con la abuela' : 'veces con la abuela', esc(detalle + ' · ' + desde)) +
       cifra(n.mes, 'este mes', '') +
       (aviso ? cifra('<span class="mn-txt">' + aviso + '</span>', 'sueles avisar', '') : '') +
       (n.ultima ? cifra('<span class="mn-txt">' + esc(haceCuanto(n.ultima)) + '</span>', 'la última vez', '') : '') +
-      (n.top10 ? cifra('<span class="mn-top">Top 10</span>', 'de toda la familia', '') : n.faltanTop10 ? cifra(n.faltanTop10, n.faltanTop10 === 1 ? 'visita más y entras en el top 10' : 'visitas más y entras en el top 10', '') : '') +
+      (n.top10 ? cifra('<span class="mn-top">Top 10</span>', 'de la familia, en los últimos 30 días', '') : n.faltanTop10 ? cifra(n.faltanTop10, (n.faltanTop10 === 1 ? 'visita más' : 'visitas más') + ' y entras en el top 10 (últimos 30 días)', '') : '') +
       '</div>' + grafica;
   }
 

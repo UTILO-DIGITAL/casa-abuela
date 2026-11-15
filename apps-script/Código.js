@@ -210,7 +210,7 @@ function datos_(ss, p) {
   };
 }
 
-/** v4.81: cuántas veces ha estado cada uno con la abuela (sin el servicio), desde que empezó el calendario hasta ayer */
+/** v4.81: lo que ha ido cada uno desde que empezó el calendario hasta ayer (ef) y, sin el servicio, en los últimos 30 días (n) */
 function visitas_(ss, config, personas) {
   return memo_('visitas', function () {
     const hoy = hoy_(), ayer = sumarDias_(hoy, -1);
@@ -218,8 +218,9 @@ function visitas_(ss, config, personas) {
     const ef = inicio <= ayer ? efectivos_(leerApuntes_(ss), leerFijos_(ss), inicio, ayer) : [];
     const familia = {};
     personas.forEach(function (x) { if (x.familia !== 'Servicio' && x.familia !== 'Otros') familia[x.id] = true; });
-    const n = {};
-    ef.forEach(function (a) { if (familia[a.persona]) n[a.persona] = (n[a.persona] || 0) + 1; });
+    // v4.81: el top 10 mira los últimos 30 días (no todo el historial), para que se pueda entrar y salir
+    const hace30 = sumarDias_(hoy, -30), n = {};
+    ef.forEach(function (a) { if (familia[a.persona] && a.fecha >= hace30) n[a.persona] = (n[a.persona] || 0) + 1; });
     return { ef: ef, n: n, inicio: inicio };
   });
 }
@@ -269,8 +270,9 @@ function misNumeros(personaId) {
   // v4.81: el top 10 de toda la familia (sin decir quién más está) y, si no estás, cuántas visitas te faltan
   const t = top10_(v), yo = mios.length;
   const top10 = t.esta(personaId);
+  const yo30 = v.n[personaId] || 0;
   return { desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav, porDia: porDia,
-    antelacionHoras: antelacion, ultima: ultima, top10: top10, faltanTop10: top10 ? 0 : Math.max(1, t.corte - yo) };
+    antelacionHoras: antelacion, ultima: ultima, top10: top10, faltanTop10: top10 ? 0 : Math.max(1, t.corte - yo30) };
 }
 
 function leerConfig_(ss) { return memo_('config', function () { return leerConfigSin_(ss); }); }
