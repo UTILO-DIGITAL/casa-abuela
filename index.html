@@ -77,7 +77,8 @@
   nav.vistas { overflow-x: auto; scrollbar-width: none; }
   nav.vistas::-webkit-scrollbar { display: none; }
   .nav-corto { display: none; }
-  @media (max-width: 420px) { nav.vistas.muchas a { padding: 8px 5px; font-size: 14px; } .nav-largo { display: none; } .nav-corto { display: inline; } }
+  @media (max-width: 700px) { nav.vistas.muchas a { padding: 8px 5px; font-size: 14px; } nav.vistas.muchas .nav-largo { display: none; } nav.vistas.muchas .nav-corto { display: inline; } }
+  @media (max-width: 420px) { nav.vistas.muchas a { padding: 8px 3px; font-size: 13px; } nav.vistas.muchas .nav-badge { min-width: 15px; height: 15px; margin-left: 2px; padding: 0 3px; font-size: 10px; } }
   nav.vistas a[aria-current="page"] { background: var(--color-fondo); color: var(--color-principal-oscuro); }
 
   .pagina { max-width: 1360px; margin: 0 auto; padding: 20px 16px 48px; }
@@ -558,6 +559,17 @@
   .forma-ev button { min-height: 44px; border: 0; background: #fff; font: inherit; font-weight: 800; color: var(--color-principal-oscuro); cursor: pointer; }
   .forma-ev button[aria-pressed="true"] { background: var(--color-principal); color: #fff; }
   .aviso-servicio { margin: 0; padding: 10px 14px; border-radius: var(--radio); background: var(--color-destacado-claro); color: var(--color-texto); font-weight: 700; border-left: 4px solid var(--color-accion); }
+  /* v4.80: pestañitas de Eventos y avisos de las pestañas */
+  .ev-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+  .ev-filtros button { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--color-linea); background: #fff; font: inherit; font-weight: 800; font-size: 15px; color: var(--color-texto-suave); cursor: pointer; }
+  .ev-filtros button[aria-selected="true"] { background: var(--color-principal-oscuro); border-color: var(--color-principal-oscuro); color: #fff; }
+  .ev-filtro-n { font-size: 13px; opacity: .85; }
+  .ev-filtro-n.alerta { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--color-accion); color: #fff; opacity: 1; }
+  .ev-lista { display: grid; gap: 14px; }
+  .nav-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; margin-left: 5px; padding: 0 5px; border-radius: 9px; background: var(--color-accion); color: #fff; font-size: 12px; font-weight: 800; line-height: 1; }
+  .nav-badge[hidden] { display: none; }
+  nav.vistas a#nav-rellenar { color: #FFE2A8; }
+  nav.vistas a#nav-rellenar[aria-current="page"] { color: var(--color-principal-oscuro); }
   .ev-notas { margin: 8px 0 4px; padding: 8px 12px; border-radius: var(--radio); background: #FFF6D9; border-left: 4px solid #E9B949; }
   .ev-notas-tit { margin: 0 0 2px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #8A6A10; }
   .ev-notas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 15px; }
@@ -784,10 +796,10 @@
     <p id="subtitulo">Quién viene a comer y a cenar</p>
     <nav class="vistas" aria-label="Vistas">
       <a href="#semana" data-vista="semana">Semana</a>
-      <a href="#eventos" data-vista="eventos">Eventos</a>
+      <a href="#eventos" data-vista="eventos">Eventos<span class="nav-badge" id="badge-eventos" hidden></span></a>
       <a href="#personas" data-vista="personas">Personas</a>
       <a href="#huecos" data-vista="huecos">Huecos</a>
-      <a href="#rellenar" data-vista="rellenar" id="nav-rellenar" hidden><span class="nav-largo">Por rellenar</span><span class="nav-corto">Rellenar</span></a>
+      <a href="#rellenar" data-vista="rellenar" id="nav-rellenar" hidden><span class="nav-largo">Por rellenar</span><span class="nav-corto">Rellenar</span><span class="nav-badge" id="badge-rellenar" hidden></span></a>
       <a href="#ajustes" data-vista="ajustes" id="nav-ajustes" hidden>Ajustes</a>
     </nav>
   </div>
@@ -847,7 +859,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.79.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.80.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1325,6 +1337,10 @@
     $('nav-ajustes').hidden = !esAdmin();  // v4.58
     const mios = rfMios();  // v4.65
     $('nav-rellenar').hidden = !mios.length && vista !== 'rellenar';
+    // v4.80: los avisos de las pestañas: eventos por contestar y personas por rellenar
+    const pend = sencillo ? 0 : (datos.eventos || []).filter(function (e) { return e.hasta >= hoy() && sinContestar(e); }).length;
+    $('badge-eventos').hidden = !pend; $('badge-eventos').textContent = pend; $('badge-eventos').setAttribute('aria-label', pend + ' por contestar');
+    $('badge-rellenar').hidden = !mios.length; $('badge-rellenar').textContent = mios.length; $('badge-rellenar').setAttribute('aria-label', mios.length + ' por rellenar');
     document.querySelector('nav.vistas').classList.toggle('muchas', !$('nav-rellenar').hidden);
     if (vista === 'ajustes') { if (!esAdmin()) { ponerVista('semana'); return; } if (!ajustes) pintarAjustes(); }  // v4.35: la Semana, los Eventos y (v4.37) las Personas, para mirar
     pintarNavegador();
@@ -2242,6 +2258,9 @@
     }
     return out;
   }
+  let evFiltro = '';  // v4.80
+  function sinContestar(e) { return !!(yo && persona(yo)) && e.van.indexOf(yo) === -1 && e.noVan.indexOf(yo) === -1; }
+  document.addEventListener('click', function (ev) { const b = ev.target.closest('[data-ev-filtro]'); if (!b) return; evFiltro = b.dataset.evFiltro; pintarEventos(); });
   function pintarEventos() {
     const $l = $('eventos-lista');
     if (!$l) return;
@@ -2249,10 +2268,20 @@
     const proximos = todos.filter(function (e) { return e.hasta >= h; });
     const pasados = todos.filter(function (e) { return e.hasta < h; }).reverse();
     const prox = proximasFechas();
-    $l.innerHTML = (proximos.length ? proximos.map(tarjetaEvento).join('') : '<p class="vacio">No hay ningún evento a la vista. Añade el primero: una comida especial, una excursión, un viaje…</p>') +
-      '<h2>Próximas fechas</h2>' + (prox.length ? '<ul class="proximas">' + prox.join('') + '</ul>' : '<p class="vacio">Nada en los próximos 30 días.</p>') +
-      '<p class="ayuda">Cumpleaños, aniversarios y las fechas que cada uno guarda en su ficha (bautizo, primera comunión, santo…). Solo salen las que tienen el día y el mes.</p>' +
-      (pasados.length ? '<details class="eventos-pasados"><summary>Eventos pasados (' + pasados.length + ')</summary>' + pasados.map(tarjetaEvento).join('') + '</details>' : '');
+    // v4.80: pestañitas: por confirmar, próximos, pasados y las fechas (cumpleaños…), para no tener que bajar
+    const porConfirmar = proximos.filter(sinContestar);
+    if (!evFiltro) evFiltro = porConfirmar.length ? 'confirmar' : 'proximos';
+    if (evFiltro === 'confirmar' && !porConfirmar.length && !modoAbuela()) evFiltro = 'proximos';
+    const pest = [modoAbuela() || !persona(yo) ? null : ['confirmar', 'Por confirmar', porConfirmar.length], ['proximos', 'Próximos', proximos.length], ['pasados', 'Pasados', pasados.length], ['fechas', 'Fechas', prox.length]].filter(Boolean);
+    const lista = evFiltro === 'confirmar' ? porConfirmar : evFiltro === 'pasados' ? pasados : proximos;
+    $l.innerHTML = '<div class="ev-filtros" role="tablist">' + pest.map(function (x) {
+        return '<button type="button" role="tab" data-ev-filtro="' + x[0] + '" aria-selected="' + (evFiltro === x[0]) + '">' + x[1] + (x[2] ? ' <span class="ev-filtro-n' + (x[0] === 'confirmar' ? ' alerta' : '') + '">' + x[2] + '</span>' : '') + '</button>';
+      }).join('') + '</div>' +
+      (evFiltro === 'fechas'
+        ? (prox.length ? '<ul class="proximas">' + prox.join('') + '</ul>' : '<p class="vacio">Nada en los próximos 30 días.</p>') +
+          '<p class="ayuda">Cumpleaños, aniversarios y las fechas que cada uno guarda en su ficha (bautizo, primera comunión, santo…), de los próximos 30 días. Solo salen las que tienen el día y el mes.</p>'
+        : lista.length ? '<div class="ev-lista">' + lista.map(tarjetaEvento).join('') + '</div>'
+        : '<p class="vacio">' + (evFiltro === 'pasados' ? 'Aún no ha pasado ningún evento.' : evFiltro === 'confirmar' ? '¡Lo tienes todo contestado!' : 'No hay ningún evento a la vista. Añade el primero: una comida especial, una excursión, un viaje…') + '</p>');
   }
   function abrirEvento(e) {
     const h = hoy();
