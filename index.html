@@ -785,7 +785,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.69.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.70.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -3581,7 +3581,18 @@
     const e = evento(id) || { nombre: 'Evento', van: [], noVan: [], desde: hoy(), hasta: hoy(), cuando: 'DIA' };
     const enlace = datos.url ? '\n\n👉 Di si vas aquí: ' + datos.url.replace(/#.*$/, '') + '#evento-' + e.id : '';  // v4.51: abre este evento
     return '🎉 *' + e.nombre + '*\n📅 ' + fechaEvento(e) + (e.lugar ? '\n📍 ' + e.lugar : '') + (e.texto ? '\n\n' + e.texto : '') + '\n\n' +
-      (e.van.length ? '*Van ya (' + e.van.length + '):*\n' + nombresDe(e.van).map(function (n) { return '• ' + n; }).join('\n') : 'Aún no se ha apuntado nadie.') + enlace;
+      (e.van.length ? '*Van ya (' + e.van.length + '):*\n' + e.van.map(function (id) { return '• ' + extraEv(e, id, true); }).join('\n') : 'Aún no se ha apuntado nadie.') +
+      // v4.70: cuántos van cada día (si alguien va solo algunos) y quién no puede, en una línea
+      (diasDelEvento(e).length > 1 && e.van.some(function (id) { return diasDe(e, id); }) ? '\n_' + diasDelEvento(e).map(function (f) {
+        const n = e.van.filter(function (id) { const d = diasDe(e, id); return !d || d.indexOf(f) !== -1; }).length;
+        return diaCortoEv(f) + ', ' + (n === 1 ? 'va 1' : 'van ' + n);
+      }).join(' · ') + '_' : '') +
+      (e.noVan.length ? '\n\n*No pueden (' + e.noVan.length + '):* ' + e.noVan.map(function (id) { return extraEv(e, id, false); }).join(', ') : '') + enlace;
+  }
+  /* v4.70: «Marcos (solo dom 20) · _llego a las 11_»: sus días y su nota, sin ruido */
+  function extraEv(e, id, conDias) {
+    const d = conDias ? diasDe(e, id) : null, n = notaDe(e, id);
+    return ((quienEs(id) || {}).apodo || id) + (d ? ' (' + textoDias(d) + ')' : '') + (n ? (conDias ? ' · _' + n + '_' : ' (_' + n + '_)') : '');
   }
   function mensaje(tipo) {
     if (tipo.indexOf('ev:') === 0) return mensajeEv(tipo.slice(3));
