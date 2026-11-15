@@ -271,6 +271,8 @@ function categorias_(ss, config, personas) {
     Object.keys(ante).forEach(function (id) { if (ante[id].length >= 2) { const l = ante[id].sort(function (a, b) { return a - b; }); cats.avisa[id] = Math.max(0.01, l[Math.floor(l.length / 2)]); } });
     const pts = {}, puntos = {};
     Object.keys(cats).forEach(function (c) { pts[c] = puntosCat_(cats[c]); Object.keys(pts[c]).forEach(function (id) { puntos[id] = (puntos[id] || 0) + pts[c][id]; }); });
+    // v4.84: las medallas que no compiten con nadie suman PUNTOS_MEDALLA cada una
+    Object.keys(deFamilia).forEach(function (id) { const m = logros_(ss, v, id).length; if (m) puntos[id] = (puntos[id] || 0) + m * PUNTOS_MEDALLA; });
     return { cats: cats, pts: pts, puntos: puntos };
   });
 }
@@ -282,13 +284,20 @@ function distinciones_(ss, config, personas, id) {
   const yoP = personas.filter(function (x) { return x.id === id; })[0];
   if (yoP && yoP.familia === 'Servicio') { medallasServicio_(ss, personas, v, id, pon); return out; }  // v4.84: las suyas, sin competir con la familia
   Object.keys(CATEGORIAS).forEach(function (k) { if (c.pts[k][id]) pon(k, CATEGORIAS[k].titulo, CATEGORIAS[k].texto, { puntos: c.pts[k][id], categoria: true }); });
+  logros_(ss, v, id).forEach(function (l) { pon(l[0], l[1], l[2], { puntos: PUNTOS_MEDALLA }); });
+  return out;
+}
+/** v4.84: las medallas que no compiten con nadie (cada una suma PUNTOS_MEDALLA): [id, título, texto] */
+const PUNTOS_MEDALLA = 3;
+function logros_(ss, v, id) {
+  const hoy = hoy_(), ayer = sumarDias_(hoy, -1), out = [];
   const eventos = leerEventos_(ss).filter(function (e) { return e.desde >= v.inicio; });
   const pasados = eventos.filter(function (e) { return e.hasta < hoy; });
-  if (pasados.length >= 2 && pasados.every(function (e) { return e.van.indexOf(id) !== -1; })) pon('ni-uno', 'No te pierdes ni uno', 'Has ido a todos los eventos que ha habido.');
-  if (eventos.length >= 2 && eventos.every(function (e) { return e.van.indexOf(id) !== -1 || e.noVan.indexOf(id) !== -1; })) pon('contesta', 'Siempre contestas', 'Has dicho si vas o no a todos los eventos. ¡Gracias!');
+  if (pasados.length >= 2 && pasados.every(function (e) { return e.van.indexOf(id) !== -1; })) out.push(['ni-uno', 'No te pierdes ni uno', 'Has ido a todos los eventos que ha habido.']);
+  if (eventos.length >= 2 && eventos.every(function (e) { return e.van.indexOf(id) !== -1 || e.noVan.indexOf(id) !== -1; })) out.push(['contesta', 'Siempre contestas', 'Has dicho si vas o no a todos los eventos. ¡Gracias!']);
   const mias = v.ef.filter(function (a) { return a.persona === id; }).map(function (a) { return a.fecha; });
-  if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) pon('semanas', 'Cuatro semanas seguidas', 'Has ido al menos una vez cada semana del último mes.');
-  if (leerFijos_(ss).some(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy); })) pon('fijo', 'Tienes tu día', 'Tienes un día fijo con la abuela cada semana.');
+  if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) out.push(['semanas', 'Cuatro semanas seguidas', 'Has ido al menos una vez cada semana del último mes.']);
+  if (leerFijos_(ss).some(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy); })) out.push(['fijo', 'Tienes tu día', 'Tienes un día fijo con la abuela cada semana.']);
   return out;
 }
 

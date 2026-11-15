@@ -401,7 +401,7 @@ const janFijo = R.getDatos(V2).fijos.some(f => f.persona === '(N) - Jan');
 ver('distinciones: top de comidas y cuatro semanas seguidas', dis.indexOf('comidas') !== -1 && dis.indexOf('semanas') !== -1);
 ver('«tienes tu día» solo si tiene un fijo', (dis.indexOf('fijo') !== -1) === janFijo);
 ver('distinciones: cada una con su título y su explicación', (mn.distinciones || []).every(x => x.titulo && x.texto));
-ver('los puntos son la suma de las categorías', mn.puntos === (mn.distinciones || []).filter(x => x.categoria).reduce((t, x) => t + x.puntos, 0));
+ver('los puntos son la suma de las categorías y de las medallas (3 cada una)', mn.puntos === (mn.distinciones || []).reduce((t, x) => t + x.puntos, 0) && (mn.distinciones || []).filter(x => !x.categoria).every(x => x.puntos === 3));
 ver('quien no ha ido no tiene las de ir (solo en positivo)', !(R.misNumeros(M_).distinciones || []).some(x => x.id === 'comidas' && !nadie.total));
 // v4.84: el servicio, con sus medallas (sin competir con la familia ni entrar en el top)
 const anchoP = hojas.PERSONAS.filas[0].length;

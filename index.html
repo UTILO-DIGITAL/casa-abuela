@@ -3296,8 +3296,8 @@
         return '<li' + (d.categoria ? ' class="cat"' : '') + '><b>' + esc(d.titulo) + (d.puntos ? ' <em>+' + d.puntos + '</em>' : '') + '</b><span>' + esc(d.texto) + '</span></li>'; }).join('') + '</ul></div>'
         : '<p class="ayuda">Aún no tienes medallas. Ve a comer con la abuela, apúntate con tiempo, contesta a los eventos… y irán saliendo.</p>') +
       '<details class="mn-como"><summary>Cómo funciona</summary><p>Hay cinco categorías, de los últimos 30 días: comidas, cenas, noches, eventos y avisar con tiempo. En cada una, los 10 primeros se llevan medalla y puntos: 10 al primero, 9 al segundo… y 1 al décimo (los empatados, igual).</p>' +
-        '<p>El <b>top 10 general</b> suma los puntos de todas las categorías: puedes estar en el top de una categoría y no en el general. Su nombre sale en dorado.</p>' +
-        '<p>Hay medallas que no compiten con nadie: no perderte ningún evento, contestar siempre, ir cuatro semanas seguidas o tener tu día fijo. No se enseña quién más está en cada top.</p></details>';
+        '<p>El <b>top 10 general</b> suma todos los puntos (los de las categorías y los de las medallas): puedes estar en el top de una categoría y no en el general. Su nombre sale en dorado.</p>' +
+        '<p>Hay medallas que no compiten con nadie y suman <b>3 puntos</b> cada una: no perderte ningún evento, contestar siempre, ir cuatro semanas seguidas o tener tu día fijo. No se enseña quién más está en cada top.</p></details>';
   }
   $('yo-chip').addEventListener('click', function () { if (datos) abrirYo(); });
   function olvidarYo() {
