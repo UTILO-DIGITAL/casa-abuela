@@ -1025,7 +1025,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.0.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.1.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1732,7 +1732,7 @@
       const paso = yaPaso(fecha, t.id);  // v4.63
       const faltaAlguien = motivo === null && !comp.length && !paso;
       const etiq = t.id === 'DORMIR' ? 'Noche' : t.nombre;  // v4.99: la etiqueta de color a la izquierda
-      const conMas = motivo === null && !modoAbuela() && !faltaAlguien && !(paso && !comp.length);  // v4.99: el «+», en la columna de color
+      const conMas = !modoAbuela();  // v4.99: el «+», en la columna de color; v5.1: siempre (también lo pasado, los eventos y lo que no hace falta), menos en la vista sencilla
       html += '<div class="comida turno-' + t.id.toLowerCase() + (motivo !== null ? ' no-hace-falta' : '') + (paso ? ' ya-paso' : '') + '"><div class="turno-lado"><span class="turno-et" aria-hidden="true">' + ICONO_TURNO_SVG[t.id] + '<span>' + etiq + '</span></span>' +
         (conMas ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div><div class="turno-cont"><div class="comida-cab"><h4 class="oculto">' + etiq + '</h4>' +
         (paso && motivo === null && !comp.length ? '<span class="nadie suave">Ya pasó · no fue nadie</span>' :
