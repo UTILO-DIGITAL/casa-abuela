@@ -431,6 +431,18 @@
   .aj-kpi { padding: 10px 12px; border-radius: 10px; background: var(--color-fondo); border: 1px solid var(--color-linea); display: grid; gap: 2px; }
   .aj-kpi b { font-size: 26px; line-height: 1.1; color: var(--color-principal-oscuro); font-variant-numeric: tabular-nums; }
   .mn-kpis { margin: 4px 0 8px; }
+  /* v4.81: el top 10 (la etiqueta, dorada) y la gráfica de los días */
+  .yo-chip.top { background: linear-gradient(135deg, #F7D774, #E3A82B); border-color: #FBE7A6; color: #3B2A00; box-shadow: 0 0 0 2px rgba(247, 215, 116, .35); }
+  .yo-chip.top .yo-ini { background: #3B2A00; color: #F7D774; }
+  .aj-kpi .mn-top { font-size: 22px; background: linear-gradient(135deg, #D99A1E, #B8860B); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .mn-dias { margin: 4px 0 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--color-linea); }
+  .mn-dias-tit { margin: 0 0 6px; font-size: 14px; font-weight: 800; }
+  .mn-barras { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 96px; }
+  .mn-barra { display: grid; grid-template-rows: auto 1fr auto; align-items: end; justify-items: center; height: 100%; gap: 2px; }
+  .mn-barra b { font-size: 11px; color: var(--color-texto-suave); }
+  .mn-barra i { display: block; width: 100%; max-width: 26px; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--color-principal-claro); align-self: end; }
+  .mn-barra.max i { background: var(--color-principal); }
+  .mn-barra small { font-size: 12px; font-weight: 800; color: var(--color-texto-suave); }
   .aj-kpi .mn-txt { font-size: 18px; }
   .mn-sub { font-size: 12px; color: var(--color-texto-suave); font-weight: 700; }
   .mn-animo { margin: 0; font-weight: 700; }
@@ -859,7 +871,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.80.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.81.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1571,6 +1583,8 @@
     const $c = $('yo-chip'), q = p || ed;
     $c.hidden = false;
     $c.classList.toggle('sin-yo', !q);
+    $c.classList.toggle('top', !!(p && datos.yoTop10));  // v4.81: en el top 10 de la familia, dorada
+    $c.title = p && datos.yoTop10 ? 'Top 10 de la familia' : '';
     $c.innerHTML = q ? '<span class="yo-ini" aria-hidden="true">' + esc((q.apodo || '?').trim().charAt(0).toUpperCase()) + '</span><span class="yo-nom">' + esc(q.apodo) + '</span>' : '<span class="yo-nom">¿Quién eres?</span>';
     $c.setAttribute('aria-label', q ? 'Eres ' + q.apodo + '. Tus datos o cambiar de persona' : 'Decir quién eres');
     $q.hidden = !!q;  // v4.35: en el modo sencillo lo esconde el estilo
@@ -3798,14 +3812,17 @@
     const h = n.antelacionHoras;
     const aviso = h === null || h === undefined ? '' : h < 24 ? (h < 2 ? 'a última hora' : 'unas ' + h + ' horas antes') : (Math.round(h / 24) === 1 ? '1 día antes' : Math.round(h / 24) + ' días antes');
     const cifra = function (num, et, sub) { return '<div class="aj-kpi"><b>' + num + '</b><span>' + et + '</span>' + (sub ? '<small class="mn-sub">' + sub + '</small>' : '') + '</div>'; };
-    return '<p class="mn-animo">' + (n.puesto === 1 ? '¡Eres quien más va de tu familia! ' : '') + 'Gracias por acompañar a la abuela.</p><div class="aj-kpis mn-kpis">' +
+    // v4.81: la gráfica de los días (de lunes a domingo)
+    const dias = n.porDia ? [1, 2, 3, 4, 5, 6, 0] : [], max = n.porDia ? Math.max.apply(null, n.porDia) : 0;
+    const grafica = dias.length && max ? '<div class="mn-dias"><p class="mn-dias-tit">Tus días' + (n.diaFav >= 0 ? ': sobre todo los ' + DIAS[n.diaFav].toLowerCase() + (/s$/.test(DIAS[n.diaFav]) ? '' : 's') : '') + '</p><div class="mn-barras">' +
+      dias.map(function (d) { const v = n.porDia[d]; return '<span class="mn-barra' + (v === max ? ' max' : '') + '" title="' + DIAS[d] + ': ' + v + '"><b>' + (v || '') + '</b><i style="height:' + Math.round(v / max * 100) + '%"></i><small>' + DIAS[d].charAt(0) + '</small></span>'; }).join('') + '</div></div>' : '';
+    return '<p class="mn-animo">' + (n.top10 ? '¡Estás en el top 10 de la familia! ' : '') + 'Gracias por acompañar a la abuela.</p><div class="aj-kpis mn-kpis">' +
       cifra(n.total, n.total === 1 ? 'vez con la abuela' : 'veces con la abuela', esc(detalle + ' · ' + desde)) +
       cifra(n.mes, 'este mes', '') +
-      (n.diaFav >= 0 ? cifra('<span class="mn-txt">los ' + DIAS[n.diaFav].toLowerCase() + (/s$/.test(DIAS[n.diaFav]) ? '' : 's') + '</span>', 'tu día de la semana', '') : '') +
       (aviso ? cifra('<span class="mn-txt">' + aviso + '</span>', 'sueles avisar', '') : '') +
       (n.ultima ? cifra('<span class="mn-txt">' + esc(haceCuanto(n.ultima)) + '</span>', 'la última vez', '') : '') +
-      (n.puesto ? cifra(n.puesto + '.º<small> de ' + n.enFamilia + '</small>', 'en tu familia', '') : '') +
-      '</div>';
+      (n.top10 ? cifra('<span class="mn-top">Top 10</span>', 'de toda la familia', '') : n.faltanTop10 ? cifra(n.faltanTop10, n.faltanTop10 === 1 ? 'visita más y entras en el top 10' : 'visitas más y entras en el top 10', '') : '') +
+      '</div>' + grafica;
   }
 
   /* ---------- Compartir por WhatsApp ---------- */

@@ -203,10 +203,31 @@ function datos_(ss, p) {
     dias: leerDias_(ss).filter(function (d) { return d.fecha >= desde && d.fecha <= hasta; }),
     admins: config.admins,  // v4.58: quién ve los Ajustes
     eventos: leerEventos_(ss).filter(function (e) { return e.hasta >= (desde < sumarDias_(hoy, -60) ? desde : sumarDias_(hoy, -60)); }),  // v4.28
+    yoTop10: p.yo ? top10_(visitas_(ss, config, personas)).esta(p.yo) : false,  // v4.81: la etiqueta dorada
     misProximas: p.yo ? efectivos_(crudos, fijos, hoy, sumarDias_(hoy, 60)).filter(function (a) { return a.persona === p.yo; }).slice(0, 12) : [],
     bajas: leerBajas_(ss).map(function (b) { return { id: b.id, apodo: b.apodo, jerarquia: b.jerarquia, familia: b.familia, menu: b.menu, baja: b.baja }; }),
     huerfanos: huerfanos_(crudos, fijos, personas.concat(leerEditores_(ss, config.excluir), leerBajas_(ss)), hoy),
   };
+}
+
+/** v4.81: cuántas veces ha estado cada uno con la abuela (sin el servicio), desde que empezó el calendario hasta ayer */
+function visitas_(ss, config, personas) {
+  return memo_('visitas', function () {
+    const hoy = hoy_(), ayer = sumarDias_(hoy, -1);
+    const inicio = esFecha_(config.inicio) ? config.inicio : sumarDias_(hoy, -365);
+    const ef = inicio <= ayer ? efectivos_(leerApuntes_(ss), leerFijos_(ss), inicio, ayer) : [];
+    const familia = {};
+    personas.forEach(function (x) { if (x.familia !== 'Servicio' && x.familia !== 'Otros') familia[x.id] = true; });
+    const n = {};
+    ef.forEach(function (a) { if (familia[a.persona]) n[a.persona] = (n[a.persona] || 0) + 1; });
+    return { ef: ef, n: n, inicio: inicio };
+  });
+}
+/** v4.81: el top 10 (con empates): quién está y cuántas visitas hacen falta para entrar */
+function top10_(v) {
+  const totales = Object.keys(v.n).map(function (id) { return v.n[id]; }).sort(function (a, b) { return b - a; });
+  const corte = totales.length >= 10 ? Math.max(1, totales[9]) : 1;  // con menos de 10 que hayan ido, entra cualquiera que haya ido
+  return { corte: corte, esta: function (id) { return (v.n[id] || 0) >= corte && (v.n[id] || 0) > 0; } };
 }
 
 /**
@@ -223,8 +244,8 @@ function misNumeros(personaId) {
   if (!p) throw new Error('No encontramos ese nombre en la lista.');
   const hoy = hoy_(), ayer = sumarDias_(hoy, -1);
   const inicio = esFecha_(config.inicio) ? config.inicio : sumarDias_(hoy, -365);
-  const crudos = leerApuntes_(ss), fijos = leerFijos_(ss);
-  const ef = inicio <= ayer ? efectivos_(crudos, fijos, inicio, ayer) : [];
+  const crudos = leerApuntes_(ss);
+  const v = visitas_(ss, config, personas), ef = v.ef;
   const mios = ef.filter(function (a) { return a.persona === personaId; });
   const cuenta = { COMIDA: 0, CENA: 0, DORMIR: 0 }, porDia = [0, 0, 0, 0, 0, 0, 0];
   let mes = 0, ultima = '';
@@ -245,13 +266,11 @@ function misNumeros(personaId) {
     return (cuando - creado) / 3600000;
   }).filter(function (x) { return x >= 0; }).sort(function (a, b) { return a - b; });
   const antelacion = antes.length >= 2 ? Math.round(antes[Math.floor(antes.length / 2)]) : null;
-  // su puesto en su familia (sin el servicio)
-  const deFamilia = personas.filter(function (x) { return x.familia === p.familia && x.familia && x.familia !== 'Otros' && x.familia !== 'Servicio'; });
-  const total = function (id) { return ef.filter(function (a) { return a.persona === id; }).length; };
-  const yo = mios.length;
-  const puesto = deFamilia.length > 1 && yo ? 1 + deFamilia.filter(function (x) { return x.id !== personaId && total(x.id) > yo; }).length : null;
-  return { desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav,
-    antelacionHoras: antelacion, ultima: ultima, puesto: puesto, enFamilia: deFamilia.length };
+  // v4.81: el top 10 de toda la familia (sin decir quién más está) y, si no estás, cuántas visitas te faltan
+  const t = top10_(v), yo = mios.length;
+  const top10 = t.esta(personaId);
+  return { desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav, porDia: porDia,
+    antelacionHoras: antelacion, ultima: ultima, top10: top10, faltanTop10: top10 ? 0 : Math.max(1, t.corte - yo) };
 }
 
 function leerConfig_(ss) { return memo_('config', function () { return leerConfigSin_(ss); }); }

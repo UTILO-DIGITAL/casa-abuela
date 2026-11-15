@@ -392,7 +392,11 @@ const mn = R.misNumeros('(N) - Jan');
 ver('mis números: cuántas veces (sin el «no voy» ni lo de hoy)', mn.total >= 4 && mn.cenas >= 1 && mn.ultima === '2026-11-10' && mn.mes >= 4);
 ver('mi día: el martes (sus comidas fijas cuentan)', mn.diaFav === 2);
 ver('con cuánta antelación aviso (horas, la mediana)', mn.antelacionHoras === 76);
-ver('mi puesto en la familia', mn.puesto >= 1 && mn.enFamilia >= 2);
+ver('los 7 días, para la gráfica', mn.porDia.length === 7 && mn.porDia.reduce((x, y) => x + y, 0) === mn.total);
+ver('con menos de 10 que hayan ido, quien ha ido está en el top 10', mn.top10 === true && mn.faltanTop10 === 0);
+const nadie = R.misNumeros(M_);
+ver('quien no ha ido: fuera del top 10 y le falta al menos 1', nadie.top10 === (nadie.total > 0) && (nadie.top10 || nadie.faltanTop10 >= 1));
+ver('la etiqueta dorada llega con los datos', R.getDatos(Object.assign({}, V2, { yo: '(N) - Jan' })).yoTop10 === true);
 err = ''; try { R.misNumeros('(X) - Nadie'); } catch (e) { err = e.message; }
 ver('de alguien que no está, no', /No encontramos/.test(err));
 
