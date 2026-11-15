@@ -394,3 +394,5 @@ ver('sin PISTA, el aviso no lleva pista', !/PISTA/.test(R.api_('getDatos', [V2],
 hojas.MESA_CONFIG.filas.push(['PISTA', 'Lo que se come en verano…']);
 ver('con PISTA, va en el aviso', /PISTA: Lo que se come en verano…$/.test(R.api_('getDatos', [V2], 'no').error || ''));
 ver('y con la clave buena, entra igual', R.api_('getDatos', [V2], 'paella').ok === true);
+const conPista = R.api_('getDatos', [V2], 'paella').r;
+ver('la pista llega con los datos, la clave no', conPista.config.pista === 'Lo que se come en verano…' && !('clave' in conPista.config));

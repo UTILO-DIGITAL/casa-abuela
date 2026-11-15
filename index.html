@@ -843,7 +843,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.77.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.78.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -927,7 +927,14 @@
   let pidiendoClave = false;
   function pistaDe(err) {  // v4.18: la pista viene en el aviso del Apps Script (MESA_CONFIG, PISTA)
     const m = String((err && err.message) || '').match(/PISTA:\s*([\s\S]+)$/);
-    return m ? m[1].trim() : '';
+    const p = m ? m[1].trim() : '';
+    if (p) { try { localStorage.setItem('mesa-abuela-pista', p); } catch (e) {} }  // v4.78: para enseñarla también al salir del modo sencillo
+    return p;
+  }
+  /* v4.78: la pista de la clave: la que manda el servidor o, si aún no, la última que se vio en este móvil */
+  function pistaClave() {
+    if (datos && datos.config && datos.config.pista) return datos.config.pista;
+    try { return localStorage.getItem('mesa-abuela-pista') || ''; } catch (e) { return ''; }
   }
   function pedirClave(err) {
     if (pidiendoClave) return;
@@ -1578,6 +1585,7 @@
   function salirSencillo() {
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Salir del modo sencillo</h2></div>' +
       '<div class="dlg-cuerpo"><p class="ayuda">Para volver a la web completa, escribe la clave de la familia.</p>' +
+      (pistaClave() ? '<p class="pista-clave"><strong>Pista:</strong> ' + esc(pistaClave()) + '</p>' : '') +  // v4.78
       '<label class="campo" for="dlg-salir-clave">Clave<input id="dlg-salir-clave" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>' +
       pie('Salir'));
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);

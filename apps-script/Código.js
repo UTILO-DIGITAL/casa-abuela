@@ -192,7 +192,7 @@ function datos_(ss, p) {
   return {
     hoy: hoy,
     url: url,
-    config: { inicio: config.inicio, horaComida: config.horaComida, horaCena: config.horaCena, horaDormir: config.horaDormir, avisoHoras: config.avisoHoras },
+    config: { inicio: config.inicio, horaComida: config.horaComida, horaCena: config.horaCena, horaDormir: config.horaDormir, avisoHoras: config.avisoHoras, pista: config.pista || '' },  // v4.78: la pista (no la clave), para salir del modo sencillo
     personas: personas,
     editores: leerEditores_(ss, config.excluir),
     menus: opcionesMenu_(personas),
