@@ -151,7 +151,7 @@
   .turno-et { display: grid; justify-items: center; gap: 3px; }
   .turno-lado .turno-et svg { width: 20px; height: 20px; }
   .turno-lado button.mas { margin: 6px 0 0; width: 40px; height: 40px; background: rgba(255,255,255,.85); border-color: currentColor; color: inherit; }
-  .turno-cont .comida-cab:not(:has(button, .nadie)) { display: none; }
+  .turno-cont .comida-cab:not(:has(button, .nadie, .falta-aviso)) { display: none; }
   .turno-comida .turno-lado { background: var(--t-comida); color: var(--t-comida-tinta); }
   .turno-cena .turno-lado { background: var(--t-cena); color: var(--t-cena-tinta); }
   .turno-dormir .turno-lado { background: var(--t-noche); color: var(--t-noche-tinta); }
@@ -226,6 +226,24 @@
   .falta-suave { background: #FFF0C2; color: #7A4B00; }
   .falta-suave .enlace { color: #7A4B00; font-weight: 800; }
   .rt-desglose { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
+  /* v5.2: menos ruido en la Semana */
+  .falta-aviso { font-weight: 800; color: var(--color-error); font-size: 15px; }
+  /* v5.2: el «+» se ve como botón (círculo blanco con borde y sombra); la etiqueta de la comida, plana */
+  .turno-lado button.mas { width: 40px; height: 40px; margin-top: 8px; border-radius: 50%; border: 2px solid currentColor; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
+  .turno-lado button.mas svg { width: 20px; height: 20px; }
+  .turno-lado button.mas:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0, 0, 0, .22); }
+  .turno-lado button.mas:active { transform: none; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); }
+  .dia-cab button.mini[data-dia] { border: 0; background: none; text-decoration: underline; text-underline-offset: 3px; font-size: 13px; opacity: .8; min-height: 32px; padding: 0 4px; }
+  .servicio-texto { gap: 4px; flex-wrap: wrap; }
+  .servicio-texto .p { border: 0 !important; background: none !important; padding: 0 !important; min-height: 0; font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
+  .servicio-texto .y { font-weight: 700; color: var(--color-texto-suave); }
+  .servicio-texto .p { box-shadow: none !important; outline: 0; text-decoration: underline dotted; text-underline-offset: 3px; }
+  .turno-cont .comida-cab { justify-content: flex-start !important; }
+  .rt-total { flex-wrap: nowrap !important; align-items: flex-start; }
+  .rt-total b { flex: 1 1 auto; min-width: 0; }
+  .rt-total .rt-flecha { flex: none; align-self: center; }
+  .turno-cont { align-content: start !important; }
+  .rt-total .rt-flecha { margin-left: auto; font-size: 20px; }
   .rt-ver { white-space: nowrap; margin-left: auto; font-size: 13px; font-weight: 800; color: var(--color-principal-oscuro); }
   .rt-ver + .rt-flecha { margin-left: 2px; }
   /* v4.90: los días pasados, en una línea; «Nota», discreto; lo que falta en una ficha, en ámbar (el rojo, para lo urgente) */
@@ -246,7 +264,6 @@
   .ver-mas-dias { width: 100%; min-height: 48px; }
   .pasados-toggle { display: flex; align-items: center; gap: 6px; width: 100%; padding: 10px 14px; border-radius: var(--radio); border: 1px dashed var(--color-linea); background: transparent; font: inherit; font-weight: 800; color: var(--color-texto-suave); cursor: pointer; }
   .pasados-toggle span { font-weight: 600; }
-  .dia-cab button.mini[data-dia] { min-height: 36px; padding: 2px 10px; font-size: 13px; opacity: .85; }
   .rt-flecha { margin-left: auto; font-size: 20px; color: var(--color-texto-suave); }
   .rt-marca { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
   .rt-marca.rt-alergias { background: #FDE8E6; color: var(--color-error); }
@@ -1025,7 +1042,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.1.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.2.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1737,7 +1754,7 @@
         (conMas ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div><div class="turno-cont"><div class="comida-cab"><h4 class="oculto">' + etiq + '</h4>' +
         (paso && motivo === null && !comp.length ? '<span class="nadie suave">Ya pasó · no fue nadie</span>' :
           faltaAlguien && modoAbuela() ? '<span class="nadie suave">Nadie apuntado</span>' : motivo === null && modoAbuela() ? '' :
-          faltaAlguien ? '<button type="button" class="nadie con-icono"' + datosTurno + ' aria-label="Falta alguien. Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '">' + ICONO_MAS + 'Falta alguien</button>'
+          faltaAlguien ? '<span class="falta-aviso">Falta alguien</span>'  // v5.2: aviso, no botón (el «+» de la izquierda añade)
           : '') + '</div>';
       const evT = ft && eventoEn(fecha, t.id);  // v4.31
       if (evT) html += '<p class="turno-evento">' + ICONO_EVENTO + esc(evT.nombre) + '</p>';  // v4.32: en el hueco, el evento tal cual
@@ -1772,14 +1789,14 @@
     // v4.92: que cuadre con las familias: «10 a la mesa (9 + la abuela)»
     const extraAco = ids.reduce(function (n, id) { return n + ((apunte(fecha, turno, id) || {}).acompanantes || 0); }, 0);
     const desglose = [fam.length + extraAco ? String(fam.length + extraAco) : '', abuelas().length && !fueraTurno(fecha, turno) ? 'la abuela' : '', serv.length ? serv.map(function (id) { return (persona(id) || {}).apodo || id; }).join(' y ') : ''].filter(Boolean);
-    const total = turno === 'DORMIR' ? (fam.length ? (fam.length === 1 ? '1 duerme' : fam.length + ' duermen') : '') : cuenta ? r.total + ' a la mesa' + (desglose.length > 1 ? ' <small class="rt-desglose">(' + esc(desglose.join(' + ')) + ')</small>' : '') : 'Ver quién va';
+    const total = turno === 'DORMIR' ? (fam.length ? (fam.length === 1 ? '1 duerme' : fam.length + ' duermen') : '') : !fam.length ? '' : cuenta ? r.total + ' a la mesa' + (desglose.length > 1 ? ' <small class="rt-desglose">(' + esc(desglose.join(' + ')) + ')</small>' : '') : 'Ver quién va';  // v5.2: sin nadie de la familia, sin número
     const conNota = function (id) { const a = apunte(fecha, turno, id); return !!(a && a.nota); };
     // las familias, cada una en su tarjeta pequeña; al tocarla, sus nombres debajo
     const grupos = {}, orden = [];
     fam.forEach(function (id) { const p = persona(id); const f = p && p.familia && p.familia !== 'Otros' ? p.familia : 'Otros'; if (!grupos[f]) { grupos[f] = []; orden.push(f); } grupos[f].push(id); });
     const clave = function (f) { return fecha + '|' + turno + '|' + f; };
     return (total ? '<button type="button" class="rt-total" data-detalle-turno="' + fecha + '|' + turno + '" aria-label="Ver todos los de la ' + esc(nombreTurno(fecha, turno)) + '"><b>' + total + '</b>' +
-        (al.length ? '<span class="rt-marca rt-alergias">alergias</span>' : '') + '<span class="rt-ver">Ver todos</span><span class="rt-flecha" aria-hidden="true">›</span></button>' : '') +
+        (al.length ? '<span class="rt-marca rt-alergias">alergias</span>' : '') + '<span class="rt-flecha" aria-hidden="true">›</span></button>' : '') +
       (orden.length ? '<div class="rt-familias">' + orden.map(function (f) {
         const ab = famAbiertas.has(clave(f)), ids2 = grupos[f];
         const extra = ids2.reduce(function (n, id) { return n + ((apunte(fecha, turno, id) || {}).acompanantes || 0); }, 0);
@@ -1788,7 +1805,7 @@
             '<span class="rt-cab"><b>' + esc(f) + '</b><span class="rt-n">' + (ids2.length + extra) + '</span><span class="rt-flecha" aria-hidden="true">' + (ab ? '▴' : '▾') + '</span></span>' + (ab ? '' : notas) + '</button>' +
           (ab ? '<div class="gente rt-abierta">' + ids2.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '');
       }).join('') + '</div>' : '') +
-      (serv.length ? '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '');
+      (serv.length ? '<div class="servicio-linea servicio-texto">Servicio: ' + serv.map(function (id) { return chip(id, fecha, turno); }).join('<span class="y">y</span>') + '</div>' : '');
   }
   function abrirDetalleTurno(fecha, turno) {
     const ids = idsDe(fecha, turno);
