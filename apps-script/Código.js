@@ -485,7 +485,10 @@ function curiosidades_(ss, config, v, deP, hace30) {
   // v5.8: lo de cada día (para la gráfica), por día de la semana, acompañantes y el mes anterior
   const hace60 = sumarDias_(hace30, -30), serie = {}, porDow = [0, 0, 0, 0, 0, 0, 0], ant = { comidas: 0, cenas: 0, noches: 0 };
   let acomp = 0;
-  for (let f = hace30; f < hoy_(); f = sumarDias_(f, 1)) serie[f] = [0, 0, 0];
+  for (let f = hace30; f < hoy_(); f = sumarDias_(f, 1)) serie[f] = [0, 0, 0, 0, 0, 0];  // comida, cena, noche · tíos, nietos, bisnietos
+  // v5.9: por generación (las parejas, con la suya)
+  const gen = function (p) { const j = String(p.jerarquia || ''); return /^Tios/.test(j) ? 0 : /^Nietos/.test(j) ? 1 : /^Biznietos/.test(j) ? 2 : -1; };
+  const porGen = [0, 1, 2].map(function () { return { visitas: 0, gente: {} }; });
   v.ef.forEach(function (a) {
     const p = deP[a.persona];
     if (!p || p.familia === 'Servicio' || p.familia === 'Otros') return;
@@ -493,6 +496,8 @@ function curiosidades_(ss, config, v, deP, hace30) {
     if (a.fecha >= hace60 && a.fecha < hace30) ant[['comidas', 'cenas', 'noches'][i]]++;
     if (a.fecha < hace30) return;
     if (serie[a.fecha]) serie[a.fecha][i]++;
+    const g = gen(p);
+    if (g !== -1) { if (serie[a.fecha]) serie[a.fecha][3 + g]++; porGen[g].visitas++; porGen[g].gente[a.persona] = (porGen[g].gente[a.persona] || 0) + 1; }
     porDow[diaSemana_(a.fecha)]++;
     acomp += Number(a.acompanantes) || 0;
   });
@@ -521,6 +526,11 @@ function curiosidades_(ss, config, v, deP, hace30) {
   return { dias: Object.keys(dias).length, deDias: 30, mesaLlena: llena, diaFavorito: max ? dow.indexOf(max) : null,
     familias: Object.keys(fams).length, eventos: ev.length, vanEventos: Object.keys(vanEv).length,
     serie: Object.keys(serie).sort().map(function (f) { return [f].concat(serie[f]); }), porDow: porDow, acompanantes: acomp,
+    porGen: porGen.map(function (x, i) {
+      const ids = Object.keys(x.gente).sort(function (a, b) { return x.gente[b] - x.gente[a]; }), m = ids.length ? x.gente[ids[0]] : 0;
+      return { gen: ['Tios', 'Nietos', 'Biznietos'][i], visitas: x.visitas, personas: ids.length,
+        primeros: ids.filter(function (id) { return x.gente[id] === m; }).slice(0, 3).map(function (id) { return deP[id].apodo; }), max: m };
+    }),
     antelacionH: antes.length ? Math.round(antes[Math.floor(antes.length / 2)]) : null, apuntes: antes.length,
     anterior: v.inicio <= hace60 ? ant : null };
 }

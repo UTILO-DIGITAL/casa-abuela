@@ -2334,6 +2334,14 @@
   const INF_ICONO_MED = { 'ni-uno': 'diana', contesta: 'check', semanas: 'repetir', fijo: 'chincheta', bienvenida: 'globo', memoria: 'camara', noche: 'luna', 'finde-uno': 'sol', doble: 'cubiertos', 'en-familia': 'gente', trae: 'gente', notas: 'carta', previsor: 'calendario', planes: 'brillo', mano: 'ayuda',
     'nunca-falla': 'estrella', 'mas-noches': 'luna', noches: 'cama', comidas: 'cubiertos', cenas: 'luna', dias: 'corazon', 'tu-dia': 'calendario', gracias: 'corazon' };
   const INF_GRUPO = { 'Previsor': 'Previsores', 'Guardián de la memoria': 'Guardianes de la memoria', 'Compañía de noche': 'Compañía de noche', 'Comida y cena': 'Comida y cena el mismo día' };
+  // v5.9: el papel en la familia (tío, nieta, bisnieto…), para poner junto al nombre
+  const INF_GEN = ['Tíos', 'Nietos', 'Bisnietos'], INF_GEN_COL = ['#1F4E79', '#4F8FC6', '#A9CBEA'];
+  function infRol(id) {
+    const p = id && persona(id);
+    if (!p) return '';
+    const j = String(p.jerarquia || ''), m = p.sexo === 'Mujer';
+    return /^Tios/.test(j) ? (m ? 'tía' : 'tío') : /^Nietos/.test(j) ? (m ? 'nieta' : 'nieto') : /^Biznietos/.test(j) ? (m ? 'bisnieta' : 'bisnieto') : '';
+  }
   function infFecha(iso) { const d = new Date(iso + 'T12:00:00'); return d.getDate() + ' de ' + INF_MESES[d.getMonth()]; }
   function infNombres(l, max) { return l.length <= max ? lista(l) : l.slice(0, max).join(', ') + ' y ' + (l.length - max) + ' más'; }
   function infLineas(c, t, maxW) {
@@ -2388,7 +2396,16 @@
     infTexto(c, titulo, 70, 170, 76, 600, color || INF_C.verde, 't', 'left', INF_W - 140);
     if (sub) infTexto(c, sub, 72, 228, 34, 700, INF_C.suave, 'n', 'left', INF_W - 140);
   }
+  // v5.9: la marca Utilo (la «o» con su punto, como en la web)
+  function infUtilo(c, x, y, tam, color, texto) {
+    infLetra(c, 600, tam, 't');
+    const w = c.measureText(texto).width, r = tam * .32, x0 = x - (w + r * 2 + tam * .35) / 2;
+    c.beginPath(); c.arc(x0 + r, y - tam * .33, r, 0, Math.PI * 2); c.strokeStyle = color; c.lineWidth = tam * .09; c.stroke();
+    c.beginPath(); c.arc(x0 + r, y - tam * .33, r * .45, 0, Math.PI * 2); c.fillStyle = color; c.fill();
+    infTexto(c, texto, x0 + r * 2 + tam * .35, y, tam, 600, color, 't');
+  }
   function infPie(c, n, total, claro) {
+    infUtilo(c, INF_W / 2, INF_H - 56, 26, claro ? INF_C.blanco : INF_C.coral, 'Utilo');
     infTexto(c, 'Casa Abuela', 70, INF_H - 56, 28, 600, claro ? 'rgba(255,255,255,.8)' : INF_C.verde, 't');
     infTexto(c, n + ' / ' + total, INF_W - 70, INF_H - 56, 26, 700, claro ? 'rgba(255,255,255,.7)' : INF_C.suave, 'n', 'right');
   }
@@ -2454,6 +2471,8 @@
     }
     // v5.8: las páginas de análisis (con su explicación)
     const COL_T = [INF_C.verde, INF_C.coral, '#E0A21B'], NOM_T = ['Comida', 'Cena', 'Noche'];
+    const porGen = !!(cu.serie && cu.serie[0] && cu.serie[0].length === 7);  // v5.9: el día a día, por generaciones
+    const COL_D = porGen ? INF_GEN_COL : COL_T, NOM_D = porGen ? INF_GEN : NOM_T, OFF = porGen ? 4 : 1;
     const nota = function (c, t) { infLetra(c, 600, 25, 'n'); const n = infLineas(c, t, INF_W - 140).length; infParrafo(c, t, 70, INF_H - 112 - (n - 1) * 32, INF_W - 140, 25, 600, INF_C.suave, 32, 'n'); };
     const caja = function (c, x, y, w, hh, num, et, expl, color) {
       infCaja(c, x, y, w, hh, 24, INF_C.blanco, '#EADFCB');
@@ -2464,14 +2483,16 @@
     const fechaCorta = function (f) { const d = new Date(f + 'T12:00:00'); return INF_DIA1[d.getDay()].slice(0, 3) + ' ' + d.getDate() + ' ' + INF_MESES[d.getMonth()].slice(0, 3); };
     const serie = cu.serie || [];
     const totS = serie.map(function (x) { return x[1] + x[2] + x[3]; });
+    // la escala del gráfico: si es por generaciones, su suma (los de «Otros» no cuentan)
+    const totD = serie.map(function (x) { return x.length === 7 ? x[4] + x[5] + x[6] : x[1] + x[2] + x[3]; });
     if (serie.length && totS.some(Boolean)) {
       // 3. día a día: barras apiladas (comida, cena, noche)
       h = infLienzo(INF_C.crema);
-      infCabecera(h.c, 'Día a día', 'Cuántos de la familia, cada día del mes');
-      const gx = 110, gy = 330, gw = INF_W - 180, gh = 470, max = Math.max.apply(null, totS), paso = Math.max(1, Math.ceil(max / 4));
+      infCabecera(h.c, 'Día a día', porGen ? 'Cuántos de cada generación, cada día del mes' : 'Cuántos de la familia, cada día del mes');
+      const gx = 110, gy = 330, gw = INF_W - 180, gh = 470, max = Math.max(1, Math.max.apply(null, totD)), paso = Math.max(1, Math.ceil(max / 4));
       // leyenda (con el nombre al lado del color)
       let lx = 70;
-      NOM_T.forEach(function (n, i) { infCaja(h.c, lx, 274, 24, 24, 6, COL_T[i]); infTexto(h.c, n, lx + 34, 296, 26, 700, INF_C.tinta, 'n'); infLetra(h.c, 700, 26, 'n'); lx += 34 + h.c.measureText(n).width + 36; });
+      NOM_D.forEach(function (n, i) { infCaja(h.c, lx, 274, 24, 24, 6, COL_D[i]); infTexto(h.c, n, lx + 34, 296, 26, 700, INF_C.tinta, 'n'); infLetra(h.c, 700, 26, 'n'); lx += 34 + h.c.measureText(n).width + 36; });
       // rejilla suave y eje
       for (let v = 0; v <= max; v += paso) {
         const yy = gy + gh - v / max * gh;
@@ -2481,27 +2502,62 @@
       const bw = gw / serie.length;
       serie.forEach(function (x, i) {
         let base = gy + gh;
-        [1, 2, 3].forEach(function (k) {
+        [0, 1, 2].forEach(function (j) {
+          const k = OFF + j;
           if (!x[k]) return;
           const alto = x[k] / max * gh;
-          h.c.fillStyle = COL_T[k - 1];
+          h.c.fillStyle = COL_D[j];
           h.c.fillRect(gx + i * bw + 2, base - alto + 1, bw - 4, alto - 2);  // 2 px de aire entre tramos
           base -= alto;
         });
         const d = new Date(x[0] + 'T12:00:00');
         if (d.getDay() === 1 || i === 0) infTexto(h.c, String(d.getDate()), gx + i * bw + bw / 2, gy + gh + 34, 22, 700, INF_C.suave, 'n', 'center');
       });
-      infTexto(h.c, 'Los números de abajo son los lunes', gx, gy + gh + 70, 22, 600, INF_C.suave, 'n');
+      infTexto(h.c, 'Los números de abajo son los lunes' + (porGen ? '. Cada generación, con sus parejas.' : ''), gx, gy + gh + 70, 22, 600, INF_C.suave, 'n');
       // tres datos con su explicación
-      const iMax = totS.indexOf(max);
+      const maxS = Math.max.apply(null, totS), iMax = totS.indexOf(maxS);
       let racha = 0, r = 0;
       totS.forEach(function (n) { r = n ? r + 1 : 0; racha = Math.max(racha, r); });
       const comidasCon = serie.filter(function (x) { return x[1]; }).length, cenasCon = serie.filter(function (x) { return x[2]; }).length;
       const media = (comidasCon + cenasCon) ? (t.comidas + t.cenas) / (comidasCon + cenasCon) : 0;
       const w3 = (INF_W - 140 - 40) / 3;
-      caja(h.c, 70, 920, w3, 280, String(max), 'el día más animado', fechaCorta(serie[iMax][0]) + ': contando comida, cena y noche.', INF_C.coral);
+      caja(h.c, 70, 920, w3, 280, String(maxS), 'el día más animado', fechaCorta(serie[iMax][0]) + ': contando comida, cena y noche.', INF_C.coral);
       caja(h.c, 70 + w3 + 20, 920, w3, 280, String(racha), racha === 1 ? 'día de racha' : 'días seguidos', 'La racha más larga con alguien de la familia en casa.');
       caja(h.c, 70 + 2 * (w3 + 20), 920, w3, 280, media.toFixed(1).replace('.', ','), 'por comida o cena', 'Personas de la familia en la mesa, de media, los días que hubo alguien.');
+      hojas.push(h);
+    }
+    const pg = (cu.porGen || []).filter(function (g) { return g.visitas; });
+    if (pg.length) {
+      // v5.9: por generaciones
+      h = infLienzo(INF_C.crema);
+      infCabecera(h.c, 'Por generaciones', 'Tíos, nietos y bisnietos (cada uno con su pareja)');
+      const tg = pg.reduce(function (a, g) { return a + g.visitas; }, 0);
+      let bx = 70;
+      (cu.porGen || []).forEach(function (g, i) { if (!g.visitas) return; const w = g.visitas / tg * (INF_W - 140); infCaja(h.c, bx + 1, 290, w - 2, 64, 12, INF_GEN_COL[i]); if (w > 110) infTexto(h.c, Math.round(g.visitas / tg * 100) + ' %', bx + 18, 334, 28, 800, i === 2 ? INF_C.tinta : INF_C.blanco, 'n'); bx += w; });
+      const alto = 200;
+      (cu.porGen || []).forEach(function (g, i) {
+        const y = 390 + i * alto;
+        infCaja(h.c, 70, y, INF_W - 140, alto - 20, 24, INF_C.blanco, '#EADFCB');
+        infCaja(h.c, 70, y, 14, alto - 20, 7, INF_GEN_COL[i]);
+        infTexto(h.c, INF_GEN[i], 110, y + 64, 44, 600, INF_C.tinta, 't');
+        if (!g.visitas) { infTexto(h.c, 'Este mes, sin visitas apuntadas', 110, y + 112, 26, 700, INF_C.suave, 'n'); return; }
+        infTexto(h.c, String(g.visitas), INF_W - 100, y + 70, 58, 600, INF_C.verde, 't', 'right');
+        infTexto(h.c, 'visitas', INF_W - 100, y + 104, 22, 700, INF_C.suave, 'n', 'right');
+        infTexto(h.c, g.personas + (g.personas === 1 ? ' persona' : ' personas') + ' · ' + (g.visitas / g.personas).toFixed(1).replace('.', ',') + ' visitas cada uno, de media', 110, y + 110, 26, 700, INF_C.tinta, 'n', 'left', INF_W - 360);
+        if (g.primeros.length) infTexto(h.c, 'El que más: ' + lista(g.primeros) + ' (' + g.max + (g.max === 1 ? ' vez' : ' veces') + ')', 110, y + 150, 26, 700, INF_C.suave, 'n', 'left', INF_W - 220);
+      });
+      // en el Top 10, cuántos de cada generación
+      const rolesTop = {};
+      (pr.general || []).filter(function (g) { return g.top; }).forEach(function (g) { const r = infRol(g.id); if (r) { const k = r.replace(/a$/, 'o').replace(/^tío$/, 'tío'); rolesTop[k] = (rolesTop[k] || 0) + 1; } });
+      const PL = { 'tío': ['tío', 'tíos'], nieto: ['nieto', 'nietos'], bisnieto: ['bisnieto', 'bisnietos'] };
+      const partes = ['tío', 'nieto', 'bisnieto'].filter(function (k) { return rolesTop[k]; }).map(function (k) { return rolesTop[k] + ' ' + PL[k][rolesTop[k] === 1 ? 0 : 1]; });
+      if (partes.length) {
+        const yT = 390 + 3 * alto + 10;
+        infTexto(h.c, 'En el Top 10 del mes', 70, yT + 30, 34, 600, INF_C.verde, 't');
+        infTexto(h.c, lista(partes), 70, yT + 76, 30, 800, INF_C.tinta, 'n', 'left', INF_W - 140);
+      }
+      const gm = pg.slice().sort(function (a, b) { return b.visitas - a.visitas; })[0];
+      nota(h.c, 'Los ' + INF_GEN[['Tios', 'Nietos', 'Biznietos'].indexOf(gm.gen)].toLowerCase() + ' son los que más van este mes: ' + Math.round(gm.visitas / tg * 100) + ' % de las visitas. Una visita es una comida, una cena o una noche.');
       hojas.push(h);
     }
     if (cu.porDow && cu.porDow.some(Boolean)) {
@@ -2551,7 +2607,8 @@
         const y = 290 + i * fila, cen = y + fila / 2;
         h.c.beginPath(); h.c.arc(100, cen, 25, 0, Math.PI * 2); h.c.fillStyle = i < 3 ? INF_C.oro : '#EFE6D6'; h.c.fill();
         infTexto(h.c, String(i + 1), 100, cen + 10, 28, 800, INF_C.tinta, 'n', 'center');
-        infTexto(h.c, g.apodo, 150, cen + 11, 32, 800, INF_C.tinta, 'n', 'left', 260);
+        infTexto(h.c, g.apodo, 150, cen + 3, 32, 800, INF_C.tinta, 'n', 'left', 260);
+        if (infRol(g.id)) infTexto(h.c, infRol(g.id), 150, cen + 30, 21, 700, INF_C.suave, 'n');
         const w = Math.max(8, g.puntos / pm * (INF_W - 600));
         infCaja(h.c, 430, cen - 15, w, 30, 8, i < 3 ? INF_C.verde : '#7CC3B8');
         infTexto(h.c, g.puntos + ' pts', 430 + w + 14, cen + 10, 28, 800, INF_C.tinta, 'n');
@@ -2574,7 +2631,7 @@
           const yy = y + 108 + k * ((alto - 130) / 3);
           infTexto(h.c, (k + 1) + '.', x + 22, yy, 24, 800, k ? INF_C.suave : INF_C.tinta, 'n');
           infTexto(h.c, g.apodo, x + 52, yy, 26, k ? 700 : 800, INF_C.tinta, 'n', 'left', w - 74);
-          infTexto(h.c, valorCat(c.id, g.valor), x + 52, yy + 28, 21, 700, INF_C.suave, 'n', 'left', w - 74);
+          infTexto(h.c, valorCat(c.id, g.valor) + (infRol(g.id) ? ' · ' + infRol(g.id) : ''), x + 52, yy + 28, 21, 700, INF_C.suave, 'n', 'left', w - 74);
         });
       });
       hojas.push(h);
@@ -2665,6 +2722,7 @@
     infParrafo(h.c, 'Cada visita cuenta. La abuela lo nota.', INF_W / 2, 790, INF_W - 200, 46, 700, INF_C.blanco, 58, 'n', 'center');
     infParrafo(h.c, 'En la web, toca tu nombre y mira tus medallas.', INF_W / 2, 960, INF_W - 240, 36, 700, 'rgba(255,255,255,.9)', 48, 'n', 'center');
     if (datos.url) infTexto(h.c, datos.url.replace(/#.*$/, '').replace(/^https?:\/\//, '').replace(/\/$/, ''), INF_W / 2, 1100, 32, 800, INF_C.blanco, 'n', 'center', INF_W - 140);
+    infUtilo(h.c, INF_W / 2, 1200, 34, INF_C.blanco, 'Hecho con cariño por Utilo');
     hojas.push(h);
     hojas.forEach(function (x, i) { infPie(x.c, i + 1, hojas.length, i === 0 || i === hojas.length - 1); });
     return hojas.map(function (x) { return x.cv; });
