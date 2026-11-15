@@ -46,6 +46,8 @@
   /* v4.3: tamaño fijo en el móvil, sin pellizcar ni doble toque (en el ordenador queda el zoom del navegador) */
   html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body { font-family: var(--letra-texto); font-size: 17px; line-height: 1.4; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  /* v4.89: todo un 10 % más pequeño, menos en la vista de la abuela (que sigue grande) */
+  body:not(.modo-abuela) .cabecera-dentro, body:not(.modo-abuela) .pagina, body:not(.modo-abuela) dialog.editor, body:not(.modo-abuela) .ev-fab, body:not(.modo-abuela) #per-arbol-btn, body:not(.modo-abuela) .toast { zoom: .9; }
   [hidden] { display: none !important; }
   button, select, input { font: inherit; }
   :focus-visible { outline: 3px solid var(--color-destacado); outline-offset: 2px; }
@@ -529,7 +531,14 @@
   .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
   .turno-evento svg { width: 16px; height: 16px; flex: none; color: var(--color-accion); }
   /* v4.28: la pestaña Eventos */
-  .eventos-barra { margin: 0 0 16px; }
+  .eventos-barra { margin: 0; }
+  /* v4.89: «Añadir evento», flotando abajo a la derecha; arriba, Eventos o Fechas señaladas */
+  .ev-fab { position: fixed; z-index: 40; right: calc(16px + var(--lado-der, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); border-radius: 999px; min-height: 48px; padding: 12px 20px; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); }
+  .ev-fab span { font-size: 22px; line-height: 0; margin-right: 2px; }
+  #vista-eventos { padding-bottom: 72px; }
+  .ev-secciones { display: grid; grid-template-columns: 1fr 1fr; margin: 0 0 12px; border-bottom: 2px solid var(--color-linea); }
+  .ev-secciones button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 0; background: none; font: inherit; font-weight: 800; font-size: 17px; color: var(--color-texto-suave); cursor: pointer; margin-bottom: -2px; border-bottom: 3px solid transparent; }
+  .ev-secciones button[aria-selected="true"] { color: var(--color-principal-oscuro); border-bottom-color: var(--color-principal-oscuro); }
   #eventos-lista { display: grid; gap: 14px; }
   #eventos-lista h2 { margin: 12px 0 0; font-size: 18px; }
   .evento-card { padding: 14px 16px; border-radius: var(--radio); background: #fff; border: 1px solid var(--color-linea); display: grid; gap: 6px; }
@@ -894,7 +903,7 @@
   </section>
 
   <section id="vista-eventos" hidden>
-    <div class="eventos-barra"><button type="button" class="principal boton-evento" id="ev-anadir">Añadir evento</button></div>
+    <div class="eventos-barra"><button type="button" class="principal boton-evento ev-fab" id="ev-anadir"><span aria-hidden="true">+</span> Añadir evento</button></div>
     <div id="eventos-lista"><p class="vacio">Cargando…</p></div>
   </section>
   <section id="vista-rellenar" hidden>
@@ -924,7 +933,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.88.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.89.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -2418,11 +2427,15 @@
     const porConfirmar = proximos.filter(sinContestar);
     if (!evFiltro) evFiltro = porConfirmar.length ? 'confirmar' : 'proximos';
     if (evFiltro === 'confirmar' && !porConfirmar.length && !modoAbuela()) evFiltro = 'proximos';
-    const pest = [modoAbuela() || !persona(yo) ? null : ['confirmar', 'Por confirmar', porConfirmar.length], ['proximos', 'Próximos', proximos.length], ['pasados', 'Pasados', pasados.length], ['fechas', 'Fechas', prox.length]].filter(Boolean);
+    // v4.89: arriba, Eventos o Fechas señaladas (son cosas distintas); dentro de Eventos, por confirmar, próximos y pasados
+    const pest = [modoAbuela() || !persona(yo) ? null : ['confirmar', 'Por confirmar', porConfirmar.length], ['proximos', 'Próximos', proximos.length], ['pasados', 'Pasados', pasados.length]].filter(Boolean);
     const lista = evFiltro === 'confirmar' ? porConfirmar : evFiltro === 'pasados' ? pasados : proximos;
-    $l.innerHTML = '<div class="ev-filtros" role="tablist">' + pest.map(function (x) {
+    const enFechas = evFiltro === 'fechas';
+    $l.innerHTML = '<div class="ev-secciones" role="tablist"><button type="button" role="tab" data-ev-filtro="' + (porConfirmar.length && !modoAbuela() ? 'confirmar' : 'proximos') + '" aria-selected="' + !enFechas + '">Eventos' + (porConfirmar.length && !modoAbuela() ? ' <span class="ev-filtro-n alerta">' + porConfirmar.length + '</span>' : '') + '</button>' +
+        '<button type="button" role="tab" data-ev-filtro="fechas" aria-selected="' + enFechas + '">Fechas señaladas</button></div>' +
+      (enFechas ? '' : '<div class="ev-filtros" role="tablist">' + pest.map(function (x) {
         return '<button type="button" role="tab" data-ev-filtro="' + x[0] + '" aria-selected="' + (evFiltro === x[0]) + '">' + x[1] + (x[2] ? ' <span class="ev-filtro-n' + (x[0] === 'confirmar' ? ' alerta' : '') + '">' + x[2] + '</span>' : '') + '</button>';
-      }).join('') + '</div>' +
+      }).join('') + '</div>') +
       (evFiltro === 'fechas'
         ? (prox.length ? '<ul class="proximas">' + prox.join('') + '</ul>' : '<p class="vacio">Nada en los próximos 30 días.</p>') +
           '<p class="ayuda">Cumpleaños, aniversarios y las fechas que cada uno guarda en su ficha (bautizo, primera comunión, santo…), de los próximos 30 días. Solo salen las que tienen el día y el mes.</p>'
