@@ -634,6 +634,9 @@
   .comida.ya-paso .comida-cab h4 { color: var(--color-texto-suave); }
   .inf-prev { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 10px; }
   .inf-prev img { flex: 0 0 72%; max-width: 300px; aspect-ratio: 4 / 5; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.18); scroll-snap-align: center; }
+  .huecos-compartir { margin: 4px 0 18px; }
+  .huecos-compartir .principal { display: inline-flex; align-items: center; gap: 8px; }
+  .huecos-compartir svg { width: 20px; height: 20px; }
   .salir-sencillo { margin: 32px 0 0; text-align: center; font-size: 14px; }
   .turno-evento { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-texto); }
   .turno-evento svg { width: 16px; height: 16px; flex: none; color: var(--color-accion); }
@@ -1046,7 +1049,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.8.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.9.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1224,7 +1227,8 @@
     window.scrollTo(0, 0);
   }
   function abrirCalendario() {
-    let mes = (desdeMovil || hoy()).slice(0, 7) + '-01', ini = '', fin = '';
+    const esc2 = enEscritorio();  // v5.9: en el ordenador, se elige un día y se ve su semana
+    let mes = ((esc2 ? diaFoco : desdeMovil) || hoy()).slice(0, 7) + '-01', ini = '', fin = '', foco = '';
     const minimo = datos ? datos.config.inicio : '';
     const pintarCal = function () {
       const d1 = mes, dowIni = (dow(d1) + 6) % 7, nDias = new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0).getDate();
@@ -1239,22 +1243,24 @@
       $('cal-cuerpo').innerHTML = '<div class="cal-cab"><button type="button" class="icono" data-cal-mes="-1" aria-label="Mes anterior"' + (minimo && sumar(mes, -1) < minimo ? ' disabled' : '') + '>‹</button>' +
         '<b>' + MESES[Number(mes.slice(5, 7)) - 1].replace(/^./, function (c) { return c.toUpperCase(); }) + ' ' + mes.slice(0, 4) + '</b><button type="button" class="icono" data-cal-mes="1" aria-label="Mes siguiente">›</button></div>' +
         '<div class="cal-semana"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="cal-grid">' + celdas + '</div>' +
-        '<p class="ayuda cal-ayuda">' + (!ini ? 'Toca el primer día.' : !fin ? 'Ahora toca el último (7 días como máximo), o «Ver» para ver solo el ' + esc(ddmm(ini)) + '.' : 'Del ' + esc(ddmm(ini)) + ' al ' + esc(ddmm(fin)) + ' (' + (diasEntre(ini, fin) + 1) + ' días).') + '</p>';
+        '<p class="ayuda cal-ayuda">' + (esc2 ? (!foco ? 'Toca un día y verás su semana.' : 'Verás la semana del ' + esc(ddmm(ini)) + ' al ' + esc(ddmm(fin)) + ', con el ' + esc(ddmm(foco)) + ' en el centro.') : !ini ? 'Toca el primer día.' : !fin ? 'Ahora toca el último (7 días como máximo), o «Ver» para ver solo el ' + esc(ddmm(ini)) + '.' : 'Del ' + esc(ddmm(ini)) + ' al ' + esc(ddmm(fin)) + ' (' + (diasEntre(ini, fin) + 1) + ' días).') + '</p>';
       $('dlg-cal-ver').disabled = !ini;
+      $('dlg-cal-ver').textContent = esc2 ? 'Ver esa semana' : 'Ver estos días';
       void anterior;
     };
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Qué días quieres ver?</h2></div><div class="dlg-cuerpo" id="cal-cuerpo"></div>' +
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + (esc2 ? '¿Qué semana quieres ver?' : '¿Qué días quieres ver?') + '</h2></div><div class="dlg-cuerpo" id="cal-cuerpo"></div>' +
       '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-cal-ver" disabled>Ver estos días</button>' +
       '<button type="button" class="accion" id="dlg-cal-hoy">Hoy</button><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
     pintarCal();
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
-    $('dlg-cal-hoy').addEventListener('click', function () { cerrarDialogo(); desdeMovil = ''; diasMovil = 7; pintar(); window.scrollTo(0, 0); });
-    $('dlg-cal-ver').addEventListener('click', function () { if (!ini) return; cerrarDialogo(); verRango(ini, fin || ini); });
+    $('dlg-cal-hoy').addEventListener('click', function () { cerrarDialogo(); if (esc2) { irADia(hoy()); cargar(); return; } desdeMovil = ''; diasMovil = 7; pintar(); window.scrollTo(0, 0); });
+    $('dlg-cal-ver').addEventListener('click', function () { if (!ini) return; cerrarDialogo(); if (esc2) { irADia(foco); cargar(); return; } verRango(ini, fin || ini); });
     $('cal-cuerpo').addEventListener('click', function (e) {
       const m = e.target.closest('[data-cal-mes]'), d = e.target.closest('[data-cal-dia]');
       if (m) { const y = Number(mes.slice(0, 4)), mm = Number(mes.slice(5, 7)) - 1 + Number(m.dataset.calMes); const nd = new Date(Date.UTC(y, mm, 1)); mes = nd.toISOString().slice(0, 10); pintarCal(); return; }
       if (!d) return;
       const f = d.dataset.calDia;
+      if (esc2) { foco = f; ini = lunesDe(f); fin = sumar(ini, 6); pintarCal(); return; }  // v5.9: la semana entera
       if (!ini || fin || f < ini) { ini = f; fin = ''; }
       else if (f === ini) { fin = ''; }
       else { fin = diasEntre(ini, f) > 6 ? sumar(ini, 6) : f; }  // 7 días como máximo
@@ -1643,6 +1649,8 @@
     let html = '<p class="huecos-resumen">' + (!sinNadie && !soloServicio
       ? 'No hay huecos de aquí al ' + diaLargo(fin).toLowerCase() + ': todo tiene a alguien.'
       : 'De aquí al ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, '1 hueco sin nadie', '% huecos sin nadie') : '', soloServicio ? vez(soloServicio, '1 solo con el servicio', '% solo con el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>';
+    // v5.9: el mismo mensaje de «Lo que falta» que en Semana, a mano desde aquí
+    if ((sinNadie || soloServicio) && !modoAbuela()) html += '<div class="huecos-compartir"><button type="button" class="principal con-icono" data-compartir-huecos>' + ICONO_COMPARTIR + '<span>Avisar al grupo por WhatsApp</span></button></div>';
     html += dias.map(function (d) {
       return '<section class="huecos-dia"><h3>' + DIAS[dow(d.fecha)] + ' <span>' + (d.fecha === h ? 'Hoy' : ddmm(d.fecha)) + '</span></h3><ul>' +
         d.huecos.map(function (x) {
@@ -1691,7 +1699,8 @@
       '<div class="titulo-nav"><h2>Del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '</h2>' +
       (actual ? '' : '<button type="button" class="enlace" data-semana="0">' + (tres ? 'Volver a esta semana' : 'Volver a hoy') + '</button>') + '</div>' +
       '<button type="button" class="flecha" data-semana="1" aria-label="' + (tres ? 'Semana siguiente' : '7 días después') + '">' + FLECHA_DER + '</button>' +
-      '<span class="nav-herr"><button type="button" class="icono" data-compartir aria-label="Compartir" title="Compartir">' + ICONO_COMPARTIR + '</button>' +
+      '<span class="nav-herr"><button type="button" class="icono" data-calendario aria-label="Elegir la semana en el calendario" title="Calendario">' + ICONO_CALENDARIO + '</button>' +  // v5.9: también en el ordenador
+      '<button type="button" class="icono" data-compartir aria-label="Compartir" title="Compartir">' + ICONO_COMPARTIR + '</button>' +
       '<button type="button" class="icono" data-imprimir aria-label="Imprimir" title="Imprimir">' + ICONO_IMPRIMIR + '</button></span></div>' +
       (tres ? '<button type="button" class="accion paso" data-paso-dia="1">Día siguiente' + FLECHA_DER + '</button>' : '');
   }
@@ -5030,7 +5039,7 @@
 
   /* ---------- Clics ---------- */
   document.addEventListener('click', function (e) {
-    const el = e.target.closest('[data-quitarme], [data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
+    const el = e.target.closest('[data-quitarme], [data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-huecos], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
     if (modoAbuela() && el.hasAttribute('data-persona')) { abrirInfoPersona(el.dataset.persona); return; }  // v4.36: quién es, para mirar
     if (servicioYo() && el.hasAttribute('data-persona') && el.dataset.persona !== yo) { abrirInfoPersona(el.dataset.persona); return; }  // v4.86
@@ -5057,6 +5066,7 @@
     } else if (el.hasAttribute('data-no-soy')) { olvidarYo();
     } else if (el.hasAttribute('data-mis-datos')) { conQuien(function () { abrirPersona(yo); });
     } else if (el.hasAttribute('data-mis-comidas')) { abrirMisComidas();
+    } else if (el.hasAttribute('data-compartir-huecos')) { abrirCompartir('huecos:7');  // v5.9
     } else if (el.hasAttribute('data-compartir-evento')) { abrirCompartir('evento:' + el.dataset.compartirEvento);
     } else if (el.hasAttribute('data-compartir')) { abrirCompartir();
     } else if (el.hasAttribute('data-imprimir')) { imprimir();
