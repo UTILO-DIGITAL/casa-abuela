@@ -128,6 +128,9 @@
   .comida-cab .nadie.con-icono svg { width: 18px; height: 18px; flex: none; }
   /* v4.75: el resumen de cada comida, cena o noche (al tocarlo, el desglose) */
   .evento-cuantos { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 0; }
+  .evento-cuantos > span { display: grid; }
+  .evento-cuantos small { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
+  .evento-dia .ev-barra-total { margin: 6px 0 0; height: 7px; }
   .rt-total { display: flex; align-items: center; gap: 8px; width: 100%; padding: 2px 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; color: var(--color-texto); }
   .rt-total b { font-size: 15px; }
   .rt-flecha { margin-left: auto; font-size: 20px; color: var(--color-texto-suave); }
@@ -1396,8 +1399,10 @@
         // v4.76: solo cuántos van ese día (quien va solo otros días, no); la lista, en «Ver quién va»
         (function () {
           const n = e.van.filter(function (id) { const d = diasDe(e, id); return !d || d.indexOf(fecha) !== -1; }).length;
-          return '<p class="evento-cuantos"><b>' + (n ? (n === 1 ? 'Va 1' : 'Van ' + n) : 'Aún no va nadie') + '</b>' +
-            '<button type="button" class="mini" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></p>';
+          const c = cuentaEvento(e);
+          return '<p class="evento-cuantos"><span><b>' + (n ? (n === 1 ? 'Va 1' : 'Van ' + n) : 'Aún no va nadie') + '</b>' +
+              '<small>' + esc([c.noVan ? (c.noVan === 1 ? '1 no puede' : c.noVan + ' no pueden') : '', c.faltan ? c.faltan + ' sin contestar' : ''].filter(Boolean).join(' · ')) + '</small></span>' +
+            '<button type="button" class="mini" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></p>' + barraEvento(e);
         })() + '</div>';
     });
     const fu = fuera(fecha);
