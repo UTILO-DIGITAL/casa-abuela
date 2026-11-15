@@ -328,6 +328,15 @@ function medallasServicio_(ss, personas, v, id, pon) {
   else if (mio.DORMIR >= 8) pon('noches', 'Noches con la abuela', mio.DORMIR + ' noches este último mes.');
   if (mio.COMIDA >= 8) pon('comidas', 'Comidas con la abuela', mio.COMIDA + ' comidas este último mes.');
   if (mio.CENA >= 8) pon('cenas', 'Cenas con la abuela', mio.CENA + ' cenas este último mes.');
+  // v4.86: siempre un gracias (si ha estado) y su día de la semana
+  const dias30 = {};
+  v.ef.forEach(function (a) { if (a.persona === id && a.fecha >= hace30) dias30[a.fecha] = true; });
+  const nd = Object.keys(dias30).length;
+  if (nd) pon('dias', nd === 1 ? '1 día con la abuela' : nd + ' días con la abuela', 'Este último mes. Gracias por tu cariño y tu paciencia.');
+  const porDow = [0, 0, 0, 0, 0, 0, 0];
+  Object.keys(dias30).forEach(function (f) { porDow[diaSemana_(f)]++; });
+  const maxD = Math.max.apply(null, porDow);
+  if (maxD >= 3) { const DIAS_ = ['domingos', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados']; pon('tu-dia', 'Los ' + DIAS_[porDow.indexOf(maxD)] + ', contigo', 'La abuela sabe que ese día estás tú.'); }
   const mias = v.ef.filter(function (a) { return a.persona === id; }).map(function (a) { return a.fecha; });
   if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) pon('semanas', 'Cuatro semanas seguidas', 'Has estado con ella todas las semanas del último mes.');
 }
@@ -688,6 +697,7 @@ function guardarPersona(personaId, cambios, quien, vista) {
     const personas = leerPersonas_(ss, config.excluir);
     const editores = leerEditores_(ss, config.excluir);
     const autor = autor_(personas.concat(editores), quien);
+    soloLoSuyo_(autor, personaId);  // v4.86
     let p = personas.filter(function (x) { return x.id === personaId; })[0];
     const esEditor = !p;
     if (esEditor) p = editores.filter(function (x) { return x.id === personaId; })[0];
@@ -1047,6 +1057,7 @@ function crearPersona(nueva, quien, vista) {
     const config = leerConfig_(ss);
     const personas = leerPersonas_(ss, config.excluir);
     const autor = autor_(personas.concat(leerEditores_(ss, config.excluir)), quien);
+    if (autor.familia === 'Servicio') throw new Error('Desde el servicio no se añaden personas.');  // v4.86
     nueva = nueva || {};
     const apodo = limpiar_(nueva.apodo, 40, 'El nombre', true);
     const jerarquia = String(nueva.jerarquia || '').trim();
@@ -1117,6 +1128,7 @@ function darDeBaja(personaId, quien, vista) {
     const config = leerConfig_(ss);
     const personas = leerPersonas_(ss, config.excluir);
     const autor = autor_(personas.concat(leerEditores_(ss, config.excluir)), quien);
+    if (autor.familia === 'Servicio') throw new Error('Desde el servicio no se quita a nadie de la lista.');  // v4.86
     const p = personas.filter(function (x) { return x.id === personaId; })[0];
     if (!p) throw new Error('No encontramos ese nombre en la lista.');
     const hoy = hoy_();
@@ -1340,6 +1352,13 @@ function autor_(todos, quien) {
   const a = todos.filter(function (p) { return p.id === quien; })[0];
   if (!a) throw new Error('Elige primero quién eres, para guardar quién hace cada cambio.');
   return a;
+}
+/** v4.86: desde el servicio, cada uno cambia solo lo suyo (apuntarse, sus eventos y sus notas) */
+function soloLoSuyo_(autor, personaId) {
+  if (autor.familia === 'Servicio' && personaId !== autor.id) throw new Error('Desde el servicio solo puedes cambiar lo tuyo.');
+}
+function sinServicio_(autor) {
+  if (autor.familia === 'Servicio') throw new Error('Los eventos los organiza la familia. Tú solo tienes que decir si vas.');
 }
 
 /* ---------- Validaciones ---------- */
@@ -1574,6 +1593,7 @@ function notaEvento(id, personaId, nota, quien, vista) {
     const config = leerConfig_(ss);
     const todos = leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir));
     const autor = autor_(todos, quien);
+    soloLoSuyo_(autor, personaId);  // v4.86
     const p = todos.filter(function (t) { return t.id === personaId; })[0];
     if (!p) throw new Error('No encontramos ese nombre en la lista.');
     const texto = limpiar_(nota, MAX_NOTA, 'La nota', true);
@@ -1602,6 +1622,7 @@ function guardarEvento(ev, quien, vista) {
     const config = leerConfig_(ss);
     const personas = leerPersonas_(ss, config.excluir);
     const autor = autor_(personas.concat(leerEditores_(ss, config.excluir)), quien);
+    sinServicio_(autor);  // v4.86
     ev = ev || {};
     const nombre = limpiar_(ev.nombre, MAX_EVENTO, 'El nombre del evento', true);
     if (!nombre) throw new Error('Pon el nombre del evento.');
@@ -1636,6 +1657,7 @@ function borrarEvento(id, quien, vista) {
   return conBloqueo_(function (ss) {
     const config = leerConfig_(ss);
     const autor = autor_(leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir)), quien);
+    sinServicio_(autor);  // v4.86
     const tabla = abrirEventos_(ss);
     const x = filaEvento_(tabla, id);
     x.v[9] = ahora_(); x.cambiada = true;
@@ -1652,6 +1674,7 @@ function apuntarEvento(id, personaId, va, quien, vista, dias) {
     const config = leerConfig_(ss);
     const todos = leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir));
     const autor = autor_(todos, quien);
+    soloLoSuyo_(autor, personaId);  // v4.86
     const p = todos.filter(function (t) { return t.id === personaId; })[0];
     if (!p) throw new Error('No encontramos ese nombre en la lista.');
     const tabla = abrirEventos_(ss);

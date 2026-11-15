@@ -626,6 +626,9 @@
   .nav-badge[hidden] { display: none; }
   nav.vistas a#nav-rellenar { color: #FFE2A8; }
   nav.vistas a#nav-rellenar[aria-current="page"] { color: var(--color-principal-oscuro); }
+  /* v4.86: el servicio ve lo suyo */
+  .modo-servicio nav.vistas a[data-vista="personas"], .modo-servicio nav.vistas a[data-vista="huecos"], .modo-servicio #nav-rellenar, .modo-servicio #nav-ajustes,
+  .modo-servicio .eventos-barra, .modo-servicio #dlg-ev-cambiar, .modo-servicio .ev-compartir, .modo-servicio [data-nueva-persona], .modo-servicio #aj-pedir { display: none !important; }
   .ev-notas { margin: 8px 0 4px; padding: 8px 12px; border-radius: var(--radio); background: #FFF6D9; border-left: 4px solid #E9B949; }
   .ev-notas-tit { margin: 0 0 2px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #8A6A10; }
   .ev-notas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 15px; }
@@ -915,7 +918,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.85.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.86.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1391,8 +1394,11 @@
     $('salir-sencillo').hidden = !sencillo;
     if (sencillo && (vista === 'huecos' || vista === 'rellenar')) { ponerVista('semana'); return; }
     $('nav-ajustes').hidden = !esAdmin();  // v4.58
+    const serv = servicioYo();  // v4.86: el servicio ve la Semana y los Eventos
+    document.body.classList.toggle('modo-servicio', serv);
+    if (serv && ['personas', 'huecos', 'rellenar', 'ajustes'].indexOf(vista) !== -1) { ponerVista('semana'); return; }
     const mios = rfMios();  // v4.65
-    $('nav-rellenar').hidden = !mios.length && vista !== 'rellenar';
+    $('nav-rellenar').hidden = serv || (!mios.length && vista !== 'rellenar');
     // v4.80: los avisos de las pestañas: eventos por contestar y personas por rellenar
     const pend = sencillo ? 0 : (datos.eventos || []).filter(function (e) { return e.hasta >= hoy() && sinContestar(e); }).length;
     $('badge-eventos').hidden = !pend; $('badge-eventos').textContent = pend; $('badge-eventos').setAttribute('aria-label', pend + ' por contestar');
@@ -1600,15 +1606,16 @@
       (al.length ? '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>' : '') +
       orden.map(function (f) { return '<h3 class="dt-fam">' + esc(f === '?' ? 'Otros' : cortoFamilia(f)) + ' <small>' + grupos[f].length + '</small></h3><div class="gente">' + grupos[f].map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>'; }).join('') +
       (serv.length ? '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '') +
-      '<p class="ayuda">Toca a alguien para cambiar lo suyo.</p></div>' +
-      '<div class="dlg-pie"><div class="botones">' + (sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">Añadir a alguien</button>' : '') +
+      '<p class="ayuda">' + (servicioYo() ? 'Toca a alguien para ver quién es.' : 'Toca a alguien para cambiar lo suyo.') + '</p></div>' +
+      '<div class="dlg-pie"><div class="botones">' + (sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">' + (servicioYo() ? 'Apuntarme' : 'Añadir a alguien') + '</button>' : '') +
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
-    if ($('dlg-dt-anadir')) $('dlg-dt-anadir').addEventListener('click', function () { cerrarDialogo(); abrirAnadir(fecha, turno); });
+    if ($('dlg-dt-anadir')) $('dlg-dt-anadir').addEventListener('click', function () { cerrarDialogo(); if (servicioYo()) apuntarme(fecha, turno); else abrirAnadir(fecha, turno); });
     $dlg.querySelector('.dlg-cuerpo').addEventListener('click', function (e) {
       const b = e.target.closest('[data-persona]');
       if (!b) return;
-      cerrarDialogo(); abrirPersona(b.dataset.persona, fecha, turno);
+      cerrarDialogo();
+      if (servicioYo() && b.dataset.persona !== yo) abrirInfoPersona(b.dataset.persona); else abrirPersona(b.dataset.persona, fecha, turno);  // v4.86
     });
   }
   function pintarSemana() {
@@ -2207,16 +2214,17 @@
     const varios = diasDelEvento(e).length > 1;  // v4.67
     const fila = function (x) {
       const p = x.p, st = estado(p);
+      const soloVer = pasado || (servicioYo() && p.id !== yo);  // v4.86: desde el servicio, los demás solo para mirar
       const dd = st === 'si' && varios ? diasDe(e, p.id) : null;  // v4.67
-      const chip = st === 'si' && varios ? (pasado ? (dd ? '<span class="ev-chip">' + esc(textoDias(dd)) + '</span>' : '') :
+      const chip = st === 'si' && varios ? (soloVer ? (dd ? '<span class="ev-chip">' + esc(textoDias(dd)) + '</span>' : '') :
         '<button type="button" class="ev-chip' + (diasAbiertos[p.id] ? ' listo' : '') + '" data-ev-dias="' + esc(e.id) + '|' + esc(p.id) + '" aria-expanded="' + !!diasAbiertos[p.id] + '">' + esc(diasAbiertos[p.id] ? 'Listo' : dd ? textoDias(dd) : 'todos los días') + '</button>') : '';  // v4.68: abierto, «Listo» (los días ya se ven debajo)
       const tiene = !!notaDe(e, p.id);
-      const lapiz = !pasado && (st || tiene) ? '<button type="button" class="ev-lapiz' + (tiene ? ' con-nota' : '') + '" data-ev-nota="' + esc(e.id) + '|' + esc(p.id) + '" aria-label="' + (tiene ? 'Cambiar la nota de ' : 'Añadir una nota de ') + esc(p.apodo) + '" title="' + (tiene ? 'Tiene nota' : 'Añadir una nota') + '">' + ICONO_LAPIZ + '</button>' : '';  // v4.68
+      const lapiz = !soloVer && (st || tiene) ? '<button type="button" class="ev-lapiz' + (tiene ? ' con-nota' : '') + '" data-ev-nota="' + esc(e.id) + '|' + esc(p.id) + '" aria-label="' + (tiene ? 'Cambiar la nota de ' : 'Añadir una nota de ') + esc(p.apodo) + '" title="' + (tiene ? 'Tiene nota' : 'Añadir una nota') + '">' + ICONO_LAPIZ + '</button>' : '';  // v4.68
       return '<li class="ev-fila" style="padding-left:' + (x.nivel * 18) + 'px"><span class="ev-nombre">' + esc(p.apodo) + '</span>' + lapiz + chip +
-        (pasado ? '<span class="ev-estado">' + (st === 'si' ? '<span class="ev-marca si" role="img" aria-label="va">' + ICONO_SI + '</span>' : st === 'no' ? '<span class="ev-marca no" role="img" aria-label="no va">' + ICONO_NO + '</span>' : '<span class="ev-marca nada" role="img" aria-label="sin contestar"></span>') + '</span>' :
+        (soloVer ? '<span class="ev-estado">' + (st === 'si' ? '<span class="ev-marca si" role="img" aria-label="va">' + ICONO_SI + '</span>' : st === 'no' ? '<span class="ev-marca no" role="img" aria-label="no va">' + ICONO_NO + '</span>' : '<span class="ev-marca nada" role="img" aria-label="sin contestar"></span>') + '</span>' :
           '<span class="ev-bots"><button type="button" class="ev-si" data-ev-p="' + esc(e.id) + '|' + esc(p.id) + '|si" aria-pressed="' + (st === 'si') + '" aria-label="' + esc(p.apodo) + ' va" title="Va">' + ICONO_SI + '</button>' +
           '<button type="button" class="ev-no" data-ev-p="' + esc(e.id) + '|' + esc(p.id) + '|no" aria-pressed="' + (st === 'no') + '" aria-label="' + esc(p.apodo) + ' no puede" title="No puede">' + ICONO_NO + '</button></span>') +
-        (chip && !pasado && diasAbiertos[p.id] ? botonesDias(e, p.id, '¿Qué días?') : '') +
+        (chip && !soloVer && diasAbiertos[p.id] ? botonesDias(e, p.id, '¿Qué días?') : '') +
         '</li>';
     };
     return '<p class="evento-cuando">' + esc(fechaEvento(e)) + '</p>' +
@@ -2235,7 +2243,7 @@
         return diaCortoEv(f) + ': ' + (n === 1 ? 'va 1' : 'van ' + n);
       }).join(' · ')) + '</p>' : '') +
       listaNotas(e, 0, !pasado) +  // v4.68
-      (modoAbuela() ? '' : '<p class="ayuda">En verde, quien va; en rojo, quien no puede; sin marcar, quien aún no ha contestado. Puedes contestar también por otros (por tus hijos, por ejemplo).' + (varios ? ' Si alguien va solo algún día, toca «todos los días» junto a su nombre.' : '') + ' Con el lápiz, una nota.</p>') +
+      (modoAbuela() ? '' : '<p class="ayuda">En verde, quien va; en rojo, quien no puede; sin marcar, quien aún no ha contestado.' + (servicioYo() ? ' Tú contesta arriba, en «¿Vas?».' : ' Puedes contestar también por otros (por tus hijos, por ejemplo).') + (varios ? ' Si alguien va solo algún día, toca «todos los días» junto a su nombre.' : '') + ' Con el lápiz, una nota.</p>') +
       // v4.30: una sola lista: cada familia con sus números y, al tocar «Ver», quién es justo debajo
       '<div class="ev-resumen">' + porFamiliaEvento(e).map(function (x) {
         return '<details class="ev-familia" data-fam="' + esc(x.f) + '"' + (abiertasEv[x.f] ? ' open' : '') + '><summary>' +
@@ -2341,6 +2349,7 @@
   function confirmarEnEvento(id, personaId, va, dias, fuera) {
     conQuien(function () {
       if (!personaId) { personaId = yo; if (!persona(personaId)) return; }  // v4.51: «¿Vas tú?» antes de saber quién eres
+      if (servicioYo() && personaId !== yo) return;  // v4.86: desde el servicio, solo lo suyo
       if (!$('dlg-ev-detalle') && !fuera) abrirDetalleEvento(id);  // v4.68: desde la tarjeta, se queda en la tarjeta
       const e = evento(id);
       if (!e) return;
@@ -2379,6 +2388,15 @@
     return out;
   }
   let evFiltro = '';  // v4.80
+  /* v4.86: quien entra es del servicio: ve lo suyo y solo cambia lo suyo */
+  function servicioYo() { const p = yo && datos && persona(yo); return !!(p && esServicio(p)); }
+  function apuntarme(fecha, turno) {
+    conQuien(function () {
+      if (idsDe(fecha, turno).indexOf(yo) !== -1) { aviso('Ya estás apuntada a la ' + nombreTurno(fecha, turno) + '.'); return; }
+      const cambio = { fecha: fecha, turno: turno, apuntado: true };
+      confirmarTarde([cambio], yo, function () { guardarCambios(yo, { turnos: [cambio] }, '¡Gracias! Apuntada a la ' + nombreTurno(fecha, turno) + '.'); });
+    });
+  }
   function sinContestar(e) { return !!(yo && persona(yo)) && e.van.indexOf(yo) === -1 && e.noVan.indexOf(yo) === -1; }
   document.addEventListener('click', function (ev) { const b = ev.target.closest('[data-ev-filtro]'); if (!b) return; evFiltro = b.dataset.evFiltro; pintarEventos(); });
   function pintarEventos() {
@@ -4169,6 +4187,8 @@
     const el = e.target.closest('[data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
     if (modoAbuela() && el.hasAttribute('data-persona')) { abrirInfoPersona(el.dataset.persona); return; }  // v4.36: quién es, para mirar
+    if (servicioYo() && el.hasAttribute('data-persona') && el.dataset.persona !== yo) { abrirInfoPersona(el.dataset.persona); return; }  // v4.86
+    if (servicioYo() && el.hasAttribute('data-anadir')) { apuntarme(el.dataset.fecha, el.dataset.turno); return; }  // v4.86: el «+», a ella misma
     if (el.hasAttribute('data-rt-fam')) { const k = el.dataset.rtFam; if (famAbiertas.has(k)) famAbiertas.delete(k); else famAbiertas.add(k); pintarSemana(); return; }  // v4.75
     if (el.hasAttribute('data-detalle-turno')) { const x = el.dataset.detalleTurno.split('|'); abrirDetalleTurno(x[0], x[1]); return; }  // v4.75
     if (el.hasAttribute('data-preguntar')) { preguntarDia(el.dataset.preguntar); return; }  // v4.38

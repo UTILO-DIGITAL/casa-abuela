@@ -412,6 +412,14 @@ ver('servicio: la que más noches le hace compañía', sol.servicio === true && 
 ver('servicio: cuatro semanas seguidas', dsol.indexOf('semanas') !== -1);
 ver('servicio: sin puntos ni top 10 de la familia', !sol.top10 && !sol.puntos && !dsol.some(x => x === 'comidas' && (sol.distinciones.find(d => d.id === x) || {}).categoria));
 ver('servicio: no sale en las medallas de la familia', R.misNumeros('(N) - Jan').puntos === mn.puntos);
+ver('servicio: siempre un gracias con sus días del mes', dsol.indexOf('dias') !== -1);
+// v4.86: desde el servicio, solo lo suyo
+err = ''; try { R.guardarPersona('(N) - Jan', { alergias: 'x' }, '(O) - Soledad', V2); } catch (e) { err = e.message; }
+ver('servicio: no cambia lo de otros', /solo puedes cambiar lo tuyo/.test(err));
+err = ''; try { R.guardarPersona('(O) - Soledad', { alergias: 'Nada' }, '(O) - Soledad', V2); } catch (e) { err = e.message; }
+ver('servicio: lo suyo, sí', !err);
+err = ''; try { R.guardarEvento({ nombre: 'Algo', desde: '2026-12-01' }, '(O) - Soledad', V2); } catch (e) { err = e.message; }
+ver('servicio: no crea eventos', /organiza la familia/.test(err));
 hojas.PERSONAS.filas = hojas.PERSONAS.filas.filter(f => f[0] !== '(O) - Soledad');
 hojas.MESA_APUNTES.filas = hojas.MESA_APUNTES.filas.filter(f => !/^s\d$/.test(f[0]));
 // v4.85: el portal de premios
