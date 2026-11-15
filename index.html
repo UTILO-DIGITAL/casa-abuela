@@ -501,6 +501,8 @@
   .ev-bots .ev-si { color: var(--color-principal); }
   .ev-bots button.grande .ico-marca, .evento-botones .ico-marca { width: 18px; height: 18px; }
   .ev-marca .ico-marca { width: 18px; height: 18px; }
+  .evento-botones .ev-compartir { display: inline-flex; align-items: center; justify-content: center; padding: 0 12px; margin-left: auto; }
+  .evento-botones .ev-compartir svg { width: 20px; height: 20px; }
   .ev-notas { margin: 8px 0 4px; padding: 8px 12px; border-radius: var(--radio); background: #FFF6D9; border-left: 4px solid #E9B949; }
   .ev-notas-tit { margin: 0 0 2px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #8A6A10; }
   .ev-notas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 15px; }
@@ -785,7 +787,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.70.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.71.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1902,7 +1904,8 @@
       '<div class="evento-botones">' + (pasado || modoAbuela() ? '' :
         '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? ICONO_SI + 'Voy' : 'Voy') + '</button>' +
         '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '" aria-pressed="' + noVoy + '">' + (noVoy ? ICONO_NO + 'No voy' : 'No voy') + '</button>') +
-      '<button type="button" class="principal boton-evento" data-ev-ver="' + esc(e.id) + '">Ver quién va</button></div>' +
+      '<button type="button" class="principal boton-evento" data-ev-ver="' + esc(e.id) + '">Ver quién va</button>' +
+      (modoAbuela() ? '' : '<button type="button" class="accion ev-compartir" data-ev-compartir="' + esc(e.id) + '" aria-label="Compartir por WhatsApp" title="Compartir">' + ICONO_COMPARTIR + '</button>') + '</div>' +  // v4.71
       (pasado || modoAbuela() || !(voy || noVoy) ? '' : '<div class="ev-mio">' +  // v4.68: tus días y tu nota, sin abrir el evento
         (voy && diasDelEvento(e).length > 1 ? botonesDias(e, yo, 'Qué días vas:') : '') + lineaNota(e, yo) + '</div>') +
       '</article>';
@@ -2161,7 +2164,7 @@
   $('ev-anadir').addEventListener('click', function () { abrirEvento(null); });
   document.addEventListener('click', function (ev) {
     if (ev.target.closest('[data-salir-sencillo]')) { salirSencillo(); return; }
-    const b = ev.target.closest('[data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p], [data-ev-dias], [data-ev-dia], [data-ev-nota]');
+    const b = ev.target.closest('[data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p], [data-ev-dias], [data-ev-dia], [data-ev-nota], [data-ev-compartir]');
     if (!b) return;
     if (modoAbuela() && !b.dataset.evVer) return;  // v4.35: en el modo sencillo, solo ver
     if (b.dataset.evVoy) apuntarEv(b.dataset.evVoy, true);
@@ -2172,6 +2175,7 @@
       const x = b.dataset.evDias.split('|'); diasAbiertos[x[1]] = !diasAbiertos[x[1]];
       const d = $('dlg-ev-detalle'); if (d && evento(x[0])) d.innerHTML = htmlDetalleEvento(evento(x[0]));
     } else if (b.dataset.evDia) { const x = b.dataset.evDia.split('|'); marcarDiaEvento(x[0], x[1], x[2], !!b.closest('.evento-card')); }
+    else if (b.dataset.evCompartir) abrirCompartir('ev:' + b.dataset.evCompartir);  // v4.71
     else if (b.dataset.evNota) { const x = b.dataset.evNota.split('|'); abrirNotaEvento(x[0], x[1], !b.closest('.evento-card')); }  // v4.68
   });
 
@@ -3576,25 +3580,27 @@
       (nd.eventoTexto ? '\n\n' + nd.eventoTexto : '') + '\n\n' +
       (comp.length ? '*Van ya (' + total + '):*\n' + comp.map(function (id) { const a = apunte(f, t, id); return '• ' + ((persona(id) || {}).apodo || id) + (a && a.acompanantes ? ' +' + a.acompanantes : ''); }).join('\n') : 'Aún no se ha apuntado nadie.') + enlace;
   }
-  /* v4.28: el mensaje de un evento de la pestaña Eventos */
+  /* v4.28: el mensaje de un evento de la pestaña Eventos.
+     v4.71: arriba el resumen (WhatsApp solo enseña las primeras líneas); luego, por familias y no persona a persona; al final, las notas */
   function mensajeEv(id) {
     const e = evento(id) || { nombre: 'Evento', van: [], noVan: [], desde: hoy(), hasta: hoy(), cuando: 'DIA' };
     const enlace = datos.url ? '\n\n👉 Di si vas aquí: ' + datos.url.replace(/#.*$/, '') + '#evento-' + e.id : '';  // v4.51: abre este evento
-    return '🎉 *' + e.nombre + '*\n📅 ' + fechaEvento(e) + (e.lugar ? '\n📍 ' + e.lugar : '') + (e.texto ? '\n\n' + e.texto : '') + '\n\n' +
-      (e.van.length ? '*Van ya (' + e.van.length + '):*\n' + e.van.map(function (id) { return '• ' + extraEv(e, id); }).join('\n') : 'Aún no se ha apuntado nadie.') +
-      // v4.70: un resumen con números (sin la lista de quién no puede): cuántos van (y cada día), no pueden y sin contestar
-      (function () {
-        const c = cuentaEvento(e), dias = diasDelEvento(e);
-        const porDia = dias.length > 1 && e.van.length ? dias.map(function (f) {
-          return '\n   – ' + diaMes(f) + ': ' + e.van.filter(function (id) { const d = diasDe(e, id); return !d || d.indexOf(f) !== -1; }).length;
-        }).join('') : '';
-        return '\n\n*En resumen*\nVan: ' + c.van + porDia + (c.noVan ? '\nNo pueden: ' + c.noVan : '') + (c.faltan ? '\nSin contestar: ' + c.faltan : '');
-      })() + enlace;
-  }
-  /* v4.70: «Marcos (solo dom 20) · _llego a las 11_»: sus días y su nota, sin ruido */
-  function extraEv(e, id) {
-    const d = diasDe(e, id), n = notaDe(e, id);
-    return ((quienEs(id) || {}).apodo || id) + (d ? ' (' + textoDias(d) + ')' : '') + (n ? ' · _' + n + '_' : '');
+    const c = cuentaEvento(e), dias = diasDelEvento(e);
+    const resumen = (c.van ? '*Van ' + c.van + '*' : '*Aún no va nadie*') + (c.noVan ? ' · no pueden ' + c.noVan : '') + (c.faltan ? ' · sin contestar ' + c.faltan : '') +
+      (dias.length > 1 && c.van ? '\n_' + dias.map(function (f) {
+        const n = e.van.filter(function (id) { const d = diasDe(e, id); return !d || d.indexOf(f) !== -1; }).length;
+        return diaMes(f) + ': ' + n;
+      }).join(' · ') + '_' : '');
+    const familias = porFamiliaEvento(e).filter(function (x) { return x.van; }).map(function (x) {
+      const sueltos = x.gente.filter(function (p) { return e.van.indexOf(p.id) !== -1 && diasDe(e, p.id); })
+        .map(function (p) { return p.apodo + ' ' + textoDias(diasDe(e, p.id)); });
+      return '• ' + cortoFamilia(x.f) + ': ' + x.van + ' de ' + x.gente.length + (sueltos.length ? ' _(' + sueltos.join('; ') + ')_' : '');
+    });
+    const notas = e.van.filter(function (id) { return notaDe(e, id) && quienEs(id); }).map(function (id) { return '• ' + quienEs(id).apodo + ': _' + notaDe(e, id) + '_'; });
+    return '🎉 *' + e.nombre + '*\n📅 ' + fechaEvento(e) + '\n' + resumen +
+      (e.lugar || e.texto ? '\n' + (e.lugar ? '\n📍 ' + e.lugar : '') + (e.texto ? '\n' + e.texto : '') : '') +
+      (familias.length ? '\n\n*Por familias*\n' + familias.join('\n') : '') +
+      (notas.length ? '\n\n*Notas*\n' + notas.join('\n') : '') + enlace;
   }
   function mensaje(tipo) {
     if (tipo.indexOf('ev:') === 0) return mensajeEv(tipo.slice(3));
