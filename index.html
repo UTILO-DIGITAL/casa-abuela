@@ -978,11 +978,9 @@
   function apunte(fecha, turno, id) { return datos.apuntes.find(function (a) { return a.fecha === fecha && a.turno === turno && a.persona === id; }); }
   function idsDe(fecha, turno) {
     const r = datos.apuntes.filter(function (a) { return a.fecha === fecha && a.turno === turno; }).map(function (a) { return a.persona; });
-    // v4.74: el servicio que duerme esa noche también cena (sin tener que apuntarlo dos veces)
-    if (turno === 'CENA') datos.apuntes.forEach(function (a) { if (a.fecha === fecha && a.turno === 'DORMIR' && esServicio(persona(a.persona)) && r.indexOf(a.persona) === -1) r.push(a.persona); });
     return r;
   }
-  /* Para dormir (y, v4.74, para cenar), el servicio también cuenta como compañía; para comer, no: la comida es lo urgente */
+  /* Para dormir y (v4.74) para cenar, el servicio apuntado también cuenta como compañía; para comer, no: la comida es lo urgente */
   function compania(ids, turno) { return turno === 'DORMIR' || turno === 'CENA' ? ids : ids.filter(function (id) { return !esServicio(persona(id)); }); }
   function servicioDe(ids, turno) { return turno === 'DORMIR' || turno === 'CENA' ? [] : ids.filter(function (id) { return esServicio(persona(id)); }); }
   /* v4.74: en esa comida o cena no hay servicio: quien vaya, que llegue antes a prepararla y a estar con la abuela */
