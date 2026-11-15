@@ -66,8 +66,13 @@
   @media (max-width: 500px) { .cabecera p#subtitulo { margin-top: 8px; } }
   @media (orientation: landscape) and (max-height: 500px) { .cabecera .cabecera-dentro p#subtitulo { display: none; } }
   .modo-abuela .yo-chip { display: none; }
+  /* v4.92: en la vista sencilla, la salida a la vista, arriba a la derecha */
+  .salir-arriba { display: none; position: absolute; top: 0; right: max(16px, var(--lado-der, 0px)); min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 2px solid #fff; background: rgba(255,255,255,.15); color: #fff; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
+  .modo-abuela .salir-arriba { display: inline-flex; align-items: center; }
   @media (min-width: 760px) { .yo-chip { right: 32px; } }
   .yo-menu { display: grid; gap: 8px; }
+  .dlg-salir { margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; background: #FFF0C2; border: 1px solid #F1C85A; }
+  .dlg-salir p { margin: 0 0 8px; font-weight: 800; }
   .yo-vista { border: 0; padding: 0; margin: 0; }
   .yo-vista legend { font-weight: 800; font-size: 14px; margin-bottom: 6px; }
   .yo-vista .forma-ev { grid-template-columns: repeat(3, 1fr); }
@@ -180,6 +185,7 @@
   .tu-vas span { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-principal-oscuro); }
   .tu-vas .ico-marca { width: 18px; height: 18px; }
   .tu-vas button { min-height: 40px; padding: 0 12px; font-size: 14px; background: #fff; }
+  .rt-desglose { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
   .rt-ver { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--color-principal-oscuro); }
   .rt-ver + .rt-flecha { margin-left: 2px; }
   /* v4.90: los días pasados, en una línea; «Nota», discreto; lo que falta en una ficha, en ámbar (el rojo, para lo urgente) */
@@ -471,6 +477,7 @@
   .pr-medallas span { color: var(--color-texto-suave); }
   .pr-pts { font-size: 11px; font-weight: 800; color: #8A5A00; }
   .aj-config fieldset, .aj-config > div { max-width: 560px; }
+  .aj-config .check { display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-weight: 700; }
   .aj-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
   .aj-tabla th { text-align: left; font-size: 12px; color: var(--color-texto-suave); font-weight: 800; padding: 4px 6px 4px 0; }
   .aj-tabla td { padding: 6px 6px 6px 0; border-top: 1px solid var(--color-linea); vertical-align: top; }
@@ -499,6 +506,7 @@
   .mn-distinciones li em { font-style: normal; font-size: 12px; font-weight: 800; color: #8A5A00; }
   .mn-distinciones li:not(.cat) { background: var(--color-principal-claro); border-color: #B9DFD7; }
   .mn-distinciones li:not(.cat) b { color: var(--color-principal-oscuro); }
+  details.mn-distinciones summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
   .mn-como { font-size: 13px; color: var(--color-texto-suave); }
   .mn-como summary { cursor: pointer; font-weight: 800; }
   .mn-como p { margin: 6px 0 0; }
@@ -560,7 +568,10 @@
   /* v4.89: «Añadir evento», flotando abajo a la derecha; arriba, Eventos o Fechas señaladas */
   .ev-fab { position: fixed; z-index: 40; right: calc(16px + var(--lado-der, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); border-radius: 999px; min-height: 48px; padding: 12px 20px; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); }
   .ev-fab span { font-size: 22px; line-height: 0; margin-right: 2px; }
-  #vista-eventos { padding-bottom: 72px; }
+  #vista-eventos { padding-bottom: 110px; }
+  .ev-fab { transition: transform .2s; }
+  .ev-fab.escondido { transform: translateY(140%); }
+  .ev-fab[hidden] { display: none; }
   .ev-secciones { display: grid; grid-template-columns: 1fr 1fr; margin: 0 0 12px; border-bottom: 2px solid var(--color-linea); }
   .ev-secciones button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 0; background: none; font: inherit; font-weight: 800; font-size: 17px; color: var(--color-texto-suave); cursor: pointer; margin-bottom: -2px; border-bottom: 3px solid transparent; }
   .ev-secciones button[aria-selected="true"] { color: var(--color-principal-oscuro); border-bottom-color: var(--color-principal-oscuro); }
@@ -610,7 +621,7 @@
   .ev-familia summary { cursor: pointer; }
   .ev-familia ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
   .ev-fila { display: flex; align-items: center; gap: 8px; padding-top: 3px; padding-bottom: 3px; }
-  .ev-nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ev-nombre { flex: 1 1 8em; min-width: 7em; overflow-wrap: anywhere; }  /* v4.92: entero (antes «Javi…»); los botones bajan si no caben */
   .ev-bots { display: flex; gap: 6px; flex: none; }
   .ev-bots button { width: 44px; height: 44px; border-radius: 10px; border: 2px solid var(--color-linea); background: #fff; font: inherit; font-weight: 800; color: var(--color-texto-suave); cursor: pointer; }
   .ev-bots .ev-si[aria-pressed="true"] { background: var(--color-principal); border-color: var(--color-principal); color: #fff; }
@@ -891,6 +902,7 @@
 <header class="cabecera">
   <div class="cabecera-dentro">
     <button type="button" id="yo-chip" class="yo-chip" hidden></button>
+    <button type="button" class="salir-arriba" data-salir-sencillo>Salir de la vista sencilla</button>
     <h1>Casa Abuela</h1>
     <p id="subtitulo">Quién viene a comer y a cenar</p>
     <nav class="vistas" aria-label="Vistas">
@@ -958,7 +970,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.91.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.92.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1060,7 +1072,7 @@
       '<div class="dlg-cuerpo"><p class="ayuda">Para ver Casa Abuela hace falta la clave que os hemos pasado por el grupo. Solo se pide una vez en este móvil.</p>' +
       (pista ? '<p class="pista-clave"><strong>Pista:</strong> ' + esc(pista) + '</p>' : '') +
       '<label class="campo" for="dlg-clave">Clave<input id="dlg-clave" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>' +
-      '<div class="dlg-pie"><p class="dlg-error" id="dlg-error"' + (habia ? '' : ' hidden') + '>' + (habia ? 'Esa clave no es. Vuelve a probar.' : '') + '</p><div class="botones">' +
+      '<div class="dlg-pie"><p class="dlg-error" id="dlg-error"' + (habia ? '' : ' hidden') + '>' + (habia ? 'Esa no es la clave. Prueba otra vez.' : '') + '</p><div class="botones">' +
       '<button type="button" class="principal" id="dlg-guardar">Entrar</button></div></div>');
     const entrar = function () {
       const v = $('dlg-clave').value.trim();
@@ -1140,7 +1152,7 @@
   function leerVista() { try { return localStorage.getItem('casa-abuela-vista') || ''; } catch (e) { return ''; } }
   function guardarVista(v) { try { localStorage.setItem('casa-abuela-vista', v); } catch (e) {} }
   function vistaElegida() { const v = leerVista(); return v === 'comoda' || v === 'sencilla' || v === 'agil' ? v : 'agil'; }
-  function modoAbuela() { const e = yo && datos && editor(yo); if (e && !e.fallecio) return leerVista() !== 'agil' && leerVista() !== 'comoda'; return !!(yo && datos && persona(yo) && leerVista() === 'sencilla'); }
+  function modoAbuela() { const e = yo && datos && editor(yo); if (e && !e.fallecio) return true; return !!(yo && datos && persona(yo) && leerVista() === 'sencilla'); }
   function quienEs(id) { return id ? (persona(id) || editor(id)) : null; }
   function esServicio(p) { return !!p && p.familia === 'Servicio'; }
   function generacion(p) { return GENERACIONES.find(function (g) { return p && g.clave === p.jerarquia; }) || GENERACIONES[GENERACIONES.length - 1]; }
@@ -1623,7 +1635,10 @@
   const famAbiertas = new Set();  // v4.75: las familias desplegadas en cada comida («fecha|turno|familia»)
   function resumenTurno(fecha, turno, ids, fam, serv, al, cuenta) {
     const r = raciones(ids, fecha, turno);
-    const total = turno === 'DORMIR' ? (fam.length ? (fam.length === 1 ? '1 duerme' : fam.length + ' duermen') : '') : cuenta ? r.total + ' a la mesa' : 'Ver quién va';
+    // v4.92: que cuadre con las familias: «10 a la mesa (9 + la abuela)»
+    const extraAco = ids.reduce(function (n, id) { return n + ((apunte(fecha, turno, id) || {}).acompanantes || 0); }, 0);
+    const desglose = [fam.length + extraAco ? String(fam.length + extraAco) : '', abuelas().length && !fueraTurno(fecha, turno) ? 'la abuela' : '', serv.length ? serv.map(function (id) { return (persona(id) || {}).apodo || id; }).join(' y ') : ''].filter(Boolean);
+    const total = turno === 'DORMIR' ? (fam.length ? (fam.length === 1 ? '1 duerme' : fam.length + ' duermen') : '') : cuenta ? r.total + ' a la mesa' + (desglose.length > 1 ? ' <small class="rt-desglose">(' + esc(desglose.join(' + ')) + ')</small>' : '') : 'Ver quién va';
     const conNota = function (id) { const a = apunte(fecha, turno, id); return !!(a && a.nota); };
     // las familias, cada una en su tarjeta pequeña; al tocarla, sus nombres debajo
     const grupos = {}, orden = [];
@@ -1730,6 +1745,8 @@
 
   /* v4.35: salir del modo sencillo: con la clave de la familia, para que no se salga sin querer */
   function salirSencillo() {
+    // v4.92: si la vista sencilla la eligió uno mismo (no es la abuela), se sale sin clave, a la cómoda
+    if (persona(yo) && !editor(yo)) { guardarVista('comoda'); pintar(); aviso('Listo: vista cómoda. Puedes cambiarla tocando tu nombre.'); return; }
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Salir del modo sencillo</h2></div>' +
       '<div class="dlg-cuerpo"><p class="ayuda">Para volver a la web completa, escribe la clave de la familia.</p>' +
       (pistaClave() ? '<p class="pista-clave"><strong>Pista:</strong> ' + esc(pistaClave()) + '</p>' : '') +  // v4.78
@@ -1738,12 +1755,13 @@
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     const n = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
     const salir = function () {
-      if (leerClave() && n($('dlg-salir-clave').value) !== n(leerClave())) { errorDialogo('Esa clave no es.'); return; }
+      if (leerClave() && n($('dlg-salir-clave').value) !== n(leerClave())) { errorDialogo('Esa no es la clave. Prueba otra vez.'); return; }
       if (persona(yo) && leerVista() === 'sencilla') guardarVista('comoda'); else { yo = ''; guardarYo(''); }  // v4.91
       cerrarDialogo(); pintar();
     };
     $('dlg-guardar').addEventListener('click', salir);
-    $('dlg-salir-clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') salir(); });
+    $('dlg-salir-clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); salir(); } });
+    $('dlg-cerrar').textContent = 'Cancelar';  // v4.92
   }
 
   /* v4.28 (v4.42, para todos): por núcleos: los padres y, debajo y metidos, sus hijos (y los hijos de sus hijos) */
@@ -2045,7 +2063,7 @@
       (nunca.length ? '<h3 class="rf-sec">No la han usado nunca (' + nunca.length + ')</h3>' + porFam.filter(function (x) { return x.nunca.length; }).map(function (x) {
         return '<div class="aj-grupo"><p class="aj-grupo-t">' + esc(famNom(x.f)) + ' <span>' + x.nunca.length + '</span></p><ul class="aj-filas">' + x.nunca.map(function (p) {
           return '<li><span><b>' + esc(p.apodo) + '</b>' + ([p.nombre, p.apellido].filter(Boolean).join(' ') && [p.nombre, p.apellido].filter(Boolean).join(' ') !== p.apodo ? ' <small>' + esc([p.nombre, p.apellido].filter(Boolean).join(' ')) + '</small>' : '') + '</span>' +
-            '<button type="button" class="mini" data-no-cuenta="' + esc(p.id) + '" aria-label="' + esc(p.apodo) + ' no cuenta">No cuenta</button></li>';
+            '<button type="button" class="mini" data-no-cuenta="' + esc(p.id) + '" aria-label="' + esc(p.apodo) + ' no usa la web">No usa la web</button></li>';
         }).join('') + '</ul></div>';
       }).join('') + '<p class="ayuda">Si alguien no va a usarla (no tiene móvil, por ejemplo), toca «No cuenta» y deja de salir aquí y en las cifras.</p>' : '') +
       (noCuentan.length ? '<h3 class="rf-sec">No cuentan (' + noCuentan.length + ')</h3><ul class="aj-filas gris">' + noCuentan.map(function (id) { return '<li><span>' + esc(nombre(id)) + '</span><button type="button" class="mini" data-si-cuenta="' + esc(id) + '" aria-label="Volver a contar a ' + esc(nombre(id)) + '">Volver a contar</button></li>'; }).join('') + '</ul>' : '') +
@@ -2102,7 +2120,7 @@
           return '<article class="pr-card"><h3>' + esc(c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^./, function (x) { return x.toUpperCase(); })) + '</h3><p class="pr-texto">' + esc(c.texto) + '</p><ol>' +
             (c.gente.length ? c.gente.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + esc(valorCat(c.id, g.valor)) + '</b><small>+' + g.puntos + '</small></li>'; }).join('') : '<li class="pr-nadie">Aún nadie.</li>') + '</ol></article>';
         }).join('') +
-        (pr.medallas.length ? '<article class="pr-card pr-ancha"><h3>Medallas</h3><ul class="pr-medallas">' + pr.medallas.map(function (m) { return '<li><b>' + esc(m.titulo) + '</b> <small class="pr-pts">+' + (m.puntos || pr.puntosMedalla) + '</small> <span>' + esc(m.gente.join(', ')) + '</span></li>'; }).join('') + '</ul></article>' : '') +
+        (pr.medallas.length ? '<article class="pr-card pr-ancha"><h3>Medallas</h3><ul class="pr-medallas">' + pr.medallas.map(function (m) { return '<li><b>' + esc(m.titulo) + '</b> <small class="pr-pts">' + (m.puntos || pr.puntosMedalla) + ((m.puntos || pr.puntosMedalla) === 1 ? ' punto' : ' puntos') + '</small> <span>' + esc(m.gente.join(', ')) + '</span></li>'; }).join('') + '</ul></article>' : '') +
         (pr.servicio.length ? '<article class="pr-card pr-ancha"><h3>El servicio</h3><ul class="pr-medallas">' + pr.servicio.map(function (x) { return '<li><b>' + esc(x.apodo) + '</b> <span>' + esc(x.medallas.length ? x.medallas.map(function (m) { return m.titulo; }).join(' · ') : 'sin medallas este mes') + '</span></li>'; }).join('') + '</ul></article>' : '') +
       '</div><p class="ayuda">Solo lo ves tú. En el resumen para el grupo solo van los destacados y las gracias: nunca quién va menos.</p>';
   }
@@ -2116,9 +2134,8 @@
     const ICONO = { secretaria: '📋', comidas: '🍽️', cenas: '🌙', noches: '🛏️', eventos: '🎉', avisa: '⏰', finde: '☀️', semana: '📅', compania: '👥' };
     const enlace = datos.url ? '\n\n👉 ' + datos.url.replace(/#.*$/, '') : '';
     return '🏆 *Casa Abuela · el último mes*\n¡Gracias a todos! Entre todos, ' + t.comidas + ' comidas, ' + t.cenas + ' cenas y ' + t.noches + ' noches con la abuela (' + t.personas + ' personas distintas).' +
-      (pr.familias.length ? '\n\n👑 *Familia del mes:* ' + cortoFamilia(pr.familias[0].familia) : '') +
-      (top.length ? '\n\n⭐ *Top 10:* ' + top.map(function (g) { return g.apodo; }).join(', ') : '') +
-      '\n\n*Los que más*\n' + pr.categorias.filter(function (c) { return c.gente.length; }).map(function (c) {
+      '\n\n💛 Gracias a todas las familias: cada visita cuenta.' +  // v4.92: sin el top 10 con nombres ni la familia del mes
+      '\n\n*Destacados del mes*\n' + pr.categorias.filter(function (c) { return c.gente.length; }).map(function (c) {
         return (ICONO[c.id] || '•') + ' ' + c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^De los que antes avisan$/, 'avisan con tiempo').replace(/^./, function (x) { return x.toUpperCase(); }) + ': ' + primeros(c).join(', ');
       }).join('\n') +
       (pr.medallas.length ? '\n\n🏅 *Medallas*\n' + pr.medallas.map(function (m) { return (PARA_GRUPO[m.titulo] || m.titulo) + ': ' + nombres(m.gente, 8); }).join('\n') : '') +
@@ -2132,8 +2149,9 @@
       abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Resumen del mes</h2></div>' +
         '<div class="dlg-cuerpo"><p class="ayuda">Solo los destacados y las gracias. Cópialo y pégalo en el grupo.</p>' +
         '<label class="campo" for="dlg-texto">Mensaje (puedes cambiarlo)<textarea id="dlg-texto" rows="14"></textarea></label></div>' +
-        '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-copiar">Copiar el mensaje</button><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+        '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-wa">Enviar por WhatsApp</button><button type="button" class="accion" id="dlg-copiar">Copiar</button><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
       $('dlg-texto').value = resumenPremios(pr);
+      $('dlg-wa').addEventListener('click', function () { abrirWhatsApp($('dlg-texto').value); });
       $('dlg-cerrar').addEventListener('click', cerrarDialogo);
       $('dlg-copiar').addEventListener('click', function () {
         const t = $('dlg-texto'), hecho = function () { aviso('Mensaje copiado. Pégalo en el grupo.'); };
@@ -2171,7 +2189,7 @@
       panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan) +
       '<section class="aj-sec" id="aj-premios"><h2>Premios</h2><p class="ayuda">Contando los premios del último mes…</p></section>' +  // v4.85
       '<section class="aj-sec"><h2>Historial de cambios</h2>' +
-        '<label class="buscar" for="aj-q"><span class="oculto">Buscar</span><input id="aj-q" type="search" autocomplete="off" placeholder="Buscar (persona, fecha, qué)"></label>' +
+        '<label class="buscar" for="aj-q"><span class="oculto">Buscar</span><input id="aj-q" type="search" autocomplete="off" placeholder="Buscar"></label>' +
         '<ul class="aj-hist" id="aj-hist"></ul></section>';
     const pintarHist = function () {
       const q = sinAcentos($('aj-q').value.trim());
@@ -2466,6 +2484,8 @@
     return out;
   }
   let evFiltro = '';  // v4.80
+  let ultimoY = 0;  // v4.92: el botón flotante se esconde al bajar y vuelve al subir
+  window.addEventListener('scroll', function () { const b = $('ev-anadir'); if (!b) return; const y = window.scrollY; b.classList.toggle('escondido', y > ultimoY + 4 && y > 120); if (y < ultimoY - 4) b.classList.remove('escondido'); ultimoY = y; }, { passive: true });
   /* v4.86: quien entra es del servicio: ve lo suyo y solo cambia lo suyo */
   function servicioYo() { const p = yo && datos && persona(yo); return !!(p && esServicio(p)); }
   function apuntarme(fecha, turno) {
@@ -2492,6 +2512,7 @@
     const pest = [modoAbuela() || !persona(yo) ? null : ['confirmar', 'Por confirmar', porConfirmar.length], ['proximos', 'Próximos', proximos.length], ['pasados', 'Pasados', pasados.length]].filter(Boolean);
     const lista = evFiltro === 'confirmar' ? porConfirmar : evFiltro === 'pasados' ? pasados : proximos;
     const enFechas = evFiltro === 'fechas';
+    $('ev-anadir').hidden = enFechas;  // v4.92: en las fechas señaladas no se añaden eventos
     $l.innerHTML = '<div class="ev-secciones" role="tablist"><button type="button" role="tab" data-ev-filtro="' + (porConfirmar.length && !modoAbuela() ? 'confirmar' : 'proximos') + '" aria-selected="' + !enFechas + '">Eventos' + (porConfirmar.length && !modoAbuela() ? ' <span class="ev-filtro-n alerta">' + porConfirmar.length + '</span>' : '') + '</button>' +
         '<button type="button" role="tab" data-ev-filtro="fechas" aria-selected="' + enFechas + '">Fechas señaladas</button></div>' +
       (enFechas ? '' : '<div class="ev-filtros" role="tablist">' + pest.map(function (x) {
@@ -3450,12 +3471,11 @@
     if (!q) { preguntarQuien(null); return; }
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(q.apodo) + '</h2>' + (p ? '<div><small>' + esc(deQuien(p)) + '</small></div>' : '') + '</div>' +
       '<div class="dlg-cuerpo">' +
+      '<div class="yo-menu">' + (p ? '<button type="button" class="accion" id="dlg-yo-comidas">' + (servicioYo() ? 'Mis días' : 'Mis comidas') + '</button><button type="button" class="accion" id="dlg-yo-datos">Mis datos</button>' : '') +
+        '<button type="button" class="accion" id="dlg-yo-otro">No soy ' + esc(q.apodo) + ' (cambiar de persona)</button></div>' +
       (p ? '<fieldset class="yo-vista"><legend>Cómo quieres ver la web</legend><div class="forma-ev" role="radiogroup">' + [['agil', 'Ágil', 'Letra pequeña, cabe más'], ['comoda', 'Cómoda', 'Letra y botones grandes'], ['sencilla', 'Sencilla', 'Solo para mirar, como la abuela']].map(function (x) {
         return '<button type="button" role="radio" data-vista-elige="' + x[0] + '" aria-pressed="' + (vistaElegida() === x[0]) + '" aria-checked="' + (vistaElegida() === x[0]) + '"><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div><p class="ayuda">Se guarda en este móvil. Para salir de la sencilla hace falta la clave.</p></fieldset>' : '') +
-      (p ? '<div id="yo-medallas"><p class="ayuda">Mirando tus medallas…</p></div>' : '') +
-      '<p class="ayuda">Los cambios que hagas se guardan a tu nombre.</p><div class="yo-menu">' +
-      (p ? '<button type="button" class="accion" id="dlg-yo-datos">Mis datos</button><button type="button" class="accion" id="dlg-yo-comidas">Mis comidas</button>' : '') +
-      '<button type="button" class="accion" id="dlg-yo-otro">No soy ' + esc(q.apodo) + ' (cambiar de persona)</button></div></div>' +
+      (p ? '<div id="yo-medallas"><p class="ayuda">Mirando tus medallas…</p></div>' : '') + '</div>' +
       '<div class="dlg-pie"><div class="botones"><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     if ($('dlg-yo-datos')) $('dlg-yo-datos').addEventListener('click', function () { cerrarDialogo(); abrirPersona(yo); });
@@ -3479,8 +3499,8 @@
     }
     return (n.top10 ? '<div class="mn-top-caja"><b>Top 10 general · ' + n.puntos + ' puntos</b><span>¡Estás entre los que más acompañan a la abuela! Por eso tu nombre sale en dorado.</span></div>'
         : '<div class="mn-top-caja fuera"><b>' + (n.puntos ? 'Llevas ' + n.puntos + (n.puntos === 1 ? ' punto' : ' puntos') : 'Aún no tienes puntos') + '</b><span>Suma puntos en las categorías para entrar en el top 10 general y que tu nombre salga en dorado.</span></div>') +
-      (l.length ? '<div class="mn-distinciones"><p class="mn-dias-tit">Tus medallas</p><ul>' + l.map(function (d) {
-        return '<li' + (d.categoria ? ' class="cat"' : '') + '><b>' + esc(d.titulo) + (d.puntos ? ' <em>+' + d.puntos + '</em>' : '') + '</b><span>' + esc(d.texto) + '</span></li>'; }).join('') + '</ul></div>'
+      (l.length ? '<details class="mn-distinciones"><summary class="mn-dias-tit">Tus medallas (' + l.length + ')</summary><ul>' + l.map(function (d) {
+        return '<li' + (d.categoria ? ' class="cat"' : '') + '><b>' + esc(d.titulo) + '</b>' + (d.puntos ? '<em>' + d.puntos + (d.puntos === 1 ? ' punto' : ' puntos') + '</em>' : '') + '<span>' + esc(d.texto) + '</span></li>'; }).join('') + '</ul></details>'
         : '<p class="ayuda">Aún no tienes medallas. Ve a comer con la abuela, apúntate con tiempo, contesta a los eventos… y irán saliendo.</p>') +
       '<details class="mn-como"><summary>Cómo funciona</summary><p>Hay nueve categorías, de los últimos 30 días: comidas, cenas, noches, eventos, avisar con tiempo, fin de semana, entre semana, traer compañía y la secretaría de la familia (apuntar y contestar por los demás). En cada una, los 10 primeros se llevan medalla y puntos: 10 al primero, 9 al segundo… y 1 al décimo (los empatados, igual).</p>' +
         '<p>El <b>top 10 general</b> suma todos los puntos (los de las categorías y los de las medallas): puedes estar en el top de una categoría y no en el general. Su nombre sale en dorado.</p>' +
@@ -3505,7 +3525,8 @@
     $('dlg-guardar').addEventListener('click', function () {
       if (!elegidoBuscador) { errorDialogo('Busca y toca tu nombre para seguir.'); return; }
       yo = elegidoBuscador; guardarYo(yo);
-      cerrarDialogo();
+      cerrarDialogo(); pintar();  // v4.92: arriba, ya con tu nombre
+      const qq = quienEs(yo); if (qq) aviso('Hola, ' + qq.apodo + '. Ahora los cambios van a tu nombre.');
       cargar().then(function () { if (siguiente) siguiente(); });
     });
   }
@@ -3678,11 +3699,21 @@
   let dlgCambiado = false;  // v4.91: si has escrito algo, tocar fuera pregunta antes de cerrar
   $dlg.addEventListener('input', function () { dlgCambiado = true; });
   $dlg.addEventListener('change', function () { dlgCambiado = true; });
+  function preguntarSalir() {  // v4.92: dentro de la ventana (los avisos del navegador no siempre salen)
+    if ($dlg.querySelector('.dlg-salir')) return;
+    const pieDlg = $dlg.querySelector('.dlg-pie') || $dlg;
+    pieDlg.insertAdjacentHTML('afterbegin', '<div class="dlg-salir" role="alert"><p>¿Salir sin guardar? Se perderá lo que has escrito.</p><div class="botones"><button type="button" class="principal" data-salir-seguir>Seguir escribiendo</button><button type="button" class="accion quitar" data-salir-si>Salir sin guardar</button></div></div>');
+    const caja = $dlg.querySelector('.dlg-salir');
+    caja.querySelector('[data-salir-seguir]').addEventListener('click', function () { caja.remove(); });
+    caja.querySelector('[data-salir-si]').addEventListener('click', function () { dlgCambiado = false; cerrarDialogo(); });
+    caja.querySelector('[data-salir-seguir]').focus();
+  }
   $dlg.addEventListener('click', function (e) {
     if (e.target !== $dlg || pidiendoClave) return;
-    if (dlgCambiado && !window.confirm('Has cambiado algo y no lo has guardado. ¿Salir sin guardar?')) return;
+    if (dlgCambiado) { preguntarSalir(); return; }
     cerrarDialogo();
   });
+  $dlg.addEventListener('cancel', function (e) { if (dlgCambiado && !pidiendoClave) { e.preventDefault(); preguntarSalir(); } });
   $dlg.addEventListener('cancel', function (e) { if (pidiendoClave) e.preventDefault(); });  // v4.17: la clave no se puede saltar
   function pie(textoGuardar, extra) {
     return '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones">' +
@@ -3876,7 +3907,7 @@
       '<div class="dlg-cuerpo">' + (sinServicio(fecha, turno) && !fueraTurno(fecha, turno) ? '<p class="aviso-servicio">' + esc(avisoSinServicio(fecha, turno)) + '</p>' : '') + buscadorHtml('Quién viene') +
       '<label class="campo" for="dlg-nota">Nota para ese día (si hace falta)<input id="dlg-nota" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: llega a las 21:30"></label>' +
       campoAcompanantes(0) + '</div>' +
-      pie('Apuntar a esta persona'));
+      pie('Apuntar'));
     montarBuscador({ excluir: ya, seleccion: ya.indexOf(yo) === -1 && persona(yo) ? yo : '', alta: true });
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
@@ -4168,7 +4199,8 @@
         if (prox && yaPaso(f, t.id)) return;  // v4.73
         const ids = idsDe(f, t.id), comp = compania(ids, t.id), serv = servicioDe(ids, t.id), motivo = sinTurno(f, t.id);
         const total = comp.length + acompanantesDe(comp, f, t.id);
-        b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (total > 1 ? ' (' + total + ')' : '');
+        const mesa = t.id !== 'DORMIR' && comp.length && !fueraTurno(f, t.id) && motivo === null ? raciones(ids, f, t.id).total : 0;  // v4.92: como en la web
+        b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (mesa ? ' (' + mesa + ' a la mesa, con la abuela)' : total > 1 ? ' (' + total + ')' : '');
         if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? ' 🎉 ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
         else if (motivo !== null && !comp.length) { b += '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.'; return; }
         else if (!comp.length) b += yaPaso(f, t.id) ? '\nNo fue nadie.' : '\n⚠️ Falta alguien';  // v4.63
@@ -4389,6 +4421,7 @@
   }
   function ponerVista(v) {
     if (v === 'ajustes') ajustes = null;  // v4.58: al entrar, lo último
+    if (v === 'eventos') evFiltro = '';  // v4.92: al entrar, «Por confirmar» si hay algo
     if (v === 'rellenar') { rfSucio = true; const y = yo && persona(yo); if (!rfFamilia && y && !esServicio(y) && y.familia !== 'Otros') rfFamilia = familiaDe(y); }  // v4.40; v4.65: directamente la tuya
     vista = SUBTITULOS[v] ? v : 'semana';
     ['semana', 'eventos', 'personas', 'huecos', 'rellenar', 'ajustes'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
