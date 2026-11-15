@@ -73,7 +73,7 @@ const COLS_DIAS = 32;     // v4.15: AD EVENTO, AE EVENTO_TURNO, AF EVENTO_TEXTO
 const TITULOS_DIAS_V415 = ['EVENTO', 'EVENTO_TURNO', 'EVENTO_TEXTO'];
 const MAX_ACOMPANANTES = 20;
 const MAX_EVENTO = 60, MAX_EVENTO_TEXTO = 500;
-const COLS_EVENTOS = 13;  // ID | NOMBRE | DESDE | HASTA | CUANDO | TEXTO | VAN | NO_VAN | CREADO_EN | BORRADO | LUGAR | HORA | TURNOS
+const COLS_EVENTOS = 15;  // ID | NOMBRE | DESDE | HASTA | CUANDO | TEXTO | VAN | NO_VAN | CREADO_EN | BORRADO | LUGAR | HORA | TURNOS | DIAS (v4.67) | NOTAS (v4.68)
 const CUANDO_EVENTO = ['DIA', 'COMIDA', 'CENA', 'DORMIR'];
 const MAX_DIAS_EVENTO = 31;
 const MAX_ALERGIAS = 100;
@@ -106,7 +106,8 @@ const API_ = {
   getAjustes: function (a) { return getAjustes(a[0]); },
   guardarAjustes: function (a) { return guardarAjustes(a[0], a[1], a[2]); },
   borrarEvento: function (a) { return borrarEvento(a[0], a[1], a[2]); },
-  apuntarEvento: function (a) { return apuntarEvento(a[0], a[1], a[2], a[3], a[4]); },
+  apuntarEvento: function (a) { return apuntarEvento(a[0], a[1], a[2], a[3], a[4], a[5]); },  // v4.67: a[5], los días
+  notaEvento: function (a) { return notaEvento(a[0], a[1], a[2], a[3], a[4]); },  // v4.68
   guardarAusencia: function (a) { return guardarAusencia(a[0], a[1], a[2], a[3], a[4], a[5]); },
   crearPersona: function (a) { return crearPersona(a[0], a[1], a[2]); },
   darDeBaja: function (a) { return darDeBaja(a[0], a[1], a[2]); },
@@ -1297,7 +1298,7 @@ function textoFechas_(lista) {
 /* ---------- v4.28: eventos ---------- */
 
 function hojaEventos_(ss) {
-  return ss.getSheetByName(HOJA_EVENTOS) || crearHoja_(ss, HOJA_EVENTOS, ['ID', 'NOMBRE', 'DESDE', 'HASTA', 'CUANDO', 'TEXTO', 'VAN', 'NO_VAN', 'CREADO_EN', 'BORRADO', 'LUGAR', 'HORA', 'TURNOS']);
+  return ss.getSheetByName(HOJA_EVENTOS) || crearHoja_(ss, HOJA_EVENTOS, ['ID', 'NOMBRE', 'DESDE', 'HASTA', 'CUANDO', 'TEXTO', 'VAN', 'NO_VAN', 'CREADO_EN', 'BORRADO', 'LUGAR', 'HORA', 'TURNOS', 'DIAS', 'NOTAS']);
 }
 function listaIds_(t) { return String(t || '').split(';').map(function (x) { return x.trim(); }).filter(Boolean); }
 function aFilaEvento_(f) { return f.map(function (c, i) { return (i === 2 || i === 3) ? (aFecha_(c) || String(c || '').trim()) : String(c == null ? '' : c).trim(); }); }
@@ -1309,7 +1310,7 @@ function leerEventos_(ss) {
     return abrirTabla_(hoja, COLS_EVENTOS, aFilaEvento_).vivas().filter(function (x) { return !x.v[9]; }).map(function (x) {
       const f = x.v;
       return { id: f[0], nombre: f[1], desde: f[2], hasta: f[3] || f[2], cuando: f[4] || 'DIA', texto: f[5],
-        van: listaIds_(f[6]).map(alias), noVan: listaIds_(f[7]).map(alias), lugar: f[10], hora: f[11], turnos: leerTurnosEv_(f[12]) };
+        van: listaIds_(f[6]).map(alias), noVan: listaIds_(f[7]).map(alias), lugar: f[10], hora: f[11], turnos: leerTurnosEv_(f[12]), dias: leerDiasEv_(f[13], alias), notas: leerNotasEv_(f[14], alias) };
     }).sort(function (a, b) { return (a.desde + a.id).localeCompare(b.desde + b.id); });
   });
 }
@@ -1330,6 +1331,55 @@ function textoTurnosEv_(turnos, desde, hasta) {
   const partes = dias.map(function (f) { return [f].concat(TURNOS.filter(function (k) { return (turnos[f] || []).indexOf(k) !== -1; })); });
   if (!partes.some(function (p) { return p.length > 1; })) throw new Error('Marca al menos una comida, cena o noche del evento.');
   return partes.map(function (p) { return p.join(' '); }).join('; ');
+}
+/* v4.67: en un evento de varios días, quién va solo algunos («(N) - Marcos 2026-12-20; (N) - Ana 2026-12-19 2026-12-20»).
+   Quien va y no sale aquí, va todos los días. */
+function leerDiasEv_(v, alias) {
+  const r = {};
+  String(v || '').split(';').forEach(function (x) {
+    const t = x.trim(), m = t.match(/^(.*?)\s+((?:\d{4}-\d{2}-\d{2}\s*)+)$/);
+    if (!m) return;
+    const dias = m[2].trim().split(/\s+/).filter(esFecha_);
+    if (dias.length) r[alias ? alias(m[1].trim()) : m[1].trim()] = dias;
+  });
+  return r;
+}
+function textoDiasEv_(dias) {
+  return Object.keys(dias).filter(function (id) { return dias[id] && dias[id].length; }).map(function (id) { return id + ' ' + dias[id].join(' '); }).join('; ');
+}
+function tituloEv_(ss, col, titulo) {
+  const cab = hojaEventos_(ss).getRange(1, col);
+  if (!String(cab.getValue()).trim() || /^Column \d+$/.test(String(cab.getValue()).trim())) cab.setValue(titulo);
+}
+/* v4.68: una nota de cada persona en el evento ({"(N) - Marcos": "Llego el domingo a las 11"}) */
+function leerNotasEv_(v, alias) {
+  let o = {};
+  try { o = JSON.parse(String(v || '').trim() || '{}'); } catch (e) { o = {}; }
+  const r = {};
+  if (o && typeof o === 'object') Object.keys(o).forEach(function (id) { if (String(o[id] || '').trim()) r[alias ? alias(id) : id] = String(o[id]).trim(); });
+  return r;
+}
+/** La nota de una persona en un evento (vacía, se quita) */
+function notaEvento(id, personaId, nota, quien, vista) {
+  return conBloqueo_(function (ss) {
+    const config = leerConfig_(ss);
+    const todos = leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir));
+    const autor = autor_(todos, quien);
+    const p = todos.filter(function (t) { return t.id === personaId; })[0];
+    if (!p) throw new Error('No encontramos ese nombre en la lista.');
+    const texto = limpiar_(nota, MAX_NOTA, 'La nota', true);
+    const tabla = abrirEventos_(ss);
+    const x = filaEvento_(tabla, id);
+    const notas = leerNotasEv_(x.v[14], resolverAlias_(ss));
+    if ((notas[personaId] || '') === texto) return datos_(ss, vista || {});
+    if (texto) notas[personaId] = texto; else delete notas[personaId];
+    x.v[14] = Object.keys(notas).length ? JSON.stringify(notas) : ''; x.cambiada = true;
+    tabla.guardar();
+    tituloEv_(ss, 15, 'NOTAS');
+    olvidar_('eventos');
+    registrar_(ss, autor, ['Nota de ' + p.apodo + ' en ' + x.v[1] + ': ' + (texto || 'borrada')]);
+    return datos_(ss, vista || {});
+  });
 }
 function abrirEventos_(ss) { return abrirTabla_(hojaEventos_(ss), COLS_EVENTOS, aFilaEvento_); }
 function filaEvento_(tabla, id) {
@@ -1387,8 +1437,8 @@ function borrarEvento(id, quien, vista) {
   });
 }
 
-/** va: true (va), false (no va) o null (sin decir) */
-function apuntarEvento(id, personaId, va, quien, vista) {
+/** va: true (va), false (no va) o null (sin decir); dias (v4.67, si va): los días que va de un evento de varios días (nada = todos) */
+function apuntarEvento(id, personaId, va, quien, vista, dias) {
   return conBloqueo_(function (ss) {
     const config = leerConfig_(ss);
     const todos = leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir));
@@ -1401,10 +1451,21 @@ function apuntarEvento(id, personaId, va, quien, vista) {
     const van = listaIds_(x.v[6]).map(alias).filter(function (i) { return i !== personaId; });
     const noVan = listaIds_(x.v[7]).map(alias).filter(function (i) { return i !== personaId; });
     if (va === true) van.push(personaId); else if (va === false) noVan.push(personaId);
-    x.v[6] = van.join('; '); x.v[7] = noVan.join('; '); x.cambiada = true;
+    // v4.67: los días sueltos (solo si va, el evento es de varios días y no son todos)
+    const desde = x.v[2], hasta = x.v[3] || x.v[2];
+    const todosDias = [];
+    for (let f = desde; esFecha_(f) && f <= hasta && todosDias.length <= MAX_DIAS_EVENTO; f = sumarDias_(f, 1)) todosDias.push(f);
+    const suyos = va === true && Array.isArray(dias) ? todosDias.filter(function (f) { return dias.indexOf(f) !== -1; }) : [];
+    if (va === true && Array.isArray(dias) && !suyos.length) throw new Error('Marca al menos un día (o, si no va ninguno, «no va»).');
+    const porDias = leerDiasEv_(x.v[13], alias);
+    delete porDias[personaId];
+    if (suyos.length && suyos.length < todosDias.length) porDias[personaId] = suyos;
+    x.v[6] = van.join('; '); x.v[7] = noVan.join('; '); x.v[13] = textoDiasEv_(porDias); x.cambiada = true;
     tabla.guardar();
+    tituloEv_(ss, 14, 'DIAS');  // v4.67: el título de la columna nueva
     olvidar_('eventos');
-    registrar_(ss, autor, [p.apodo + (va === true ? ' va a ' : va === false ? ' no va a ' : ' sin decir si va a ') + x.v[1]]);
+    const soloDias = porDias[personaId] ? ' (solo ' + porDias[personaId].map(ddmm_).join(', ') + ')' : '';
+    registrar_(ss, autor, [p.apodo + (va === true ? ' va a ' : va === false ? ' no va a ' : ' sin decir si va a ') + x.v[1] + soloDias]);
     return datos_(ss, vista || {});
   });
 }

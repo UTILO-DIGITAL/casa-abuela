@@ -60,7 +60,7 @@ const ctx = {
   ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, guardarPersonas, getAjustes, guardarAjustes, api_ };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, guardarPersonas, getAjustes, guardarAjustes, api_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -264,6 +264,38 @@ ver('y quitarse', evt.van.join() === JP_);
 d = R.guardarEvento({ id: ev1.id, nombre: 'PortAventura y Ferrari Land', desde: '2026-12-19', hasta: '2026-12-21', cuando: 'DIA' }, M_, V2);
 evt = d.eventos.find(e => e.id === ev1.id);
 ver('cambiar el evento no borra quién va', evt.nombre === 'PortAventura y Ferrari Land' && evt.hasta === '2026-12-21' && evt.van.join() === JP_);
+// v4.67: días sueltos de un evento de varios días
+d = R.apuntarEvento(ev1.id, M_, true, M_, V2, ['2026-12-20']);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('ir solo el domingo', evt.van.indexOf(M_) !== -1 && JSON.stringify(evt.dias) === JSON.stringify({ [M_]: ['2026-12-20'] }) && hojas.MESA_EVENTOS.filas[0][13] === 'DIAS');
+d = R.apuntarEvento(ev1.id, JP_, true, M_, V2, ['2026-12-19', '2026-12-21', '2027-01-01']);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('dos días (y uno que no es del evento, fuera)', evt.dias[JP_].join() === '2026-12-19,2026-12-21' && evt.dias[M_].join() === '2026-12-20');
+d = R.apuntarEvento(ev1.id, JP_, true, M_, V2, ['2026-12-19', '2026-12-20', '2026-12-21']);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('todos los días = sin días sueltos', !evt.dias[JP_] && evt.van.indexOf(JP_) !== -1);
+err = ''; try { R.apuntarEvento(ev1.id, JP_, true, M_, V2, []); } catch (e) { err = e.message; }
+ver('ningún día, no', /al menos un día/.test(err));
+d = R.apuntarEvento(ev1.id, M_, false, M_, V2, ['2026-12-20']);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('si no va, fuera sus días', !evt.dias[M_] && evt.noVan.indexOf(M_) !== -1);
+const porApi = R.api_('apuntarEvento', [ev1.id, M_, true, M_, V2, ['2026-12-21']]);
+evt = ((JSON.parse(porApi.getContent ? porApi.getContent() : JSON.stringify(porApi)).r || {}).eventos || []).find(e => e.id === ev1.id) || R.getDatos(V2).eventos.find(e => e.id === ev1.id);
+ver('los días también llegan por la API', (evt.dias[M_] || []).join() === '2026-12-21');
+// v4.68: notas
+d = R.notaEvento(ev1.id, M_, 'Llego el domingo a las 11', JP_, V2);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('una nota en el evento', evt.notas[M_] === 'Llego el domingo a las 11' && hojas.MESA_EVENTOS.filas[0][14] === 'NOTAS');
+d = R.notaEvento(ev1.id, JP_, 'Sin gluten; ojo', M_, V2);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('dos notas, con punto y coma', evt.notas[JP_] === 'Sin gluten; ojo' && evt.notas[M_] === 'Llego el domingo a las 11');
+d = R.notaEvento(ev1.id, M_, '', M_, V2);
+evt = d.eventos.find(e => e.id === ev1.id);
+ver('borrar la nota', !evt.notas[M_] && evt.notas[JP_]);
+err = ''; try { R.notaEvento(ev1.id, M_, 'x'.repeat(200), M_, V2); } catch (e) { err = e.message; }
+ver('una nota muy larga, no', /nota/i.test(err));
+ver('notaEvento, en la API', R.api_('notaEvento', [ev1.id, JP_, '', M_, V2]) !== undefined);
+d = R.apuntarEvento(ev1.id, M_, null, M_, V2);
 err = ''; try { R.guardarEvento({ nombre: 'X', desde: '2026-12-20', hasta: '2026-12-19' }, M_, V2); } catch (e) { err = e.message; }
 ver('el último día no puede ser antes', /antes del primero/.test(err));
 err = ''; try { R.guardarEvento({ nombre: '', desde: '2026-12-20' }, M_, V2); } catch (e) { err = e.message; }
