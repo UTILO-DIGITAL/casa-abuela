@@ -2392,22 +2392,16 @@
     infTexto(c, 'Casa Abuela', 70, INF_H - 56, 28, 600, claro ? 'rgba(255,255,255,.8)' : INF_C.verde, 't');
     infTexto(c, n + ' / ' + total, INF_W - 70, INF_H - 56, 26, 700, claro ? 'rgba(255,255,255,.7)' : INF_C.suave, 'n', 'right');
   }
-  // reparte tarjetas de alto variable en una o más diapositivas
-  function infPaginar(titulo, sub, items, gap) {
-    const pags = [];
-    let pag = null, y = 0;
-    const nueva = function () { pag = infLienzo(INF_C.crema); infCabecera(pag.c, pags.length ? titulo + ' (sigue)' : titulo, pags.length ? '' : sub); pags.push(pag); y = 290; };
-    nueva();
-    // si no cabe en una, se reparten a partes iguales (nada de una página con una sola tarjeta)
-    const hs = items.map(function (it) { return it.alto(pag.c) + gap; }), libre = INF_H - 100 - 290 + gap;
-    let n = 1, acu = 0;
-    hs.forEach(function (h) { if (acu + h > libre && acu) { n++; acu = 0; } acu += h; });
-    const cupo = n > 1 ? Math.min(libre, hs.reduce(function (a, b) { return a + b; }, 0) / n * 1.12) : libre;
-    items.forEach(function (it, i) {
-      if ((y - 290) + hs[i] > (y - 290 + hs[i] > libre ? 0 : cupo) && y > 290) nueva();
-      it.pintar(pag.c, y); y += hs[i];
-    });
-    return pags;
+  // v5.7: cada sección, en una sola página: si no cabe, todo más pequeño (escala k)
+  function infUnaPagina(titulo, sub, items, gap) {
+    const pag = infLienzo(INF_C.crema), libre = INF_H - 110 - 280;
+    infCabecera(pag.c, titulo, sub);
+    let k = 1;
+    const total = function () { return items.reduce(function (a, it) { return a + it.alto(pag.c, k) + gap * k; }, -gap * k); };
+    while (k > .5 && total() > libre) k -= .04;
+    let y = 280;
+    items.forEach(function (it) { it.pintar(pag.c, y, k); y += it.alto(pag.c, k) + gap * k; });
+    return pag;
   }
   function infServicioMedallas(pr) {
     return (pr.servicio || []).map(function (x) {
@@ -2474,58 +2468,62 @@
       });
       hojas.push(h);
     }
-    // 4. medallas: todos los que las tienen, con su nombre
+    // 4. medallas: todos los que las tienen, con su nombre (en una página)
     const meds = (pr.medallas || []).filter(function (m) { return m.gente.length; }).slice().sort(function (a, b) { return b.gente.length - a.gente.length; });
     if (meds.length) {
       const todos = {};
       meds.forEach(function (m) { m.gente.forEach(function (g) { todos[g] = true; }); });
       const nTodos = Object.keys(todos).length;
-      infPaginar('Medallas del mes', nTodos === 1 ? '1 persona con medalla' : nTodos + ' personas con medalla. ¡Enhorabuena!', meds.map(function (m) {
-        const texto = function (c) { infLetra(c, 700, 28, 'n'); let k = m.gente.length, s; do { s = infNombres(m.gente, k); k--; } while (k > 0 && infLineas(c, s, INF_W - 200).length > 3); return s; };
+      hojas.push(infUnaPagina('Medallas del mes', nTodos === 1 ? '1 persona con medalla' : nTodos + ' personas con medalla. ¡Enhorabuena!', meds.map(function (m) {
+        const ancho = INF_W - 200;
+        const texto = function (c, k) { infLetra(c, 700, 26 * k, 'n'); let n = m.gente.length, t; do { t = infNombres(m.gente, n); n--; } while (n > 0 && infLineas(c, t, ancho).length > 3); return t; };
+        const lin = function (c, k) { const t = texto(c, k); infLetra(c, 700, 26 * k, 'n'); return infLineas(c, t, ancho).length; };
         return {
-          alto: function (c) { infLetra(c, 700, 28, 'n'); return 92 + infLineas(c, texto(c), INF_W - 200).length * 36 + 14; },
-          pintar: function (c, y) {
-            const hh = this.alto(c);
-            infCaja(c, 70, y, INF_W - 140, hh, 28, INF_C.oroClaro);
-            infIcono(c, INF_ICONO_MED[m.id], 130, y + 54, 34, INF_C.tinta, INF_C.oro);
-            infTexto(c, PARA_GRUPO[m.titulo] || INF_GRUPO[m.titulo] || m.titulo, 180, y + 68, 40, 600, INF_C.tinta, 't', 'left', INF_W - 420);
+          alto: function (c, k) { return (78 + lin(c, k) * 33 + 12) * k; },
+          pintar: function (c, y, k) {
+            const hh = this.alto(c, k);
+            infCaja(c, 70, y, INF_W - 140, hh, 24 * k, INF_C.oroClaro);
+            infIcono(c, INF_ICONO_MED[m.id], 70 + 50 * k, y + 44 * k, 30 * k, INF_C.tinta, INF_C.oro);
+            infTexto(c, PARA_GRUPO[m.titulo] || INF_GRUPO[m.titulo] || m.titulo, 70 + 100 * k, y + 56 * k, 36 * k, 600, INF_C.tinta, 't', 'left', INF_W - 360);
             const n = String(m.gente.length);
-            infLetra(c, 800, 30, 'n');
-            const pw = c.measureText(n).width + 44;
-            infCaja(c, INF_W - 100 - pw, y + 28, pw, 54, 27, INF_C.oro);
-            infTexto(c, n, INF_W - 100 - pw / 2, y + 66, 30, 800, INF_C.tinta, 'n', 'center');
-            infParrafo(c, texto(c), 100, y + 118, INF_W - 200, 28, 700, INF_C.suave, 36, 'n');
+            infLetra(c, 800, 26 * k, 'n');
+            const pw = c.measureText(n).width + 36 * k;
+            infCaja(c, INF_W - 100 - pw, y + 22 * k, pw, 46 * k, 23 * k, INF_C.oro);
+            infTexto(c, n, INF_W - 100 - pw / 2, y + 54 * k, 26 * k, 800, INF_C.tinta, 'n', 'center');
+            const t = texto(c, k);
+            infParrafo(c, t, 100, y + 100 * k, ancho, 26 * k, 700, INF_C.suave, 33 * k, 'n');
           }
         };
-      }), 16).forEach(function (p) { hojas.push(p); });
+      }), 14));
     }
-    // 5. el servicio: todos, cada uno con sus medallas (al menos una)
+    // 5. el servicio: todos, cada uno con sus medallas (al menos una), en una página
     const serv = infServicioMedallas(pr);
     if (serv.length) {
-      infPaginar('Gracias al servicio', 'Por cuidar de la abuela cada día', serv.map(function (x) {
-        const pills = function (c) {
-          infLetra(c, 800, 27, 'n');
+      hojas.push(infUnaPagina('Gracias al servicio', 'Por cuidar de la abuela cada día', serv.map(function (x) {
+        const pills = function (c, k) {
+          infLetra(c, 800, 25 * k, 'n');
           let px = 100, py = 0;
           return x.medallas.map(function (m) {
-            const tx = m.titulo, w = c.measureText(tx).width + 86;
-            if (px + w > INF_W - 100) { px = 100; py += 62; }
-            const r = { tx: tx, id: m.id, x: px, y: py, w: Math.min(w, INF_W - 200) }; px += w + 16; return r;
+            const w = Math.min(c.measureText(m.titulo).width + 80 * k, INF_W - 200);
+            if (px + w > INF_W - 100) { px = 100; py += 56 * k; }
+            const r = { tx: m.titulo, id: m.id, x: px, y: py, w: w }; px += w + 14 * k; return r;
           });
         };
         return {
-          alto: function (c) { const p = pills(c); return 100 + p[p.length - 1].y + 62 + 12; },
-          pintar: function (c, y) {
-            const hh = this.alto(c);
-            infCaja(c, 70, y, INF_W - 140, hh, 28, INF_C.blanco, INF_C.oro);
-            infTexto(c, x.apodo, 100, y + 68, 50, 600, INF_C.verde, 't', 'left', INF_W - 200);
-            pills(c).forEach(function (p) {
-              infCaja(c, p.x, y + 92 + p.y, p.w, 50, 25, INF_C.oroClaro);
-              infIcono(c, INF_ICONO_MED[p.id], p.x + 30, y + 92 + p.y + 25, 26, INF_C.tinta);
-              infTexto(c, p.tx, p.x + 56, y + 92 + p.y + 35, 27, 800, INF_C.tinta, 'n', 'left', p.w - 72);
+          alto: function (c, k) { const p = pills(c, k); return 92 * k + p[p.length - 1].y + 56 * k + 10 * k; },
+          pintar: function (c, y, k) {
+            const hh = this.alto(c, k);
+            infCaja(c, 70, y, INF_W - 140, hh, 24 * k, INF_C.blanco, INF_C.oro);
+            infTexto(c, x.apodo, 100, y + 62 * k, 46 * k, 600, INF_C.verde, 't', 'left', INF_W - 200);
+            pills(c, k).forEach(function (p) {
+              const py = y + 84 * k + p.y;
+              infCaja(c, p.x, py, p.w, 46 * k, 23 * k, INF_C.oroClaro);
+              infIcono(c, INF_ICONO_MED[p.id], p.x + 28 * k, py + 23 * k, 24 * k, INF_C.tinta);
+              infTexto(c, p.tx, p.x + 52 * k, py + 32 * k, 25 * k, 800, INF_C.tinta, 'n', 'left', p.w - 66 * k);
             });
           }
         };
-      }), 18).forEach(function (p) { hojas.push(p); });
+      }), 16));
     }
     // 6. cierre
     h = infLienzo(INF_C.coral);
