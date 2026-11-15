@@ -256,13 +256,35 @@ const CATEGORIAS = {
   finde: { titulo: 'Top 10 de fin de semana', texto: 'De los que más van los sábados y los domingos.' },  // v4.85
   semana: { titulo: 'Top 10 entre semana', texto: 'De los que más van de lunes a viernes.' },
   compania: { titulo: 'Top 10 en traer compañía', texto: 'De los que más gente traen a la mesa.' },
+  secretaria: { titulo: 'Secretaría de la familia', texto: 'De los que más apuntan y contestan por los demás.' },  // v4.88
 };
+/** v4.88: los cambios del último mes (MESA_CAMBIOS): quién los hizo y qué */
+function cambios30_(ss) {
+  return memo_('cambios30', function () {
+    const h = ss.getSheetByName(HOJA_CAMBIOS);
+    const n = h ? Math.max(0, h.getLastRow() - 1) : 0;
+    if (!n) return [];
+    const desde = Math.max(0, n - 4000), hace30 = sumarDias_(hoy_(), -30);
+    return h.getRange(2 + desde, 1, n - desde, 4).getValues().map(function (f) {
+      return { cuando: f[0] instanceof Date ? Utilities.formatDate(f[0], TZ, 'yyyy-MM-dd') : String(f[0]).slice(0, 10), quien: String(f[1]), apodo: String(f[2]), cambio: String(f[3]) };
+    }).filter(function (x) { return x.cuando >= hace30; });
+  });
+}
+/** v4.88: ¿ese cambio es apuntar o contestar por otra persona? (el nombre de quien va, distinto del de quien lo hace) */
+function porOtro_(c) {
+  const m = c.cambio.match(/^Apunta a (.+?) a la |^Quita a (.+?) de la |^Nota de (.+?) en |^(.+?) (?:va|no va|sin decir si va) a |^(.+?) va siempre los |^(.+?) deja de ir /);
+  if (!m) return false;
+  const quien = m[1] || m[2] || m[3] || m[4] || m[5] || m[6];
+  return !!quien && quien !== c.apodo;
+}
+function esDatos_(c) { return /^(Cumpleaños|Otras fechas|Menú|Alergias|Apellido|Nombre) de |son pareja|: casados|es hijo o hija|falleció|: (hombre|mujer)$/.test(c.cambio); }
 function categorias_(ss, config, personas) {
   return memo_('categorias', function () {
     const hoy = hoy_(), hace30 = sumarDias_(hoy, -30), v = visitas_(ss, config);
     const deFamilia = {};
     personas.forEach(function (x) { if (x.familia !== 'Servicio' && x.familia !== 'Otros') deFamilia[x.id] = true; });
-    const cats = { comidas: {}, cenas: {}, noches: {}, eventos: {}, avisa: {}, finde: {}, semana: {}, compania: {} };
+    const cats = { comidas: {}, cenas: {}, noches: {}, eventos: {}, avisa: {}, finde: {}, semana: {}, compania: {}, secretaria: {} };
+    cambios30_(ss).forEach(function (x) { if (deFamilia[x.quien] && porOtro_(x)) cats.secretaria[x.quien] = (cats.secretaria[x.quien] || 0) + 1; });  // v4.88
     const k = { COMIDA: 'comidas', CENA: 'cenas', DORMIR: 'noches' };
     const suma = function (c, id, n) { cats[c][id] = (cats[c][id] || 0) + n; };
     v.ef.forEach(function (a) {
@@ -283,7 +305,7 @@ function categorias_(ss, config, personas) {
     const pts = {}, puntos = {};
     Object.keys(cats).forEach(function (c) { pts[c] = puntosCat_(cats[c]); Object.keys(pts[c]).forEach(function (id) { puntos[id] = (puntos[id] || 0) + pts[c][id]; }); });
     // v4.84: las medallas que no compiten con nadie suman PUNTOS_MEDALLA cada una
-    Object.keys(deFamilia).forEach(function (id) { const m = logros_(ss, v, id).length; if (m) puntos[id] = (puntos[id] || 0) + m * PUNTOS_MEDALLA; });
+    Object.keys(deFamilia).forEach(function (id) { const m = logros_(ss, v, id).reduce(function (t, l) { return t + l[3]; }, 0); if (m) puntos[id] = (puntos[id] || 0) + m; });
     return { cats: cats, pts: pts, puntos: puntos };
   });
 }
@@ -295,21 +317,51 @@ function distinciones_(ss, config, personas, id) {
   const yoP = personas.filter(function (x) { return x.id === id; })[0];
   if (yoP && yoP.familia === 'Servicio') { medallasServicio_(ss, personas, v, id, pon); return out; }  // v4.84: las suyas, sin competir con la familia
   Object.keys(CATEGORIAS).forEach(function (k) { if (c.pts[k][id]) pon(k, CATEGORIAS[k].titulo, CATEGORIAS[k].texto, { puntos: c.pts[k][id], categoria: true }); });
-  logros_(ss, v, id).forEach(function (l) { pon(l[0], l[1], l[2], { puntos: PUNTOS_MEDALLA }); });
+  logros_(ss, v, id).forEach(function (l) { pon(l[0], l[1], l[2], { puntos: l[3] }); });
   return out;
 }
-/** v4.84: las medallas que no compiten con nadie (cada una suma PUNTOS_MEDALLA): [id, título, texto] */
-const PUNTOS_MEDALLA = 3;
+/**
+ * v4.84: las medallas que no compiten con nadie: [id, título, texto, puntos].
+ * v4.88: muchas, para que todo el mundo tenga alguna: las difíciles suman PUNTOS_MEDALLA; las de participar, PUNTOS_PARTICIPAR.
+ */
+const PUNTOS_MEDALLA = 3, PUNTOS_PARTICIPAR = 1;
 function logros_(ss, v, id) {
-  const hoy = hoy_(), ayer = sumarDias_(hoy, -1), out = [];
-  const eventos = leerEventos_(ss).filter(function (e) { return e.desde >= v.inicio; });
-  const pasados = eventos.filter(function (e) { return e.hasta < hoy; });
-  if (pasados.length >= 2 && pasados.every(function (e) { return e.van.indexOf(id) !== -1; })) out.push(['ni-uno', 'No te pierdes ni uno', 'Has ido a todos los eventos que ha habido.']);
-  if (eventos.length >= 2 && eventos.every(function (e) { return e.van.indexOf(id) !== -1 || e.noVan.indexOf(id) !== -1; })) out.push(['contesta', 'Siempre contestas', 'Has dicho si vas o no a todos los eventos. ¡Gracias!']);
-  const mias = v.ef.filter(function (a) { return a.persona === id; }).map(function (a) { return a.fecha; });
-  if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) out.push(['semanas', 'Cuatro semanas seguidas', 'Has ido al menos una vez cada semana del último mes.']);
-  if (leerFijos_(ss).some(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy); })) out.push(['fijo', 'Tienes tu día', 'Tienes un día fijo con la abuela cada semana.']);
-  return out;
+  return memo_('logros|' + id, function () {
+    const hoy = hoy_(), ayer = sumarDias_(hoy, -1), hace30 = sumarDias_(hoy, -30), out = [];
+    const dif = function (a, b, c) { out.push([a, b, c, PUNTOS_MEDALLA]); }, facil = function (a, b, c) { out.push([a, b, c, PUNTOS_PARTICIPAR]); };
+    const eventos = leerEventos_(ss).filter(function (e) { return e.desde >= v.inicio; });
+    const pasados = eventos.filter(function (e) { return e.hasta < hoy; });
+    if (pasados.length >= 2 && pasados.every(function (e) { return e.van.indexOf(id) !== -1; })) dif('ni-uno', 'No te pierdes ni uno', 'Has ido a todos los eventos que ha habido.');
+    if (eventos.length >= 2 && eventos.every(function (e) { return e.van.indexOf(id) !== -1 || e.noVan.indexOf(id) !== -1; })) dif('contesta', 'Siempre contestas', 'Has dicho si vas o no a todos los eventos. ¡Gracias!');
+    const todas = v.ef.filter(function (a) { return a.persona === id; });
+    const mias = todas.map(function (a) { return a.fecha; });
+    if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) dif('semanas', 'Cuatro semanas seguidas', 'Has ido al menos una vez cada semana del último mes.');
+    if (leerFijos_(ss).some(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy); })) dif('fijo', 'Tienes tu día', 'Tienes un día fijo con la abuela cada semana.');
+    // v4.88: bienvenida (la primera vez, este mes) y guardián de la memoria (ha rellenado datos de la familia)
+    const mes = todas.filter(function (a) { return a.fecha >= hace30; });
+    if (mes.length && v.inicio < hace30 && !todas.some(function (a) { return a.fecha < hace30; })) dif('bienvenida', '¡Bienvenido a la mesa!', 'Este mes has ido por primera vez. ¡Qué alegría!');
+    const cambios = cambios30_(ss).filter(function (x) { return x.quien === id; });
+    if (cambios.some(esDatos_)) dif('memoria', 'Guardián de la memoria', 'Has ayudado a completar los datos de la familia.');
+    // v4.88: las de participar (casi cualquiera las puede tener)
+    if (mes.some(function (a) { return a.turno === 'DORMIR'; })) facil('noche', 'Compañía de noche', 'Le has hecho compañía por la noche.');
+    if (mes.some(function (a) { const d = diaSemana_(a.fecha); return d === 0 || d === 6; })) facil('finde-uno', 'Fin de semana con la abuela', 'Has ido algún sábado o domingo.');
+    const porDia = {};
+    mes.forEach(function (a) { (porDia[a.fecha] = porDia[a.fecha] || {})[a.turno] = true; });
+    if (Object.keys(porDia).some(function (f) { return porDia[f].COMIDA && porDia[f].CENA; })) facil('doble', 'Comida y cena', 'Algún día te has quedado a comer y a cenar.');
+    const config = leerConfig_(ss), personas = leerPersonas_(ss, config.excluir);
+    const yoP = personas.filter(function (x) { return x.id === id; })[0];
+    const mismos = {};
+    personas.forEach(function (x) { if (yoP && x.id !== id && x.familia === yoP.familia) mismos[x.id] = true; });
+    if (mes.some(function (a) { return v.ef.some(function (b) { return b.fecha === a.fecha && b.turno === a.turno && mismos[b.persona]; }); })) facil('en-familia', 'En familia', 'Has ido con alguien de tu familia.');
+    if (mes.some(function (a) { return a.acompanantes; })) facil('trae', 'Traes compañía', 'Has traído a alguien más a la mesa.');
+    const crudos = leerApuntes_(ss).filter(function (a) { return a.persona === id && !a.no && a.fecha >= hace30; });
+    if (crudos.some(function (a) { return a.nota; })) facil('notas', 'Notas con cariño', 'Dejas notas para que la casa se organice mejor.');
+    const horaDe = horasDe_(config);
+    if (crudos.some(function (a) { const x = antelacion_(a, horaDe); return x !== null && x >= 7 * 24; })) facil('previsor', 'Previsor', 'Te has apuntado con más de una semana de antelación.');
+    if (eventos.some(function (e) { return e.hasta >= hace30 && e.van.indexOf(id) !== -1; })) facil('planes', 'Te apuntas a los planes', 'Vas a los eventos de la familia.');
+    if (cambios.some(porOtro_)) facil('mano', 'Echas una mano', 'Apuntas o contestas por los demás.');
+    return out;
+  });
 }
 
 /** v4.84: las medallas del servicio, solo en positivo y entre el servicio */
@@ -404,7 +456,7 @@ function getPremios(quien) {
     .sort(function (a, b) { return b.puntos - a.puntos || a.apodo.localeCompare(b.apodo); });
   const medallas = {};
   personas.filter(function (p) { return p.familia !== 'Servicio' && p.familia !== 'Otros'; }).forEach(function (p) {
-    logros_(ss, v, p.id).forEach(function (l) { (medallas[l[0]] = medallas[l[0]] || { id: l[0], titulo: l[1], gente: [] }).gente.push(p.apodo); });
+    logros_(ss, v, p.id).forEach(function (l) { (medallas[l[0]] = medallas[l[0]] || { id: l[0], titulo: l[1], puntos: l[3], gente: [] }).gente.push(p.apodo); });
   });
   const servicio = personas.filter(function (p) { return p.familia === 'Servicio'; }).map(function (p) {
     const out = [];

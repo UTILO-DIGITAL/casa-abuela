@@ -401,7 +401,7 @@ const janFijo = R.getDatos(V2).fijos.some(f => f.persona === '(N) - Jan');
 ver('distinciones: top de comidas y cuatro semanas seguidas', dis.indexOf('comidas') !== -1 && dis.indexOf('semanas') !== -1);
 ver('«tienes tu día» solo si tiene un fijo', (dis.indexOf('fijo') !== -1) === janFijo);
 ver('distinciones: cada una con su título y su explicación', (mn.distinciones || []).every(x => x.titulo && x.texto));
-ver('los puntos son la suma de las categorías y de las medallas (3 cada una)', mn.puntos === (mn.distinciones || []).reduce((t, x) => t + x.puntos, 0) && (mn.distinciones || []).filter(x => !x.categoria).every(x => x.puntos === 3));
+ver('los puntos son la suma de las categorías y de las medallas (3 las difíciles, 1 las de participar)', mn.puntos === (mn.distinciones || []).reduce((t, x) => t + x.puntos, 0) && (mn.distinciones || []).filter(x => !x.categoria).every(x => x.puntos === 3 || x.puntos === 1));
 ver('quien no ha ido no tiene las de ir (solo en positivo)', !(R.misNumeros(M_).distinciones || []).some(x => x.id === 'comidas' && !nadie.total));
 // v4.84: el servicio, con sus medallas (sin competir con la familia ni entrar en el top)
 const anchoP = hojas.PERSONAS.filas[0].length;
@@ -426,7 +426,10 @@ hojas.MESA_APUNTES.filas = hojas.MESA_APUNTES.filas.filter(f => !/^s\d$/.test(f[
 err = ''; try { R.getPremios(JP_); } catch (e) { err = e.message; }
 ver('premios: solo para quien lleva la web', /solo para quien lleva la web/.test(err));
 const pr = R.getPremios(M_);
-ver('premios: las 8 categorías, cada una con su gente', pr.categorias.length === 8 && pr.categorias.find(c => c.id === 'comidas').gente.some(g => g.apodo === 'Jan'));
+const secre = pr.categorias.find(c => c.id === 'secretaria');
+ver('secretaría: quien apunta o contesta por otros (Mercedes)', secre.gente.some(g => g.apodo === 'Mercedes'));
+ver('medallas nuevas: guardián de la memoria y echar una mano', ['memoria', 'mano'].every(k => pr.medallas.some(m => m.id === k)));
+ver('premios: las 9 categorías (con la secretaría), cada una con su gente', pr.categorias.length === 9 && pr.categorias.find(c => c.id === 'comidas').gente.some(g => g.apodo === 'Jan'));
 ver('premios: fin de semana y entre semana', pr.categorias.find(c => c.id === 'semana').gente.some(g => g.apodo === 'Jan'));
 ver('premios: el general, ordenado por puntos', pr.general.length > 0 && pr.general.every((g, i) => !i || pr.general[i - 1].puntos >= g.puntos));
 ver('premios: las familias y los totales del mes', pr.familias.length > 0 && pr.totales.comidas > 0 && pr.totales.personas > 0);
