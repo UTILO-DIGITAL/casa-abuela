@@ -144,6 +144,34 @@
   @media (max-width: 759px) { .solo-escritorio { display: none; } }
   button.dia-cab .ver { margin-left: auto; font-size: 14px; text-decoration: underline; }
   .comida { padding: 12px 14px; display: grid; gap: 8px; }
+  /* v4.99: cada comida, con su etiqueta de color a la izquierda; cada día, con su hoja de calendario */
+  :root { --t-comida: #FFF3D6; --t-comida-tinta: #8A5A00; --t-cena: #E3EDFB; --t-cena-tinta: #1F4E8C; --t-noche: #ECE6FA; --t-noche-tinta: #4B3A8F; }
+  .dia .comida { padding: 0; grid-template-columns: 62px minmax(0, 1fr); gap: 0; }
+  .turno-lado { display: grid; justify-items: center; align-content: center; gap: 3px; padding: 10px 2px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+  .turno-et { display: grid; justify-items: center; gap: 3px; }
+  .turno-lado .turno-et svg { width: 20px; height: 20px; }
+  .turno-lado button.mas { margin: 6px 0 0; width: 40px; height: 40px; background: rgba(255,255,255,.85); border-color: currentColor; color: inherit; }
+  .turno-cont .comida-cab:not(:has(button, .nadie)) { display: none; }
+  .turno-comida .turno-lado { background: var(--t-comida); color: var(--t-comida-tinta); }
+  .turno-cena .turno-lado { background: var(--t-cena); color: var(--t-cena-tinta); }
+  .turno-dormir .turno-lado { background: var(--t-noche); color: var(--t-noche-tinta); }
+  .ya-paso .turno-lado, .no-hace-falta .turno-lado { filter: grayscale(.7); opacity: .7; }
+  .turno-cont { padding: 10px 12px; display: grid; gap: 8px; min-width: 0; align-content: center; }
+  .turno-cont .comida-cab { justify-content: flex-end; }
+  .turno-cont .comida-cab:has(.nadie.con-icono) { justify-content: flex-start; }
+  .dia-hoja { display: inline-grid; place-items: center; align-self: center; width: 44px; height: 48px; border-radius: 10px; background: var(--color-principal); color: #fff; line-height: 1; flex: none; }
+  .dia-hoja small { font-size: 10px; font-weight: 800; letter-spacing: .06em; }
+  .dia-hoja b { font-family: var(--letra-titulos); font-size: 21px; font-weight: 600; }
+  .dia-cab .dia-hoja { color: #fff; }
+  .dia.hoy .dia-cab .dia-hoja { background: #fff; color: var(--color-principal-oscuro); }
+  .dia-cab { align-items: center; }
+  .dias-semana { gap: 18px; }
+  /* v4.99: el borde de cada día, más marcado: hoy en verde, los demás en tostado (como su cabecera), los pasados en gris */
+  .dias-semana .dia { border: 2.5px solid #D49A5E; box-shadow: 0 3px 10px rgba(120, 80, 30, .08); }
+  .dias-semana .dia.hoy { border: 2.5px solid var(--color-principal); box-shadow: 0 4px 14px rgba(14, 124, 110, .18); }
+  .dias-semana .dia.pasado { border-color: var(--color-linea); box-shadow: none; }
+  .dias-semana .dia:not(.hoy):not(.pasado) .dia-cab { background: #FFE2C2; border-bottom: 1px solid #D49A5E; }
+  @media (min-width: 760px) { .dia .comida { grid-template-columns: 50px minmax(0, 1fr); } .turno-lado { font-size: 10px; } .dia-hoja { display: none; } }
   .comida + .comida { border-top: 1px solid var(--color-linea); }
   .comida-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .comida-cab h4 { margin: 0; font-size: 15px; font-weight: 800; color: var(--color-principal-oscuro); }
@@ -189,7 +217,7 @@
   .falta-suave { background: #FFF0C2; color: #7A4B00; }
   .falta-suave .enlace { color: #7A4B00; font-weight: 800; }
   .rt-desglose { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
-  .rt-ver { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--color-principal-oscuro); }
+  .rt-ver { white-space: nowrap; margin-left: auto; font-size: 13px; font-weight: 800; color: var(--color-principal-oscuro); }
   .rt-ver + .rt-flecha { margin-left: 2px; }
   /* v4.90: los días pasados, en una línea; «Nota», discreto; lo que falta en una ficha, en ámbar (el rojo, para lo urgente) */
   /* v4.98: el calendario */
@@ -988,7 +1016,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.98.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.99.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1026,6 +1054,11 @@
   const ICONO_COMPARTIR = SVG('<path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 14v5h14v-5"/>');
   const ICONO_EVENTO = SVG('<path d="M12 3l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.3 6.8 19l1-5.8-4.2-4.1 5.8-.8z"/>');
   const ICONO_CALENDARIO = SVG('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>');  // v4.98
+  /* v4.99: un icono por comida (cubiertos, luna y cama), siempre el mismo */
+  const ICONO_TURNO_SVG = {
+    COMIDA: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M7 3v8M5 3v4a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 2-2 6 0 8v10"/></svg>',
+    CENA: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
+    DORMIR: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5M7 11.5a1.5 1.5 0 1 0 0-.01"/></svg>' };
   const ICONO_IMPRIMIR = SVG('<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="1"/><path d="M7 14h10v7H7z"/>');
 
   const hayServidor = typeof google !== 'undefined' && google.script && google.script.run;
@@ -1641,7 +1674,7 @@
     const plegable = pasado;
     const abierto = abiertos.has(fecha);
     let html = '<article class="dia' + (fecha === h ? ' hoy' : '') + (pasado ? ' pasado' : '') + (abierto ? ' abierto' : '') + (sinTodo ? ' sin' : '') + '">';
-    html += '<div class="dia-cab"><h3>' + DIAS[dow(fecha)] + '</h3><span>' + (fecha === h ? 'Hoy' : ddmm(fecha)) + '</span>' +
+    html += '<div class="dia-cab"><span class="dia-hoja" aria-hidden="true"><small>' + DIAS[dow(fecha)].slice(0, 3).toUpperCase() + '</small><b>' + Number(fecha.slice(8, 10)) + '</b></span><h3>' + DIAS[dow(fecha)] + '</h3><span>' + (fecha === h ? 'Hoy' : ddmm(fecha)) + '</span>' +
       (plegable ? '<button type="button" class="mini solo-movil" data-plegar="' + fecha + '" aria-expanded="' + abierto + '">' + (abierto ? 'Ocultar' : 'Ver') + '</button>' : '') +
       (modoAbuela() && !pasado ? '<button type="button" class="mini campana" data-preguntar="' + fecha + '" aria-label="Copiar quién viene el ' + diaLargo(fecha).toLowerCase() + '">' + ICONO_CAMPANA + '¿Quién viene?</button>' : '') +  // v4.38
       (modoAbuela() ? '' : '<button type="button" class="mini' + (plegable && !abierto ? ' solo-escritorio' : '') + '" data-dia="' + fecha + '" aria-label="Notas del ' + diaLargo(fecha).toLowerCase() + '">Nota</button>') + '</div>';
@@ -1689,11 +1722,14 @@
       // v4.6: sin nadie, un solo botón «Falta alguien» con el icono, en la línea del turno
       const paso = yaPaso(fecha, t.id);  // v4.63
       const faltaAlguien = motivo === null && !comp.length && !paso;
-      html += '<div class="comida' + (motivo !== null ? ' no-hace-falta' : '') + (paso ? ' ya-paso' : '') + '"><div class="comida-cab"><h4>' + t.nombre + '</h4>' +
+      const etiq = t.id === 'DORMIR' ? 'Noche' : t.nombre;  // v4.99: la etiqueta de color a la izquierda
+      const conMas = motivo === null && !modoAbuela() && !faltaAlguien && !(paso && !comp.length);  // v4.99: el «+», en la columna de color
+      html += '<div class="comida turno-' + t.id.toLowerCase() + (motivo !== null ? ' no-hace-falta' : '') + (paso ? ' ya-paso' : '') + '"><div class="turno-lado"><span class="turno-et" aria-hidden="true">' + ICONO_TURNO_SVG[t.id] + '<span>' + etiq + '</span></span>' +
+        (conMas ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div><div class="turno-cont"><div class="comida-cab"><h4 class="oculto">' + etiq + '</h4>' +
         (paso && motivo === null && !comp.length ? '<span class="nadie suave">Ya pasó · no fue nadie</span>' :
           faltaAlguien && modoAbuela() ? '<span class="nadie suave">Nadie apuntado</span>' : motivo === null && modoAbuela() ? '' :
           faltaAlguien ? '<button type="button" class="nadie con-icono"' + datosTurno + ' aria-label="Falta alguien. Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '">' + ICONO_MAS + 'Falta alguien</button>'
-          : motivo === null ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div>';
+          : '') + '</div>';
       const evT = ft && eventoEn(fecha, t.id);  // v4.31
       if (evT) html += '<p class="turno-evento">' + ICONO_EVENTO + esc(evT.nombre) + '</p>';  // v4.32: en el hueco, el evento tal cual
       else if (ft) html += '<p class="sin-turno">La abuela no está' + (ids.length ? ': avisad a quien va.' : '.') + '</p>';
@@ -1710,7 +1746,7 @@
       if (!modoAbuela() && yo && persona(yo) && ids.indexOf(yo) !== -1 && !paso) {  // v4.91: lo tuyo, a la vista, y quitarte en un toque
         html += '<div class="tu-vas"><span>' + ICONO_SI + 'Tú ' + (t.id === 'DORMIR' ? 'duermes' : 'vas') + '</span><button type="button" class="accion" data-quitarme="' + fecha + '|' + t.id + '">' + (t.id === 'DORMIR' ? 'Ya no duermo' : 'Ya no voy') + '</button></div>';
       }
-      html += '</div>';
+      html += '</div></div>';
     });
     return html + '</article>';
   }
