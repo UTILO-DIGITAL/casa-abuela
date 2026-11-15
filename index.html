@@ -972,7 +972,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.93.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.94.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -3528,10 +3528,29 @@
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
       if (!elegidoBuscador) { errorDialogo('Busca y toca tu nombre para seguir.'); return; }
-      yo = elegidoBuscador; guardarYo(yo);
-      cerrarDialogo(); pintar();  // v4.92: arriba, ya con tu nombre
-      const qq = quienEs(yo); if (qq) aviso('Hola, ' + qq.apodo + '. Ahora los cambios van a tu nombre.');
-      cargar().then(function () { if (siguiente) siguiente(); });
+      const elegido = elegidoBuscador, q = quienEs(elegido);
+      const entrar = function () {
+        yo = elegido; guardarYo(yo);
+        cerrarDialogo(); pintar();  // v4.92: arriba, ya con tu nombre
+        if (q) aviso('Hola, ' + q.apodo + '. Ahora los cambios van a tu nombre.');
+        cargar().then(function () { if (siguiente) siguiente(); });
+      };
+      // v4.94: para ponerse en el nombre de alguien, su cumpleaños (el día y el mes); quien no lo tiene puesto, entra sin más
+      const c = (q && q.cumple) || '', dd = Number(c.slice(0, 2)), mm = Number(c.slice(3, 5));
+      if (elegido === yo || !dd || !mm) { entrar(); return; }
+      abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Eres ' + esc(q.apodo) + '?</h2></div>' +
+        '<div class="dlg-cuerpo"><p class="ayuda">Para confirmarlo, dinos qué día es tu cumpleaños.</p><div class="dos dos-iguales">' +
+        '<label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' + Array.from({ length: 31 }, function (_, k) { return '<option value="' + (k + 1) + '">' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
+        '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' + MESES.map(function (m, k) { return '<option value="' + (k + 1) + '">' + m + '</option>'; }).join('') + '</select></label></div></div>' +
+        '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones"><button type="button" class="principal" id="dlg-entrar">Entrar</button>' +
+        '<button type="button" class="accion quitar" id="dlg-otro">No soy ' + esc(q.apodo) + '</button></div></div>');
+      $('dlg-otro').addEventListener('click', function () { cerrarDialogo(); preguntarQuien(siguiente); });
+      $('dlg-entrar').addEventListener('click', function () {
+        const d = Number($('dlg-cdia').value), m = Number($('dlg-cmes').value);
+        if (!d || !m) { errorDialogo('Elige el día y el mes.'); return; }
+        if (d !== dd || m !== mm) { errorDialogo('No coincide. Prueba otra vez.'); return; }
+        entrar();
+      });
     });
   }
 
