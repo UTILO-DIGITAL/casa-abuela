@@ -1281,8 +1281,7 @@
       TURNOS.forEach(function (t) {
         if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id) || yaPaso(f, t.id)) return;  // v4.63: lo que ya pasó, no
         const ids = idsDe(f, t.id);
-        const familia = ids.filter(function (id) { return !esServicio(persona(id)); });
-        if (familia.length) return;
+        if (compania(ids, t.id).length) return;  // v4.73: por la noche, el servicio ya acompaña (la abuela no está sola)
         const serv = ids.filter(function (id) { return esServicio(persona(id)); }).map(function (id) { return (persona(id) || {}).apodo || id; });
         if (serv.length) soloServicio++; else sinNadie++;
         huecos.push({ turno: t, serv: serv });
@@ -3643,7 +3642,7 @@
         TURNOS.forEach(function (t) {
           if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id) || yaPaso(f, t.id)) return;  // v4.63
           const ids = idsDe(f, t.id);
-          if (ids.some(function (id) { return !esServicio(persona(id)); })) return;
+          if (compania(ids, t.id).length) return;  // v4.73: por la noche, el servicio ya acompaña
           faltan.push((t.id === 'DORMIR' ? 'noche' : t.nombre.toLowerCase()) + (ids.length ? ' (solo el servicio)' : ''));
         });
         if (faltan.length) lineas.push('• *' + diaLargo(f) + '*: ' + lista(faltan));
