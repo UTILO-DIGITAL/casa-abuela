@@ -166,6 +166,11 @@
   .dia.hoy .dia-cab .dia-hoja { background: #fff; color: var(--color-principal-oscuro); }
   .dia-cab { align-items: center; }
   .dias-semana { gap: 18px; }
+  /* v4.99: el borde de cada día, más marcado: hoy en verde, los demás en tostado (como su cabecera), los pasados en gris */
+  .dias-semana .dia { border: 2.5px solid #D49A5E; box-shadow: 0 3px 10px rgba(120, 80, 30, .08); }
+  .dias-semana .dia.hoy { border: 2.5px solid var(--color-principal); box-shadow: 0 4px 14px rgba(14, 124, 110, .18); }
+  .dias-semana .dia.pasado { border-color: var(--color-linea); box-shadow: none; }
+  .dias-semana .dia:not(.hoy):not(.pasado) .dia-cab { background: #FFE2C2; border-bottom: 1px solid #D49A5E; }
   @media (min-width: 760px) { .dia .comida { grid-template-columns: 50px minmax(0, 1fr); } .turno-lado { font-size: 10px; } .dia-hoja { display: none; } }
   .comida + .comida { border-top: 1px solid var(--color-linea); }
   .comida-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
