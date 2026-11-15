@@ -692,7 +692,11 @@
 
   /* v3: servicio, abuela, compartir, imprimir, buscador */
   .g-servicio { background: #fff; color: var(--color-texto); box-shadow: inset 0 0 0 1px var(--color-linea); }
-  .servicio-linea { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; color: var(--color-texto-suave); }
+  .servicio-linea { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--color-texto-suave); margin-top: 4px; }
+  /* v4.75: el servicio, discreto: una línea pequeña, sin tarjeta */
+  .servicio-linea .p { min-height: 0; padding: 2px 8px; background: transparent; border: 1px solid var(--color-linea); font-size: 13px; flex-direction: row; gap: 4px; align-items: baseline; }
+  .servicio-linea .p b, .servicio-linea .p strong { font-weight: 700; }
+  .servicio-linea .p small { display: none; }
   .nadie.suave { border-color: var(--color-linea); color: var(--color-texto-suave); cursor: default; }
   .nota-servicio { margin: 0; padding: 6px 14px; background: var(--color-principal-claro); font-size: 14px; font-weight: 700; line-height: 1.35; }
   .nota-servicio span { font-weight: 600; color: var(--color-texto-suave); }
@@ -792,7 +796,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.74.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.75.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1390,15 +1394,18 @@
           faltaAlguien && modoAbuela() ? '<span class="nadie suave">Nadie apuntado</span>' : motivo === null && modoAbuela() ? '' :
           faltaAlguien ? '<button type="button" class="nadie con-icono"' + datosTurno + ' aria-label="Falta alguien. Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '">' + ICONO_MAS + 'Falta alguien</button>'
           : motivo === null ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div>';
-      if (cuenta(ids, t.id, fecha)) {
+      if (cuenta(ids, t.id, fecha) && ids.some(function (id) { return !esServicio(persona(id)); })) {  // v4.75: solo el servicio, sin «1 persona»
         html += '<span class="cuantos">' + cuenta(ids, t.id, fecha) + '</span>';
       }
       const evT = ft && eventoEn(fecha, t.id);  // v4.31
       if (evT) html += '<p class="turno-evento">' + ICONO_EVENTO + esc(evT.nombre) + '</p>';  // v4.32: en el hueco, el evento tal cual
       else if (ft) html += '<p class="sin-turno">La abuela no está' + (ids.length ? ': avisad a quien va.' : '.') + '</p>';
       else if (motivo !== null) html += '<p class="sin-turno">No hace falta que vaya nadie' + (motivo ? ': ' + esc(motivo) : '.') + '</p>';
-      if (comp.length) html += '<div class="gente">' + comp.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
-      if (serv.length) html += '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
+      // v4.75: el servicio, siempre aparte y en pequeño (aunque cuente como compañía por la noche o en la cena)
+      const fam = comp.filter(function (id) { return !esServicio(persona(id)); });
+      const servTodo = ids.filter(function (id) { return esServicio(persona(id)); });
+      if (fam.length) html += '<div class="gente">' + fam.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
+      if (servTodo.length) html += '<div class="servicio-linea">Servicio:' + servTodo.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
       const al = t.id === 'DORMIR' ? [] : ids.map(persona).filter(function (p) { return p && p.alergias; });
       if (al.length) html += '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>';
       html += '</div>';
