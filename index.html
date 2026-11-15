@@ -265,6 +265,21 @@
     .turno { grid-template-columns: 1fr; }
     .turno .accion { justify-self: start; }
   }
+  /* v4.66: el móvil en horizontal: que la isla de la cámara no tape los lados y la cabecera ocupe poco */
+  :root { --lado-izq: env(safe-area-inset-left, 0px); --lado-der: env(safe-area-inset-right, 0px); }
+  .cabecera-dentro, .pagina { padding-left: max(16px, var(--lado-izq)); padding-right: max(16px, var(--lado-der)); }
+  @media (min-width: 760px) { .cabecera-dentro, .pagina { padding-left: max(32px, calc(var(--lado-izq) + 8px)); padding-right: max(32px, calc(var(--lado-der) + 8px)); } }
+  #per-arbol-btn { right: calc(16px + var(--lado-der)); }
+  dialog.editor { width: min(560px, calc(100vw - 24px - var(--lado-izq) - var(--lado-der))); }
+  @media (orientation: landscape) and (max-height: 500px) {
+    .cabecera { padding-top: calc(8px + env(safe-area-inset-top, 0px)); }
+    .cabecera h1 { font-size: 24px; display: inline; }
+    .cabecera p#subtitulo { display: inline; margin-left: 12px; font-size: 15px; opacity: .85; }
+    nav.vistas { margin-top: 6px; }
+    nav.vistas a { min-height: 38px; padding-top: 4px; padding-bottom: 4px; }
+    .pagina { padding-top: 14px; }
+    dialog.editor { max-height: calc(100dvh - 12px); }
+  }
   @media (prefers-reduced-motion: no-preference) {
     button.accion, .p { transition: background-color .18s, color .18s; }
   }
@@ -726,7 +741,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.65.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.66.0</footer>
 </div>
 
 <div id="impresion"></div>
