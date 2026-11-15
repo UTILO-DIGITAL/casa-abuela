@@ -1394,7 +1394,10 @@
           faltaAlguien && modoAbuela() ? '<span class="nadie suave">Nadie apuntado</span>' : motivo === null && modoAbuela() ? '' :
           faltaAlguien ? '<button type="button" class="nadie con-icono"' + datosTurno + ' aria-label="Falta alguien. Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '">' + ICONO_MAS + 'Falta alguien</button>'
           : motivo === null ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div>';
-      if (cuenta(ids, t.id, fecha) && ids.some(function (id) { return !esServicio(persona(id)); })) {  // v4.75: solo el servicio, sin «1 persona»
+      if (t.id !== 'DORMIR' && ids.length && !ft && motivo === null) {  // v4.75: en la comida y la cena, todos los que comen (la abuela y el servicio también), para quien cocina
+        const r = raciones(ids, fecha, t.id);
+        html += '<span class="cuantos">Comen ' + r.total + (abuelas().length ? ' con la abuela' : '') + (/^(Todos )?menú entero$/i.test(r.detalle) ? '' : ' · ' + esc((r.detalle.charAt(0).toLowerCase() + r.detalle.slice(1)).replace(/menús enteros/g, 'enteros').replace(/menú entero/g, 'entero'))) + '</span>';
+      } else if (t.id === 'DORMIR' && cuenta(ids, t.id, fecha) && ids.some(function (id) { return !esServicio(persona(id)); })) {  // v4.75: solo el servicio, sin «1 persona»
         html += '<span class="cuantos">' + cuenta(ids, t.id, fecha) + '</span>';
       }
       const evT = ft && eventoEn(fecha, t.id);  // v4.31
