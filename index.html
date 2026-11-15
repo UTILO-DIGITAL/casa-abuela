@@ -422,6 +422,23 @@
   .aj-con-sufijo { display: flex; align-items: center; gap: 10px; }
   .aj-con-sufijo input { width: 6em; flex: none; }
   .aj-con-sufijo span { font-weight: 600; color: var(--color-texto-suave); }
+  /* v4.85: el portal de premios */
+  .aj-sub { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
+  .pr-totales { margin: 0; }
+  .pr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .pr-card { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--color-linea); background: var(--color-fondo); display: grid; gap: 4px; align-content: start; }
+  .pr-card h3 { margin: 0; font-size: 16px; }
+  .pr-card.pr-oro { background: linear-gradient(135deg, #FFF3CF, #FBE3A0); border-color: #F1C85A; }
+  .pr-card.pr-ancha { grid-column: 1 / -1; }
+  .pr-texto { margin: 0; font-size: 12px; color: var(--color-texto-suave); }
+  .pr-card ol { margin: 4px 0 0; padding-left: 22px; display: grid; gap: 2px; font-size: 14px; }
+  .pr-card ol li span { font-weight: 700; }
+  .pr-card ol li b { float: right; font-size: 13px; }
+  .pr-card ol li small { float: right; margin-right: 6px; font-size: 11px; color: #B8860B; font-weight: 800; }
+  .pr-nadie { list-style: none; margin-left: -22px; color: var(--color-texto-suave); }
+  .pr-mas { margin: 0; font-size: 12px; color: var(--color-texto-suave); }
+  .pr-medallas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+  .pr-medallas span { color: var(--color-texto-suave); }
   .aj-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
   .aj-tabla th { text-align: left; font-size: 12px; color: var(--color-texto-suave); font-weight: 800; padding: 4px 6px 4px 0; }
   .aj-tabla td { padding: 6px 6px 6px 0; border-top: 1px solid var(--color-linea); vertical-align: top; }
@@ -898,7 +915,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.84.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.85.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1982,6 +1999,65 @@
     llamar('getAjustes', [yo]).then(function (a) { ajCargando = false; ajustes = a; pintarAjustes(); })
       .catch(function (err) { ajCargando = false; if (esErrorClave(err)) { pedirClave(err); return; } $('ajustes').innerHTML = '<p class="vacio">' + esc(mensajeError(err)) + '</p>'; });
   }
+  /* ---------- v4.85: el portal de premios (solo para quien lleva la web) ---------- */
+  const UNIDAD_CAT = { comidas: ['comida', 'comidas'], cenas: ['cena', 'cenas'], noches: ['noche', 'noches'], eventos: ['evento', 'eventos'], finde: ['visita', 'visitas'], semana: ['visita', 'visitas'], compania: ['acompañante', 'acompañantes'] };
+  function valorCat(k, v) {
+    if (k === 'avisa') return v < 24 ? Math.round(v) + ' h antes' : Math.round(v / 24) + (Math.round(v / 24) === 1 ? ' día antes' : ' días antes');
+    const u = UNIDAD_CAT[k] || ['', ''];
+    return v + ' ' + (v === 1 ? u[0] : u[1]);
+  }
+  function htmlPremios(pr) {
+    const t = pr.totales, top = pr.general.filter(function (g) { return g.top; });
+    return '<h2>Premios <small class="aj-sub">del último mes (desde el ' + esc(ddmm(pr.desde)) + ')</small></h2>' +
+      '<p class="pr-totales">Entre todos: <b>' + t.comidas + '</b> comidas, <b>' + t.cenas + '</b> cenas y <b>' + t.noches + '</b> noches con la abuela · <b>' + t.personas + '</b> personas distintas.</p>' +
+      '<div><button type="button" class="principal" id="pr-compartir">Compartir el resumen del mes</button></div>' +
+      '<div class="pr-grid">' +
+        '<article class="pr-card pr-oro"><h3>Top 10 general</h3><ol>' + (top.length ? top.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + g.puntos + ' pts</b></li>'; }).join('') : '<li>Aún nadie.</li>') + '</ol>' +
+          (pr.general.length > top.length ? '<p class="pr-mas">Y ' + (pr.general.length - top.length) + ' más con puntos.</p>' : '') + '</article>' +
+        (pr.familias.length ? '<article class="pr-card"><h3>Familias del mes</h3><ol>' + pr.familias.map(function (f) { return '<li><span>' + esc(cortoFamilia(f.familia)) + '</span><b>' + f.visitas + '</b></li>'; }).join('') + '</ol></article>' : '') +
+        pr.categorias.map(function (c) {
+          return '<article class="pr-card"><h3>' + esc(c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^./, function (x) { return x.toUpperCase(); })) + '</h3><p class="pr-texto">' + esc(c.texto) + '</p><ol>' +
+            (c.gente.length ? c.gente.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + esc(valorCat(c.id, g.valor)) + '</b><small>+' + g.puntos + '</small></li>'; }).join('') : '<li class="pr-nadie">Aún nadie.</li>') + '</ol></article>';
+        }).join('') +
+        (pr.medallas.length ? '<article class="pr-card pr-ancha"><h3>Medallas (+' + pr.puntosMedalla + ' cada una)</h3><ul class="pr-medallas">' + pr.medallas.map(function (m) { return '<li><b>' + esc(m.titulo) + '</b> <span>' + esc(m.gente.join(', ')) + '</span></li>'; }).join('') + '</ul></article>' : '') +
+        (pr.servicio.length ? '<article class="pr-card pr-ancha"><h3>El servicio</h3><ul class="pr-medallas">' + pr.servicio.map(function (x) { return '<li><b>' + esc(x.apodo) + '</b> <span>' + esc(x.medallas.length ? x.medallas.map(function (m) { return m.titulo; }).join(' · ') : 'sin medallas este mes') + '</span></li>'; }).join('') + '</ul></article>' : '') +
+      '</div><p class="ayuda">Solo lo ves tú. En el resumen para el grupo solo van los destacados y las gracias: nunca quién va menos.</p>';
+  }
+  /* en el mensaje al grupo, las medallas dichas de los demás */
+  const PARA_GRUPO = { 'Siempre contestas': 'Siempre contestan', 'Tienes tu día': 'Tienen su día fijo', 'No te pierdes ni uno': 'No se pierden ni un evento', 'No fallas nunca': 'No falla nunca' };
+  function resumenPremios(pr) {
+    const t = pr.totales, top = pr.general.filter(function (g) { return g.top; });
+    const nombres = function (l, max) { return l.slice(0, max).join(', ') + (l.length > max ? ' y ' + (l.length - max) + ' más' : ''); };
+    const primeros = function (c) { const m = c.gente.length ? c.gente[0].puntos : 0; return c.gente.filter(function (g) { return g.puntos === m; }).map(function (g) { return g.apodo; }); };
+    const ICONO = { comidas: '🍽️', cenas: '🌙', noches: '🛏️', eventos: '🎉', avisa: '⏰', finde: '☀️', semana: '📅', compania: '👥' };
+    const enlace = datos.url ? '\n\n👉 ' + datos.url.replace(/#.*$/, '') : '';
+    return '🏆 *Casa Abuela · el último mes*\n¡Gracias a todos! Entre todos, ' + t.comidas + ' comidas, ' + t.cenas + ' cenas y ' + t.noches + ' noches con la abuela (' + t.personas + ' personas distintas).' +
+      (pr.familias.length ? '\n\n👑 *Familia del mes:* ' + cortoFamilia(pr.familias[0].familia) : '') +
+      (top.length ? '\n\n⭐ *Top 10:* ' + top.map(function (g) { return g.apodo; }).join(', ') : '') +
+      '\n\n*Los que más*\n' + pr.categorias.filter(function (c) { return c.gente.length; }).map(function (c) {
+        return (ICONO[c.id] || '•') + ' ' + c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^De los que antes avisan$/, 'avisan con tiempo').replace(/^./, function (x) { return x.toUpperCase(); }) + ': ' + primeros(c).join(', ');
+      }).join('\n') +
+      (pr.medallas.length ? '\n\n🏅 *Medallas*\n' + pr.medallas.map(function (m) { return (PARA_GRUPO[m.titulo] || m.titulo) + ': ' + nombres(m.gente, 8); }).join('\n') : '') +
+      (pr.servicio.some(function (x) { return x.medallas.length; }) ? '\n\n💛 *Gracias al servicio:* ' + pr.servicio.filter(function (x) { return x.medallas.length; }).map(function (x) { return x.apodo + ' (' + x.medallas.map(function (m) { return (PARA_GRUPO[m.titulo] || m.titulo).toLowerCase(); }).join(', ') + ')'; }).join('; ') : '') +
+      '\n\nEn la web, tocando tu nombre, ves tus medallas.' + enlace;
+  }
+  function montarPremios(pr) {
+    const b = $('pr-compartir');
+    if (!b) return;
+    b.addEventListener('click', function () {
+      abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Resumen del mes</h2></div>' +
+        '<div class="dlg-cuerpo"><p class="ayuda">Solo los destacados y las gracias. Cópialo y pégalo en el grupo.</p>' +
+        '<label class="campo" for="dlg-texto">Mensaje (puedes cambiarlo)<textarea id="dlg-texto" rows="14"></textarea></label></div>' +
+        '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-copiar">Copiar el mensaje</button><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+      $('dlg-texto').value = resumenPremios(pr);
+      $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+      $('dlg-copiar').addEventListener('click', function () {
+        const t = $('dlg-texto'), hecho = function () { aviso('Mensaje copiado. Pégalo en el grupo.'); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(hecho).catch(function () { t.select(); document.execCommand('copy'); hecho(); });
+        else { t.select(); document.execCommand('copy'); hecho(); }
+      });
+    });
+  }
   function pintarAjustes() {
     const $a = $('ajustes');
     if (!ajustes) { $a.innerHTML = '<p class="vacio">Cargando…</p>'; cargarAjustes(); return; }
@@ -2009,6 +2085,7 @@
           campo('inicio', 'El calendario empieza el', 'date', c.inicio) + '</fieldset>' +
         '<div><button type="button" class="principal" id="aj-guardar">Guardar ajustes</button></div></section>' +
       panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan) +
+      '<section class="aj-sec" id="aj-premios"><h2>Premios</h2><p class="ayuda">Contando los premios del último mes…</p></section>' +  // v4.85
       '<section class="aj-sec"><h2>Historial de cambios</h2>' +
         '<label class="buscar" for="aj-q"><span class="oculto">Buscar</span><input id="aj-q" type="search" autocomplete="off" placeholder="Buscar (persona, fecha, qué)"></label>' +
         '<ul class="aj-hist" id="aj-hist"></ul></section>';
@@ -2021,6 +2098,8 @@
       }).join('') : '<li>Nada con eso.</li>';
     };
     $('aj-q').addEventListener('input', pintarHist);
+    llamar('getPremios', [yo]).then(function (pr) { const $p = $('aj-premios'); if ($p) { $p.innerHTML = htmlPremios(pr); montarPremios(pr); } })
+      .catch(function (err) { const $p = $('aj-premios'); if ($p) $p.innerHTML = '<h2>Premios</h2><p class="ayuda">' + esc(mensajeError(err)) + '</p>'; });
 
     if ($('aj-pedir')) $('aj-pedir').addEventListener('click', function () {  // v4.61: el mensaje para el grupo, con el enlace a Rellenar
       const url = (datos.url || location.href).replace(/#.*$/, '') + '#rellenar';

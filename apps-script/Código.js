@@ -104,6 +104,7 @@ const API_ = {
   guardarDia: function (a) { return guardarDia(a[0], a[1], a[2], a[3]); },
   guardarEvento: function (a) { return guardarEvento(a[0], a[1], a[2]); },
   getAjustes: function (a) { return getAjustes(a[0]); },
+  getPremios: function (a) { return getPremios(a[0]); },  // v4.85
   guardarAjustes: function (a) { return guardarAjustes(a[0], a[1], a[2]); },
   borrarEvento: function (a) { return borrarEvento(a[0], a[1], a[2]); },
   apuntarEvento: function (a) { return apuntarEvento(a[0], a[1], a[2], a[3], a[4], a[5]); },  // v4.67: a[5], los días
@@ -252,15 +253,25 @@ const CATEGORIAS = {
   noches: { titulo: 'Top 10 en noches', texto: 'De los que más noches le han hecho compañía.' },
   eventos: { titulo: 'Top 10 en eventos', texto: 'De los que más se apuntan a los planes de la familia.' },
   avisa: { titulo: 'De los que antes avisan', texto: 'Te apuntas con tiempo: así se organiza mejor la casa.' },
+  finde: { titulo: 'Top 10 de fin de semana', texto: 'De los que más van los sábados y los domingos.' },  // v4.85
+  semana: { titulo: 'Top 10 entre semana', texto: 'De los que más van de lunes a viernes.' },
+  compania: { titulo: 'Top 10 en traer compañía', texto: 'De los que más gente traen a la mesa.' },
 };
 function categorias_(ss, config, personas) {
   return memo_('categorias', function () {
     const hoy = hoy_(), hace30 = sumarDias_(hoy, -30), v = visitas_(ss, config);
     const deFamilia = {};
     personas.forEach(function (x) { if (x.familia !== 'Servicio' && x.familia !== 'Otros') deFamilia[x.id] = true; });
-    const cats = { comidas: {}, cenas: {}, noches: {}, eventos: {}, avisa: {} };
+    const cats = { comidas: {}, cenas: {}, noches: {}, eventos: {}, avisa: {}, finde: {}, semana: {}, compania: {} };
     const k = { COMIDA: 'comidas', CENA: 'cenas', DORMIR: 'noches' };
-    v.ef.forEach(function (a) { if (deFamilia[a.persona] && a.fecha >= hace30) cats[k[a.turno]][a.persona] = (cats[k[a.turno]][a.persona] || 0) + 1; });
+    const suma = function (c, id, n) { cats[c][id] = (cats[c][id] || 0) + n; };
+    v.ef.forEach(function (a) {
+      if (!deFamilia[a.persona] || a.fecha < hace30) return;
+      suma(k[a.turno], a.persona, 1);
+      const d = diaSemana_(a.fecha);
+      suma(d === 0 || d === 6 ? 'finde' : 'semana', a.persona, 1);  // v4.85
+      if (a.acompanantes) suma('compania', a.persona, a.acompanantes);
+    });
     leerEventos_(ss).filter(function (e) { return e.hasta >= hace30; }).forEach(function (e) { e.van.forEach(function (id) { if (deFamilia[id]) cats.eventos[id] = (cats.eventos[id] || 0) + 1; }); });
     const horaDe = horasDe_(config), ante = {};
     leerApuntes_(ss).forEach(function (a) {
@@ -360,6 +371,50 @@ function misNumeros(personaId) {
   const c = categorias_(ss, config, personas), yo = mios.length;
   return { servicio: p.familia === 'Servicio', distinciones: distinciones_(ss, config, personas, personaId), puntos: c.puntos[personaId] || 0, top10: enTop_(c.puntos, personaId), desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav, porDia: porDia,
     antelacionHoras: antelacion, ultima: ultima };
+}
+
+/**
+ * v4.85: el portal de premios (solo para quien lleva la web): cada categoría con quién está, el top 10 general,
+ * quién tiene cada medalla, las del servicio, las familias y los totales del último mes.
+ */
+function getPremios(quien) {
+  reiniciar_();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const config = leerConfig_(ss);
+  if (!esAdmin_(config, quien)) throw new Error('Los premios son solo para quien lleva la web.');
+  const personas = leerPersonas_(ss, config.excluir);
+  const apodo = {};
+  personas.forEach(function (p) { apodo[p.id] = p.apodo; });
+  const v = visitas_(ss, config), c = categorias_(ss, config, personas);
+  const lista = function (mapa, pts) {
+    return Object.keys(pts).map(function (id) { return { id: id, apodo: apodo[id] || id, valor: Math.round(mapa[id] * 10) / 10, puntos: pts[id] }; })
+      .sort(function (a, b) { return b.puntos - a.puntos || a.apodo.localeCompare(b.apodo); });
+  };
+  const categorias = Object.keys(CATEGORIAS).map(function (k) { return { id: k, titulo: CATEGORIAS[k].titulo, texto: CATEGORIAS[k].texto, gente: lista(c.cats[k], c.pts[k]) }; });
+  const general = Object.keys(c.puntos).map(function (id) { return { id: id, apodo: apodo[id] || id, puntos: c.puntos[id], top: enTop_(c.puntos, id) }; })
+    .sort(function (a, b) { return b.puntos - a.puntos || a.apodo.localeCompare(b.apodo); });
+  const medallas = {};
+  personas.filter(function (p) { return p.familia !== 'Servicio' && p.familia !== 'Otros'; }).forEach(function (p) {
+    logros_(ss, v, p.id).forEach(function (l) { (medallas[l[0]] = medallas[l[0]] || { id: l[0], titulo: l[1], gente: [] }).gente.push(p.apodo); });
+  });
+  const servicio = personas.filter(function (p) { return p.familia === 'Servicio'; }).map(function (p) {
+    const out = [];
+    medallasServicio_(ss, personas, v, p.id, function (id, titulo, texto) { out.push({ id: id, titulo: titulo, texto: texto }); });
+    return { apodo: p.apodo, medallas: out };
+  });
+  // las familias y los totales del último mes (sin el servicio)
+  const hace30 = sumarDias_(hoy_(), -30), fam = {}, totales = { COMIDA: 0, CENA: 0, DORMIR: 0 }, gente = {};
+  const deP = {};
+  personas.forEach(function (p) { deP[p.id] = p; });
+  v.ef.forEach(function (a) {
+    const p = deP[a.persona];
+    if (!p || a.fecha < hace30 || p.familia === 'Servicio' || p.familia === 'Otros') return;
+    totales[a.turno]++; gente[a.persona] = true;
+    fam[p.familia] = (fam[p.familia] || 0) + 1;
+  });
+  const familias = Object.keys(fam).map(function (f) { return { familia: f, visitas: fam[f] }; }).sort(function (a, b) { return b.visitas - a.visitas; });
+  return { desde: hace30, totales: { comidas: totales.COMIDA, cenas: totales.CENA, noches: totales.DORMIR, personas: Object.keys(gente).length },
+    categorias: categorias, general: general, medallas: Object.keys(medallas).map(function (k) { return medallas[k]; }), servicio: servicio, familias: familias, puntosMedalla: PUNTOS_MEDALLA };
 }
 
 function leerConfig_(ss) { return memo_('config', function () { return leerConfigSin_(ss); }); }

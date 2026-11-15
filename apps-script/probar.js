@@ -60,7 +60,7 @@ const ctx = {
   ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, misNumeros, guardarPersonas, getAjustes, guardarAjustes, api_ };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, misNumeros, getPremios, guardarPersonas, getAjustes, guardarAjustes, api_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -414,6 +414,14 @@ ver('servicio: sin puntos ni top 10 de la familia', !sol.top10 && !sol.puntos &&
 ver('servicio: no sale en las medallas de la familia', R.misNumeros('(N) - Jan').puntos === mn.puntos);
 hojas.PERSONAS.filas = hojas.PERSONAS.filas.filter(f => f[0] !== '(O) - Soledad');
 hojas.MESA_APUNTES.filas = hojas.MESA_APUNTES.filas.filter(f => !/^s\d$/.test(f[0]));
+// v4.85: el portal de premios
+err = ''; try { R.getPremios(JP_); } catch (e) { err = e.message; }
+ver('premios: solo para quien lleva la web', /solo para quien lleva la web/.test(err));
+const pr = R.getPremios(M_);
+ver('premios: las 8 categorías, cada una con su gente', pr.categorias.length === 8 && pr.categorias.find(c => c.id === 'comidas').gente.some(g => g.apodo === 'Jan'));
+ver('premios: fin de semana y entre semana', pr.categorias.find(c => c.id === 'semana').gente.some(g => g.apodo === 'Jan'));
+ver('premios: el general, ordenado por puntos', pr.general.length > 0 && pr.general.every((g, i) => !i || pr.general[i - 1].puntos >= g.puntos));
+ver('premios: las familias y los totales del mes', pr.familias.length > 0 && pr.totales.comidas > 0 && pr.totales.personas > 0);
 ver('la etiqueta dorada llega con los datos', R.getDatos(Object.assign({}, V2, { yo: '(N) - Jan' })).yoTop10 === true);
 err = ''; try { R.misNumeros('(X) - Nadie'); } catch (e) { err = e.message; }
 ver('de alguien que no está, no', /No encontramos/.test(err));
