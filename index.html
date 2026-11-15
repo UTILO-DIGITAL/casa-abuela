@@ -126,6 +126,26 @@
   .comida-cab { flex-wrap: wrap; }  /* en columnas estrechas, el botón baja debajo del título */
   .comida-cab .nadie.con-icono { margin-left: auto; gap: 6px; min-height: 36px; padding: 4px 10px; white-space: nowrap; }
   .comida-cab .nadie.con-icono svg { width: 18px; height: 18px; flex: none; }
+  /* v4.75: el resumen de cada comida, cena o noche (al tocarlo, el desglose) */
+  .rt-total { display: flex; align-items: center; gap: 8px; width: 100%; padding: 2px 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; color: var(--color-texto); }
+  .rt-total b { font-size: 15px; }
+  .rt-flecha { margin-left: auto; font-size: 20px; color: var(--color-texto-suave); }
+  .rt-marca { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
+  .rt-marca.rt-alergias { background: #FDE8E6; color: var(--color-error); }
+  .rt-familias { display: grid; gap: 4px; margin: 4px 0; }
+  .rt-familia { display: grid; gap: 2px; width: 100%; padding: 6px 10px; border: 0; border-radius: calc(var(--radio) / 2); background: var(--color-principal-claro); font: inherit; font-size: 15px; text-align: left; cursor: pointer; color: var(--color-texto); }
+  .rt-cab { display: flex; align-items: baseline; gap: 8px; }
+  .rt-cab b { font-size: 17px; }
+  .rt-familia .rt-n { font-weight: 800; color: var(--color-principal-oscuro); }
+  .rt-familia .rt-flecha { margin-left: auto; font-size: 14px; }
+  .rt-familia[aria-expanded="true"] { background: var(--color-principal); color: #fff; }
+  .rt-familia[aria-expanded="true"] .rt-n, .rt-familia[aria-expanded="true"] .rt-flecha { color: #fff; }
+  .rt-familia.con-yo { box-shadow: inset 0 0 0 3px var(--color-accion); }
+  .rt-nota { font-size: 14px; }
+  .rt-abierta { margin: 0 0 4px; padding-left: 10px; border-left: 3px solid var(--color-principal); }
+  .dt-total { margin: 0; font-size: 16px; }
+  .dt-fam { margin: 6px 0 0; font-size: 15px; }
+  .dt-fam small { color: var(--color-texto-suave); font-weight: 700; }
   .cuantos { font-size: 14px; font-weight: 700; color: var(--color-texto-suave); font-variant-numeric: tabular-nums; }
   /* v4.14.1: la gente de cada comida, una debajo de otra, con su nota dentro */
   .gente { display: grid; gap: 4px; }
@@ -692,7 +712,11 @@
 
   /* v3: servicio, abuela, compartir, imprimir, buscador */
   .g-servicio { background: #fff; color: var(--color-texto); box-shadow: inset 0 0 0 1px var(--color-linea); }
-  .servicio-linea { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; color: var(--color-texto-suave); }
+  .servicio-linea { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--color-texto-suave); margin-top: 4px; }
+  /* v4.75: el servicio, discreto: una línea pequeña, sin tarjeta */
+  .servicio-linea .p { min-height: 0; padding: 2px 8px; background: transparent; border: 1px solid var(--color-linea); font-size: 13px; flex-direction: row; gap: 4px; align-items: baseline; }
+  .servicio-linea .p b, .servicio-linea .p strong { font-weight: 700; }
+  .servicio-linea .p small { display: none; }
   .nadie.suave { border-color: var(--color-linea); color: var(--color-texto-suave); cursor: default; }
   .nota-servicio { margin: 0; padding: 6px 14px; background: var(--color-principal-claro); font-size: 14px; font-weight: 700; line-height: 1.35; }
   .nota-servicio span { font-weight: 600; color: var(--color-texto-suave); }
@@ -792,7 +816,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.74.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.75.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1390,22 +1414,78 @@
           faltaAlguien && modoAbuela() ? '<span class="nadie suave">Nadie apuntado</span>' : motivo === null && modoAbuela() ? '' :
           faltaAlguien ? '<button type="button" class="nadie con-icono"' + datosTurno + ' aria-label="Falta alguien. Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '">' + ICONO_MAS + 'Falta alguien</button>'
           : motivo === null ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div>';
-      if (cuenta(ids, t.id, fecha)) {
-        html += '<span class="cuantos">' + cuenta(ids, t.id, fecha) + '</span>';
-      }
       const evT = ft && eventoEn(fecha, t.id);  // v4.31
       if (evT) html += '<p class="turno-evento">' + ICONO_EVENTO + esc(evT.nombre) + '</p>';  // v4.32: en el hueco, el evento tal cual
       else if (ft) html += '<p class="sin-turno">La abuela no está' + (ids.length ? ': avisad a quien va.' : '.') + '</p>';
       else if (motivo !== null) html += '<p class="sin-turno">No hace falta que vaya nadie' + (motivo ? ': ' + esc(motivo) : '.') + '</p>';
-      if (comp.length) html += '<div class="gente">' + comp.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
-      if (serv.length) html += '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
+      // v4.75: el servicio, siempre aparte y en pequeño (aunque cuente como compañía por la noche o en la cena)
+      const fam = ids.filter(function (id) { return !esServicio(persona(id)); });
+      const servTodo = ids.filter(function (id) { return esServicio(persona(id)); });
       const al = t.id === 'DORMIR' ? [] : ids.map(persona).filter(function (p) { return p && p.alergias; });
-      if (al.length) html += '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>';
+      if (modoAbuela()) {  // la abuela, con los nombres: para ella lo importante es quién viene
+        if (fam.length) html += '<div class="gente">' + fam.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
+        if (servTodo.length) html += '<div class="servicio-linea">Servicio:' + servTodo.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
+        if (al.length) html += '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>';
+      } else if (ids.length) html += resumenTurno(fecha, t.id, ids, fam, servTodo, al, !ft && motivo === null);  // v4.75: fuera, el resumen; al tocarlo, el desglose
       html += '</div>';
     });
     return html + '</article>';
   }
 
+  /* v4.75: el resumen de una comida, cena o noche: cuántos (a la mesa, con la abuela), por familias y el servicio; al tocarlo, el desglose */
+  function porFamilias(ids) {
+    const n = {}, orden = [];
+    ids.forEach(function (id) { const p = persona(id); const f = p && p.familia && p.familia !== 'Otros' ? p.familia : 'Otros'; /* el nombre corto (Pich, Roger…), como en las fichas */ if (!n[f]) { n[f] = 0; orden.push(f); } n[f]++; });
+    return orden.map(function (f) { return f + ' ' + n[f]; });
+  }
+  const famAbiertas = new Set();  // v4.75: las familias desplegadas en cada comida («fecha|turno|familia»)
+  function resumenTurno(fecha, turno, ids, fam, serv, al, cuenta) {
+    const r = raciones(ids, fecha, turno);
+    const total = turno === 'DORMIR' ? (fam.length ? (fam.length === 1 ? '1 duerme' : fam.length + ' duermen') : '') : cuenta ? r.total + ' a la mesa' : 'Ver quién va';
+    const conNota = function (id) { const a = apunte(fecha, turno, id); return !!(a && a.nota); };
+    // las familias, cada una en su tarjeta pequeña; al tocarla, sus nombres debajo
+    const grupos = {}, orden = [];
+    fam.forEach(function (id) { const p = persona(id); const f = p && p.familia && p.familia !== 'Otros' ? p.familia : 'Otros'; if (!grupos[f]) { grupos[f] = []; orden.push(f); } grupos[f].push(id); });
+    const clave = function (f) { return fecha + '|' + turno + '|' + f; };
+    return (total ? '<button type="button" class="rt-total" data-detalle-turno="' + fecha + '|' + turno + '" aria-label="Ver todos los de la ' + esc(nombreTurno(fecha, turno)) + '"><b>' + total + '</b>' +
+        (al.length ? '<span class="rt-marca rt-alergias">alergias</span>' : '') + '<span class="rt-flecha" aria-hidden="true">›</span></button>' : '') +
+      (orden.length ? '<div class="rt-familias">' + orden.map(function (f) {
+        const ab = famAbiertas.has(clave(f)), ids2 = grupos[f];
+        const extra = ids2.reduce(function (n, id) { return n + ((apunte(fecha, turno, id) || {}).acompanantes || 0); }, 0);
+        const notas = ids2.filter(conNota).map(function (id) { return '<span class="rt-nota"><b>' + esc((persona(id) || {}).apodo || id) + ':</b> ' + esc(apunte(fecha, turno, id).nota) + '</span>'; }).join('');
+        return '<button type="button" class="rt-familia' + (ids2.indexOf(yo) !== -1 ? ' con-yo' : '') + '" data-rt-fam="' + esc(clave(f)) + '" aria-expanded="' + ab + '">' +
+            '<span class="rt-cab"><b>' + esc(f) + '</b><span class="rt-n">' + (ids2.length + extra) + '</span><span class="rt-flecha" aria-hidden="true">' + (ab ? '▴' : '▾') + '</span></span>' + (ab ? '' : notas) + '</button>' +
+          (ab ? '<div class="gente rt-abierta">' + ids2.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '');
+      }).join('') + '</div>' : '') +
+      (serv.length ? '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '');
+  }
+  function abrirDetalleTurno(fecha, turno) {
+    const ids = idsDe(fecha, turno);
+    const fam = ids.filter(function (id) { return !esServicio(persona(id)); });
+    const serv = ids.filter(function (id) { return esServicio(persona(id)); });
+    const r = raciones(ids, fecha, turno);
+    const titulo = nombreTurno(fecha, turno);
+    const grupos = {}, orden = [];
+    ordenPorNucleos(fam.map(persona).filter(Boolean)).forEach(function (x) { const f = familiaDe(x.p); if (!grupos[f]) { grupos[f] = []; orden.push(f); } grupos[f].push(x.p.id); });
+    fam.filter(function (id) { return !persona(id); }).forEach(function (id) { if (!grupos['?']) { grupos['?'] = []; orden.push('?'); } grupos['?'].push(id); });
+    const al = turno === 'DORMIR' ? [] : ids.map(persona).filter(function (p) { return p && p.alergias; });
+    const cuenta = !fueraTurno(fecha, turno) && sinTurno(fecha, turno) === null;
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(titulo.charAt(0).toUpperCase() + titulo.slice(1)) + '</h2></div><div class="dlg-cuerpo">' +
+      (turno !== 'DORMIR' && cuenta ? '<p class="dt-total"><b>' + r.total + ' a la mesa</b>, contando a la abuela' + (serv.length ? ' y al servicio' : '') + '.<br>Para cocinar: ' + esc(r.detalle.charAt(0).toLowerCase() + r.detalle.slice(1)) + '.</p>' : '') +
+      (al.length ? '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>' : '') +
+      orden.map(function (f) { return '<h3 class="dt-fam">' + esc(f === '?' ? 'Otros' : cortoFamilia(f)) + ' <small>' + grupos[f].length + '</small></h3><div class="gente">' + grupos[f].map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>'; }).join('') +
+      (serv.length ? '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '') +
+      '<p class="ayuda">Toca a alguien para cambiar lo suyo.</p></div>' +
+      '<div class="dlg-pie"><div class="botones">' + (sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">Añadir a alguien</button>' : '') +
+      '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    if ($('dlg-dt-anadir')) $('dlg-dt-anadir').addEventListener('click', function () { cerrarDialogo(); abrirAnadir(fecha, turno); });
+    $dlg.querySelector('.dlg-cuerpo').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-persona]');
+      if (!b) return;
+      cerrarDialogo(); abrirPersona(b.dataset.persona, fecha, turno);
+    });
+  }
   function pintarSemana() {
     let html = '';
     if (hoy() < datos.config.inicio && lunesSel === lunesInicio()) html += '<p class="aviso">El calendario empieza el ' + diaLargo(datos.config.inicio).toLowerCase() + '.</p>';
@@ -3796,9 +3876,11 @@
 
   /* ---------- Clics ---------- */
   document.addEventListener('click', function (e) {
-    const el = e.target.closest('[data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
+    const el = e.target.closest('[data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
     if (modoAbuela() && el.hasAttribute('data-persona')) { abrirInfoPersona(el.dataset.persona); return; }  // v4.36: quién es, para mirar
+    if (el.hasAttribute('data-rt-fam')) { const k = el.dataset.rtFam; if (famAbiertas.has(k)) famAbiertas.delete(k); else famAbiertas.add(k); pintarSemana(); return; }  // v4.75
+    if (el.hasAttribute('data-detalle-turno')) { const x = el.dataset.detalleTurno.split('|'); abrirDetalleTurno(x[0], x[1]); return; }  // v4.75
     if (el.hasAttribute('data-preguntar')) { preguntarDia(el.dataset.preguntar); return; }  // v4.38
     if (modoAbuela() && !el.hasAttribute('data-semana') && !el.hasAttribute('data-plegar') && !el.hasAttribute('data-paso-dia')) return;  // v4.35: solo para mirar
     if (el.hasAttribute('data-semana')) {
