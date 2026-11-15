@@ -898,7 +898,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.83.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.84.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -3285,6 +3285,11 @@
   function htmlMedallas(n) {
     if (!n) return '';
     const l = n.distinciones || [];
+    if (n.servicio) {  // v4.84: el servicio, con las suyas y sin top ni puntos
+      return '<div class="mn-top-caja"><b>Gracias por cuidar de la abuela</b><span>Aquí salen tus medallas del último mes.</span></div>' +
+        (l.length ? '<div class="mn-distinciones"><p class="mn-dias-tit">Tus medallas</p><ul>' + l.map(function (d) { return '<li class="cat"><b>' + esc(d.titulo) + '</b><span>' + esc(d.texto) + '</span></li>'; }).join('') + '</ul></div>'
+          : '<p class="ayuda">Tus medallas irán saliendo a medida que estés con ella.</p>');
+    }
     return (n.top10 ? '<div class="mn-top-caja"><b>Top 10 general · ' + n.puntos + ' puntos</b><span>¡Estás entre los que más acompañan a la abuela! Por eso tu nombre sale en dorado.</span></div>'
         : '<div class="mn-top-caja fuera"><b>' + (n.puntos ? 'Llevas ' + n.puntos + (n.puntos === 1 ? ' punto' : ' puntos') : 'Aún no tienes puntos') + '</b><span>Suma puntos en las categorías para entrar en el top 10 general y que tu nombre salga en dorado.</span></div>') +
       (l.length ? '<div class="mn-distinciones"><p class="mn-dias-tit">Tus medallas</p><ul>' + l.map(function (d) {

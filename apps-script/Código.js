@@ -279,6 +279,8 @@ function distinciones_(ss, config, personas, id) {
   const hoy = hoy_(), ayer = sumarDias_(hoy, -1), v = visitas_(ss, config), c = categorias_(ss, config, personas);
   const out = [];
   const pon = function (clave, titulo, texto, extra) { out.push(Object.assign({ id: clave, titulo: titulo, texto: texto }, extra || {})); };
+  const yoP = personas.filter(function (x) { return x.id === id; })[0];
+  if (yoP && yoP.familia === 'Servicio') { medallasServicio_(ss, personas, v, id, pon); return out; }  // v4.84: las suyas, sin competir con la familia
   Object.keys(CATEGORIAS).forEach(function (k) { if (c.pts[k][id]) pon(k, CATEGORIAS[k].titulo, CATEGORIAS[k].texto, { puntos: c.pts[k][id], categoria: true }); });
   const eventos = leerEventos_(ss).filter(function (e) { return e.desde >= v.inicio; });
   const pasados = eventos.filter(function (e) { return e.hasta < hoy; });
@@ -288,6 +290,26 @@ function distinciones_(ss, config, personas, id) {
   if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) pon('semanas', 'Cuatro semanas seguidas', 'Has ido al menos una vez cada semana del último mes.');
   if (leerFijos_(ss).some(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy); })) pon('fijo', 'Tienes tu día', 'Tienes un día fijo con la abuela cada semana.');
   return out;
+}
+
+/** v4.84: las medallas del servicio, solo en positivo y entre el servicio */
+function medallasServicio_(ss, personas, v, id, pon) {
+  const hoy = hoy_(), hace30 = sumarDias_(hoy, -30), ayer = sumarDias_(hoy, -1);
+  const serv = personas.filter(function (x) { return x.familia === 'Servicio'; }).map(function (x) { return x.id; });
+  const n = {};
+  v.ef.forEach(function (a) { if (a.fecha >= hace30 && serv.indexOf(a.persona) !== -1) { n[a.persona] = n[a.persona] || { COMIDA: 0, CENA: 0, DORMIR: 0 }; n[a.persona][a.turno]++; } });
+  const mio = n[id] || { COMIDA: 0, CENA: 0, DORMIR: 0 };
+  // no falla nunca: tiene días fijos y en el último mes no ha dicho «no voy» a ninguno
+  const fijos = leerFijos_(ss).filter(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hace30); });
+  const faltas = leerApuntes_(ss).filter(function (a) { return a.persona === id && a.no && a.fecha >= hace30 && a.fecha <= ayer; }).length;
+  if (fijos.length && !faltas && (mio.COMIDA + mio.CENA + mio.DORMIR) > 0) pon('nunca-falla', 'No fallas nunca', 'Este último mes no has faltado ni un día de los tuyos.');
+  const masNoches = serv.every(function (o) { return o === id || (n[o] || { DORMIR: 0 }).DORMIR <= mio.DORMIR; });
+  if (mio.DORMIR > 0 && masNoches) pon('mas-noches', 'La que más noches le hace compañía', mio.DORMIR + (mio.DORMIR === 1 ? ' noche' : ' noches') + ' este último mes. Gracias.');
+  else if (mio.DORMIR >= 8) pon('noches', 'Noches con la abuela', mio.DORMIR + ' noches este último mes.');
+  if (mio.COMIDA >= 8) pon('comidas', 'Comidas con la abuela', mio.COMIDA + ' comidas este último mes.');
+  if (mio.CENA >= 8) pon('cenas', 'Cenas con la abuela', mio.CENA + ' cenas este último mes.');
+  const mias = v.ef.filter(function (a) { return a.persona === id; }).map(function (a) { return a.fecha; });
+  if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) pon('semanas', 'Cuatro semanas seguidas', 'Has estado con ella todas las semanas del último mes.');
 }
 
 /**
@@ -327,7 +349,7 @@ function misNumeros(personaId) {
   const antelacion = antes.length >= 2 ? Math.round(antes[Math.floor(antes.length / 2)]) : null;
   // v4.83: las medallas, los puntos y el top 10 general (la suma de las categorías)
   const c = categorias_(ss, config, personas), yo = mios.length;
-  return { distinciones: distinciones_(ss, config, personas, personaId), puntos: c.puntos[personaId] || 0, top10: enTop_(c.puntos, personaId), desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav, porDia: porDia,
+  return { servicio: p.familia === 'Servicio', distinciones: distinciones_(ss, config, personas, personaId), puntos: c.puntos[personaId] || 0, top10: enTop_(c.puntos, personaId), desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav, porDia: porDia,
     antelacionHoras: antelacion, ultima: ultima };
 }
 

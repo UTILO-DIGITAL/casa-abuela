@@ -403,6 +403,17 @@ ver('«tienes tu día» solo si tiene un fijo', (dis.indexOf('fijo') !== -1) ===
 ver('distinciones: cada una con su título y su explicación', (mn.distinciones || []).every(x => x.titulo && x.texto));
 ver('los puntos son la suma de las categorías', mn.puntos === (mn.distinciones || []).filter(x => x.categoria).reduce((t, x) => t + x.puntos, 0));
 ver('quien no ha ido no tiene las de ir (solo en positivo)', !(R.misNumeros(M_).distinciones || []).some(x => x.id === 'comidas' && !nadie.total));
+// v4.84: el servicio, con sus medallas (sin competir con la familia ni entrar en el top)
+const anchoP = hojas.PERSONAS.filas[0].length;
+hojas.PERSONAS.filas.push(['(O) - Soledad', 'Soledad', 'Otros', 'Servicio', '', '🌕 Entero', '', ''].concat(Array(Math.max(0, anchoP - 8)).fill('')));
+['2026-10-20', '2026-10-21', '2026-10-22', '2026-10-27', '2026-10-28', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-10'].forEach((f, i) => hojas.MESA_APUNTES.filas.push(['s' + i, f, 'DORMIR', '(O) - Soledad', '', '', '', '', '', '']));
+const sol = R.misNumeros('(O) - Soledad'), dsol = (sol.distinciones || []).map(x => x.id);
+ver('servicio: la que más noches le hace compañía', sol.servicio === true && dsol.indexOf('mas-noches') !== -1);
+ver('servicio: cuatro semanas seguidas', dsol.indexOf('semanas') !== -1);
+ver('servicio: sin puntos ni top 10 de la familia', !sol.top10 && !sol.puntos && !dsol.some(x => x === 'comidas' && (sol.distinciones.find(d => d.id === x) || {}).categoria));
+ver('servicio: no sale en las medallas de la familia', R.misNumeros('(N) - Jan').puntos === mn.puntos);
+hojas.PERSONAS.filas = hojas.PERSONAS.filas.filter(f => f[0] !== '(O) - Soledad');
+hojas.MESA_APUNTES.filas = hojas.MESA_APUNTES.filas.filter(f => !/^s\d$/.test(f[0]));
 ver('la etiqueta dorada llega con los datos', R.getDatos(Object.assign({}, V2, { yo: '(N) - Jan' })).yoTop10 === true);
 err = ''; try { R.misNumeros('(X) - Nadie'); } catch (e) { err = e.message; }
 ver('de alguien que no está, no', /No encontramos/.test(err));
