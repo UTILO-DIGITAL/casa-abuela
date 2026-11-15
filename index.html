@@ -228,9 +228,11 @@
   .rt-desglose { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
   /* v5.2: menos ruido en la Semana */
   .falta-aviso { font-weight: 800; color: var(--color-error); font-size: 15px; }
-  .turno-lado button.mas { border: 0; background: transparent; width: 44px; height: 40px; }
-  .turno-lado button.mas svg { width: 22px; height: 22px; }
-  .turno-lado button.mas:hover { background: rgba(255,255,255,.6); }
+  /* v5.2: el «+» se ve como botón (círculo blanco con borde y sombra); la etiqueta de la comida, plana */
+  .turno-lado button.mas { width: 40px; height: 40px; margin-top: 8px; border-radius: 50%; border: 2px solid currentColor; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
+  .turno-lado button.mas svg { width: 20px; height: 20px; }
+  .turno-lado button.mas:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0, 0, 0, .22); }
+  .turno-lado button.mas:active { transform: none; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); }
   .dia-cab button.mini[data-dia] { border: 0; background: none; text-decoration: underline; text-underline-offset: 3px; font-size: 13px; opacity: .8; min-height: 32px; padding: 0 4px; }
   .servicio-texto { gap: 4px; flex-wrap: wrap; }
   .servicio-texto .p { border: 0 !important; background: none !important; padding: 0 !important; min-height: 0; font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
