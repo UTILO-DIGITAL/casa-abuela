@@ -444,6 +444,7 @@
   .pr-mas { margin: 0; font-size: 12px; color: var(--color-texto-suave); }
   .pr-medallas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
   .pr-medallas span { color: var(--color-texto-suave); }
+  .pr-pts { font-size: 11px; font-weight: 800; color: #B8860B; }
   .aj-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
   .aj-tabla th { text-align: left; font-size: 12px; color: var(--color-texto-suave); font-weight: 800; padding: 4px 6px 4px 0; }
   .aj-tabla td { padding: 6px 6px 6px 0; border-top: 1px solid var(--color-linea); vertical-align: top; }
@@ -923,7 +924,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.87.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.88.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -2013,7 +2014,7 @@
       .catch(function (err) { ajCargando = false; if (esErrorClave(err)) { pedirClave(err); return; } $('ajustes').innerHTML = '<p class="vacio">' + esc(mensajeError(err)) + '</p>'; });
   }
   /* ---------- v4.85: el portal de premios (solo para quien lleva la web) ---------- */
-  const UNIDAD_CAT = { comidas: ['comida', 'comidas'], cenas: ['cena', 'cenas'], noches: ['noche', 'noches'], eventos: ['evento', 'eventos'], finde: ['visita', 'visitas'], semana: ['visita', 'visitas'], compania: ['acompañante', 'acompañantes'] };
+  const UNIDAD_CAT = { secretaria: ['vez', 'veces'], comidas: ['comida', 'comidas'], cenas: ['cena', 'cenas'], noches: ['noche', 'noches'], eventos: ['evento', 'eventos'], finde: ['visita', 'visitas'], semana: ['visita', 'visitas'], compania: ['acompañante', 'acompañantes'] };
   function valorCat(k, v) {
     if (k === 'avisa') return v < 24 ? Math.round(v) + ' h antes' : Math.round(v / 24) + (Math.round(v / 24) === 1 ? ' día antes' : ' días antes');
     const u = UNIDAD_CAT[k] || ['', ''];
@@ -2032,17 +2033,18 @@
           return '<article class="pr-card"><h3>' + esc(c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^./, function (x) { return x.toUpperCase(); })) + '</h3><p class="pr-texto">' + esc(c.texto) + '</p><ol>' +
             (c.gente.length ? c.gente.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + esc(valorCat(c.id, g.valor)) + '</b><small>+' + g.puntos + '</small></li>'; }).join('') : '<li class="pr-nadie">Aún nadie.</li>') + '</ol></article>';
         }).join('') +
-        (pr.medallas.length ? '<article class="pr-card pr-ancha"><h3>Medallas (+' + pr.puntosMedalla + ' cada una)</h3><ul class="pr-medallas">' + pr.medallas.map(function (m) { return '<li><b>' + esc(m.titulo) + '</b> <span>' + esc(m.gente.join(', ')) + '</span></li>'; }).join('') + '</ul></article>' : '') +
+        (pr.medallas.length ? '<article class="pr-card pr-ancha"><h3>Medallas</h3><ul class="pr-medallas">' + pr.medallas.map(function (m) { return '<li><b>' + esc(m.titulo) + '</b> <small class="pr-pts">+' + (m.puntos || pr.puntosMedalla) + '</small> <span>' + esc(m.gente.join(', ')) + '</span></li>'; }).join('') + '</ul></article>' : '') +
         (pr.servicio.length ? '<article class="pr-card pr-ancha"><h3>El servicio</h3><ul class="pr-medallas">' + pr.servicio.map(function (x) { return '<li><b>' + esc(x.apodo) + '</b> <span>' + esc(x.medallas.length ? x.medallas.map(function (m) { return m.titulo; }).join(' · ') : 'sin medallas este mes') + '</span></li>'; }).join('') + '</ul></article>' : '') +
       '</div><p class="ayuda">Solo lo ves tú. En el resumen para el grupo solo van los destacados y las gracias: nunca quién va menos.</p>';
   }
   /* en el mensaje al grupo, las medallas dichas de los demás */
-  const PARA_GRUPO = { 'Siempre contestas': 'Siempre contestan', 'Tienes tu día': 'Tienen su día fijo', 'No te pierdes ni uno': 'No se pierden ni un evento', 'No fallas nunca': 'No falla nunca' };
+  const PARA_GRUPO = { 'Siempre contestas': 'Siempre contestan', 'Tienes tu día': 'Tienen su día fijo', 'No te pierdes ni uno': 'No se pierden ni un evento', 'No fallas nunca': 'No falla nunca',
+    '¡Bienvenido a la mesa!': '¡Bienvenidos a la mesa!', 'Traes compañía': 'Traen compañía', 'Te apuntas a los planes': 'Se apuntan a los planes', 'Echas una mano': 'Echan una mano' };
   function resumenPremios(pr) {
     const t = pr.totales, top = pr.general.filter(function (g) { return g.top; });
     const nombres = function (l, max) { return l.slice(0, max).join(', ') + (l.length > max ? ' y ' + (l.length - max) + ' más' : ''); };
     const primeros = function (c) { const m = c.gente.length ? c.gente[0].puntos : 0; return c.gente.filter(function (g) { return g.puntos === m; }).map(function (g) { return g.apodo; }); };
-    const ICONO = { comidas: '🍽️', cenas: '🌙', noches: '🛏️', eventos: '🎉', avisa: '⏰', finde: '☀️', semana: '📅', compania: '👥' };
+    const ICONO = { secretaria: '📋', comidas: '🍽️', cenas: '🌙', noches: '🛏️', eventos: '🎉', avisa: '⏰', finde: '☀️', semana: '📅', compania: '👥' };
     const enlace = datos.url ? '\n\n👉 ' + datos.url.replace(/#.*$/, '') : '';
     return '🏆 *Casa Abuela · el último mes*\n¡Gracias a todos! Entre todos, ' + t.comidas + ' comidas, ' + t.cenas + ' cenas y ' + t.noches + ' noches con la abuela (' + t.personas + ' personas distintas).' +
       (pr.familias.length ? '\n\n👑 *Familia del mes:* ' + cortoFamilia(pr.familias[0].familia) : '') +
@@ -3398,9 +3400,9 @@
       (l.length ? '<div class="mn-distinciones"><p class="mn-dias-tit">Tus medallas</p><ul>' + l.map(function (d) {
         return '<li' + (d.categoria ? ' class="cat"' : '') + '><b>' + esc(d.titulo) + (d.puntos ? ' <em>+' + d.puntos + '</em>' : '') + '</b><span>' + esc(d.texto) + '</span></li>'; }).join('') + '</ul></div>'
         : '<p class="ayuda">Aún no tienes medallas. Ve a comer con la abuela, apúntate con tiempo, contesta a los eventos… y irán saliendo.</p>') +
-      '<details class="mn-como"><summary>Cómo funciona</summary><p>Hay cinco categorías, de los últimos 30 días: comidas, cenas, noches, eventos y avisar con tiempo. En cada una, los 10 primeros se llevan medalla y puntos: 10 al primero, 9 al segundo… y 1 al décimo (los empatados, igual).</p>' +
+      '<details class="mn-como"><summary>Cómo funciona</summary><p>Hay nueve categorías, de los últimos 30 días: comidas, cenas, noches, eventos, avisar con tiempo, fin de semana, entre semana, traer compañía y la secretaría de la familia (apuntar y contestar por los demás). En cada una, los 10 primeros se llevan medalla y puntos: 10 al primero, 9 al segundo… y 1 al décimo (los empatados, igual).</p>' +
         '<p>El <b>top 10 general</b> suma todos los puntos (los de las categorías y los de las medallas): puedes estar en el top de una categoría y no en el general. Su nombre sale en dorado.</p>' +
-        '<p>Hay medallas que no compiten con nadie y suman <b>3 puntos</b> cada una: no perderte ningún evento, contestar siempre, ir cuatro semanas seguidas o tener tu día fijo. No se enseña quién más está en cada top.</p></details>';
+        '<p>Además hay muchas medallas que no compiten con nadie. Las que cuestan más suman <b>3 puntos</b>: no perderte ningún evento, contestar siempre, cuatro semanas seguidas, tener tu día fijo, tu primera vez o ayudar a rellenar los datos de la familia. Las de participar suman <b>1 punto</b>: una noche, un fin de semana, comida y cena el mismo día, ir con tu familia, traer a alguien, dejar notas, apuntarte con tiempo, ir a los planes o echar una mano. No se enseña quién más está en cada top.</p></details>';
   }
   $('yo-chip').addEventListener('click', function () { if (datos) abrirYo(); });
   function olvidarYo() {
