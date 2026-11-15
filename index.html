@@ -507,6 +507,7 @@
   .forma-ev[hidden] { display: none; }
   .forma-ev button { min-height: 44px; border: 0; background: #fff; font: inherit; font-weight: 800; color: var(--color-principal-oscuro); cursor: pointer; }
   .forma-ev button[aria-pressed="true"] { background: var(--color-principal); color: #fff; }
+  .aviso-servicio { margin: 0; padding: 10px 14px; border-radius: var(--radio); background: var(--color-destacado-claro); color: var(--color-texto); font-weight: 700; border-left: 4px solid var(--color-accion); }
   .ev-notas { margin: 8px 0 4px; padding: 8px 12px; border-radius: var(--radio); background: #FFF6D9; border-left: 4px solid #E9B949; }
   .ev-notas-tit { margin: 0 0 2px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #8A6A10; }
   .ev-notas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 15px; }
@@ -791,7 +792,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.73.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.74.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -975,10 +976,18 @@
   }
   function etiquetaMenu(v) { return String(v || '').replace(/^[^A-Za-zÁÉÍÓÚáéíóúÑñ]+/, '').trim() || 'Entero'; }
   function apunte(fecha, turno, id) { return datos.apuntes.find(function (a) { return a.fecha === fecha && a.turno === turno && a.persona === id; }); }
-  function idsDe(fecha, turno) { return datos.apuntes.filter(function (a) { return a.fecha === fecha && a.turno === turno; }).map(function (a) { return a.persona; }); }
-  /* Para dormir, el servicio también cuenta como compañía; para comer y cenar, no */
-  function compania(ids, turno) { return turno === 'DORMIR' ? ids : ids.filter(function (id) { return !esServicio(persona(id)); }); }
-  function servicioDe(ids, turno) { return turno === 'DORMIR' ? [] : ids.filter(function (id) { return esServicio(persona(id)); }); }
+  function idsDe(fecha, turno) {
+    const r = datos.apuntes.filter(function (a) { return a.fecha === fecha && a.turno === turno; }).map(function (a) { return a.persona; });
+    // v4.74: el servicio que duerme esa noche también cena (sin tener que apuntarlo dos veces)
+    if (turno === 'CENA') datos.apuntes.forEach(function (a) { if (a.fecha === fecha && a.turno === 'DORMIR' && esServicio(persona(a.persona)) && r.indexOf(a.persona) === -1) r.push(a.persona); });
+    return r;
+  }
+  /* Para dormir (y, v4.74, para cenar), el servicio también cuenta como compañía; para comer, no: la comida es lo urgente */
+  function compania(ids, turno) { return turno === 'DORMIR' || turno === 'CENA' ? ids : ids.filter(function (id) { return !esServicio(persona(id)); }); }
+  function servicioDe(ids, turno) { return turno === 'DORMIR' || turno === 'CENA' ? [] : ids.filter(function (id) { return esServicio(persona(id)); }); }
+  /* v4.74: en esa comida o cena no hay servicio: quien vaya, que llegue antes a prepararla y a estar con la abuela */
+  function sinServicio(fecha, turno) { return turno !== 'DORMIR' && !idsDe(fecha, turno).some(function (id) { return esServicio(persona(id)); }); }
+  function avisoSinServicio(fecha, turno) { return 'No hay servicio: llega antes para preparar la ' + (turno === 'CENA' ? 'cena' : 'comida') + ' y estar con la abuela.'; }
   function notaDia(fecha) { return datos.dias.find(function (d) { return d.fecha === fecha; }); }
   function fijosDe(id) { return (datos.fijos || []).filter(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy()); }); }
   function deBaja(id) { return (datos.bajas || []).find(function (p) { return p.id === id; }); }
@@ -3071,6 +3080,9 @@
 
   /* ---------- Guardar ---------- */
   function guardarCambios(id, cambios, mensaje) {
+    // v4.74: si se apunta a una comida o cena sin servicio, se le avisa de que tiene que ir antes
+    const sinS = (cambios.turnos || []).filter(function (t) { return t.apuntado && t.fecha >= hoy() && !fueraTurno(t.fecha, t.turno) && sinServicio(t.fecha, t.turno); })[0];
+    if (sinS) mensaje = mensaje + ' ' + avisoSinServicio(sinS.fecha, sinS.turno);
     return enSegundoPlano('guardarPersona', [id, cambios, yo, rango()], mensaje, function () { aplicarPersonaLocal(id, cambios); });
   }
 
@@ -3400,7 +3412,7 @@
   function abrirAnadir(fecha, turno) {
     const ya = idsDe(fecha, turno);
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Añadir a la ' + esc(nombreTurno(fecha, turno)) + '</h2></div>' +
-      '<div class="dlg-cuerpo">' + buscadorHtml('Quién viene') +
+      '<div class="dlg-cuerpo">' + (sinServicio(fecha, turno) && !fueraTurno(fecha, turno) ? '<p class="aviso-servicio">' + esc(avisoSinServicio(fecha, turno)) + '</p>' : '') + buscadorHtml('Quién viene') +
       '<label class="campo" for="dlg-nota">Nota para ese día (si hace falta)<input id="dlg-nota" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: llega a las 21:30"></label>' +
       campoAcompanantes(0) + '</div>' +
       pie('Apuntar a esta persona'));
@@ -3778,7 +3790,7 @@
     const $t = $('toast');
     $t.textContent = t; $t.hidden = false;
     clearTimeout(temporizador);
-    if (ms !== 0) temporizador = setTimeout(function () { $t.hidden = true; }, ms || 3500);
+    if (ms !== 0) temporizador = setTimeout(function () { $t.hidden = true; }, ms || (t.length > 70 ? 7000 : 3500));  // v4.74: los largos, más rato
   }
 
   /* v4.3: Safari del iPhone no hace caso a user-scalable=no; así tampoco se pellizca */
