@@ -163,6 +163,12 @@
   .evento-dia .ev-barra-total { margin: 6px 0 0; height: 7px; }
   .rt-total { display: flex; align-items: center; gap: 8px; width: 100%; padding: 2px 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; color: var(--color-texto); }
   .rt-total b { font-size: 15px; }
+  .rt-ver { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--color-principal-oscuro); }
+  .rt-ver + .rt-flecha { margin-left: 2px; }
+  /* v4.90: los días pasados, en una línea; «Nota», discreto; lo que falta en una ficha, en ámbar (el rojo, para lo urgente) */
+  .pasados-toggle { display: flex; align-items: center; gap: 6px; width: 100%; padding: 10px 14px; border-radius: var(--radio); border: 1px dashed var(--color-linea); background: transparent; font: inherit; font-weight: 800; color: var(--color-texto-suave); cursor: pointer; }
+  .pasados-toggle span { font-weight: 600; }
+  .dia-cab button.mini[data-dia] { min-height: 28px; padding: 1px 8px; font-size: 12px; opacity: .8; }
   .rt-flecha { margin-left: auto; font-size: 20px; color: var(--color-texto-suave); }
   .rt-marca { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
   .rt-marca.rt-alergias { background: #FDE8E6; color: var(--color-error); }
@@ -770,7 +776,7 @@
   .fp-come { flex-basis: 100%; font-size: 14px; color: var(--color-texto-suave); }
   .fp-come.con-alergia { color: var(--color-error); }
   .marca-politico { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border: 2px solid var(--color-principal); border-radius: 50%; vertical-align: 1px; flex: none; }
-  .fp-falta-corto { flex-basis: 100%; font-size: 14px; font-weight: 800; color: var(--color-error); }
+  .fp-falta-corto { flex-basis: 100%; font-size: 13px; font-weight: 700; color: #9A6B00; }
   .hijos-grupo { margin: 10px 0 0 6px; padding-left: 12px; border-left: 2px solid var(--color-linea); }
   .leyenda-suave { font-weight: 400; color: var(--color-texto-suave); }
   .otra-fecha { border-top: 1px dashed var(--color-linea); padding-top: 8px; margin-top: 8px; }
@@ -933,7 +939,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.89.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.90.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1595,7 +1601,7 @@
     fam.forEach(function (id) { const p = persona(id); const f = p && p.familia && p.familia !== 'Otros' ? p.familia : 'Otros'; if (!grupos[f]) { grupos[f] = []; orden.push(f); } grupos[f].push(id); });
     const clave = function (f) { return fecha + '|' + turno + '|' + f; };
     return (total ? '<button type="button" class="rt-total" data-detalle-turno="' + fecha + '|' + turno + '" aria-label="Ver todos los de la ' + esc(nombreTurno(fecha, turno)) + '"><b>' + total + '</b>' +
-        (al.length ? '<span class="rt-marca rt-alergias">alergias</span>' : '') + '<span class="rt-flecha" aria-hidden="true">›</span></button>' : '') +
+        (al.length ? '<span class="rt-marca rt-alergias">alergias</span>' : '') + '<span class="rt-ver">Ver todos</span><span class="rt-flecha" aria-hidden="true">›</span></button>' : '') +
       (orden.length ? '<div class="rt-familias">' + orden.map(function (f) {
         const ab = famAbiertas.has(clave(f)), ids2 = grupos[f];
         const extra = ids2.reduce(function (n, id) { return n + ((apunte(fecha, turno, id) || {}).acompanantes || 0); }, 0);
@@ -1634,11 +1640,22 @@
       if (servicioYo() && b.dataset.persona !== yo) abrirInfoPersona(b.dataset.persona); else abrirPersona(b.dataset.persona, fecha, turno);  // v4.86
     });
   }
+  let verPasados = false;  // v4.90
+  document.addEventListener('click', function (e) { if (e.target.closest('[data-ver-pasados]')) { verPasados = true; pintarSemana(); } });
   function pintarSemana() {
     let html = '';
     if (hoy() < datos.config.inicio && lunesSel === lunesInicio()) html += '<p class="aviso">El calendario empieza el ' + diaLargo(datos.config.inicio).toLowerCase() + '.</p>';
     const tres = enEscritorio();
-    html += '<div class="dias-semana">' + (tres ? ventana() : semana(lunesSel)).map(function (f) { return bloqueDia(f, {}); }).join('') + '</div>';
+    // v4.90: en el móvil, los días que ya pasaron, juntos en una línea (para que hoy salga arriba)
+    let dias = tres ? ventana() : semana(lunesSel), pasadosHtml = '';
+    if (!tres && !verPasados) {
+      const pas = dias.filter(function (f) { return f < hoy() && !abiertos.has(f); });
+      if (pas.length >= 2 && pas.length === dias.indexOf(pas[pas.length - 1]) + 1) {
+        dias = dias.slice(pas.length);
+        pasadosHtml = '<button type="button" class="pasados-toggle" data-ver-pasados>Días pasados <span>(' + DIAS[dow(pas[0])].toLowerCase() + ' a ' + DIAS[dow(pas[pas.length - 1])].toLowerCase() + ')</span><span class="rt-flecha" aria-hidden="true">▾</span></button>';
+      }
+    }
+    html += '<div class="dias-semana">' + pasadosHtml + dias.map(function (f) { return bloqueDia(f, {}); }).join('') + '</div>';
     $('semana-grande').innerHTML = html;
   }
 
