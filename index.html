@@ -973,7 +973,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.95.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.96.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1122,6 +1122,8 @@
   function primerDia() { return sumar(diaFoco, -lado()); }
   function ventana() { const n = cuantosDias(), v = []; for (let i = 0; i < n; i++) v.push(sumar(primerDia(), i)); return v; }
   function diaInicial() { return hoy(); }
+  /* v4.96: en el móvil, bloques de 7 días: anteayer, ayer, hoy y los cuatro siguientes (las flechas mueven 7 días) */
+  function bloqueMovil() { return [-2, -1, 0, 1, 2, 3, 4].map(function (i) { return sumar(diaFoco, i); }); }
   /* No se ven días anteriores al inicio del calendario: el centro se corre lo que haga falta */
   function minFoco() { return datos ? sumar(datos.config.inicio, lado()) : null; }
   function irADia(dia) {
@@ -1131,6 +1133,7 @@
     lunesSel = lunesDe(dia);
   }
   function necesita() {
+    if (!enEscritorio()) { const b = bloqueMovil(); return { desde: lunesDe(b[0]) < lunesSel ? lunesDe(b[0]) : lunesSel, hasta: sumar(lunesDe(b[6]), 6) }; }  // v4.96
     const ini = lunesDe(primerDia()), fin = sumar(lunesDe(sumar(diaFoco, lado())), 6);  // las semanas enteras del primer y el último día que se ven
     return { desde: ini < lunesSel ? ini : lunesSel, hasta: fin };
   }
@@ -1531,17 +1534,17 @@
     // v4.12.9: todo en una fila (en ordenador, con Día anterior y Día siguiente a los lados); Compartir e Imprimir, iconos
     $n.hidden = false; $h.hidden = true;
     const lh = lunesDe(hoy());
-    const dias = semana(lunesSel);
-    const actual = lunesSel === lh || lh < lunesInicio();
     const tres = enEscritorio();
+    const dias = tres ? semana(lunesSel) : bloqueMovil();  // v4.96
+    const actual = tres ? (lunesSel === lh || lh < lunesInicio()) : diaFoco === hoy();
     $n.classList.toggle('con-pasos', tres);
     $n.innerHTML =
       (tres ? '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaFoco <= minFoco() ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Día anterior</button>' : '') +
       '<div class="nav-centro">' +
-      '<button type="button" class="flecha" data-semana="-1" aria-label="Semana anterior"' + (lunesSel <= lunesInicio() ? ' disabled' : '') + '>' + FLECHA_IZQ + '</button>' +
+      '<button type="button" class="flecha" data-semana="-1" aria-label="' + (tres ? 'Semana anterior' : '7 días antes') + '"' + ((tres ? lunesSel <= lunesInicio() : dias[0] <= datos.config.inicio) ? ' disabled' : '') + '>' + FLECHA_IZQ + '</button>' +
       '<div class="titulo-nav"><h2>Del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '</h2>' +
-      (actual ? '' : '<button type="button" class="enlace" data-semana="0">Volver a esta semana</button>') + '</div>' +
-      '<button type="button" class="flecha" data-semana="1" aria-label="Semana siguiente">' + FLECHA_DER + '</button>' +
+      (actual ? '' : '<button type="button" class="enlace" data-semana="0">' + (tres ? 'Volver a esta semana' : 'Volver a hoy') + '</button>') + '</div>' +
+      '<button type="button" class="flecha" data-semana="1" aria-label="' + (tres ? 'Semana siguiente' : '7 días después') + '">' + FLECHA_DER + '</button>' +
       '<span class="nav-herr"><button type="button" class="icono" data-compartir aria-label="Compartir" title="Compartir">' + ICONO_COMPARTIR + '</button>' +
       '<button type="button" class="icono" data-imprimir aria-label="Imprimir" title="Imprimir">' + ICONO_IMPRIMIR + '</button></span></div>' +
       (tres ? '<button type="button" class="accion paso" data-paso-dia="1">Día siguiente' + FLECHA_DER + '</button>' : '');
@@ -1688,18 +1691,19 @@
     });
   }
   let verPasados = false;  // v4.90
-  document.addEventListener('click', function (e) { if (e.target.closest('[data-ver-pasados]')) { verPasados = true; pintarSemana(); } });
+  document.addEventListener('click', function (e) { if (e.target.closest('[data-ver-pasados]')) { verPasados = !verPasados; pintarSemana(); } });  // v4.96: se abre y se vuelve a plegar
   function pintarSemana() {
     let html = '';
     if (hoy() < datos.config.inicio && lunesSel === lunesInicio()) html += '<p class="aviso">El calendario empieza el ' + diaLargo(datos.config.inicio).toLowerCase() + '.</p>';
     const tres = enEscritorio();
     // v4.90: en el móvil, los días que ya pasaron, juntos en una línea (para que hoy salga arriba)
-    let dias = tres ? ventana() : semana(lunesSel), pasadosHtml = '';
-    if (!tres && !verPasados) {
-      const pas = dias.filter(function (f) { return f < hoy() && !abiertos.has(f); });
-      if (pas.length >= 2 && pas.length === dias.indexOf(pas[pas.length - 1]) + 1) {
-        dias = dias.slice(pas.length);
-        pasadosHtml = '<button type="button" class="pasados-toggle" data-ver-pasados>Días pasados <span>(' + DIAS[dow(pas[0])].toLowerCase() + ' a ' + DIAS[dow(pas[pas.length - 1])].toLowerCase() + ')</span><span class="rt-flecha" aria-hidden="true">▾</span></button>';
+    let dias = tres ? ventana() : bloqueMovil(), pasadosHtml = '';  // v4.96: en el móvil, el bloque de 7 días
+    if (!tres && dias.indexOf(hoy()) !== -1) {
+      const pas = dias.filter(function (f) { return f < hoy(); });
+      if (pas.length) {
+        const nombres = pas.map(function (f) { return DIAS[dow(f)].toLowerCase(); }).join(' y ');
+        pasadosHtml = '<button type="button" class="pasados-toggle" data-ver-pasados aria-expanded="' + verPasados + '">' + (verPasados ? 'Ocultar los días pasados' : 'Días pasados <span>(' + nombres + ')</span>') + '<span class="rt-flecha" aria-hidden="true">' + (verPasados ? '▴' : '▾') + '</span></button>';
+        if (!verPasados) dias = dias.slice(pas.length);
       }
     }
     html += '<div class="dias-semana">' + pasadosHtml + dias.map(function (f) { return bloqueDia(f, {}); }).join('') + '</div>';
@@ -4394,7 +4398,7 @@
         const destino = document.querySelector('[data-dia="' + fecha + '"]');
         if (destino) destino.closest('.dia').scrollIntoView({ behavior: 'smooth', block: 'start' });
       };
-      const seVe = enEscritorio() ? ventana().indexOf(fecha) !== -1 : lunesDe(fecha) === lunesSel;
+      const seVe = enEscritorio() ? ventana().indexOf(fecha) !== -1 : bloqueMovil().indexOf(fecha) !== -1;  // v4.96
       if (seVe) ir();
       else { irADia(fecha); if (cubierto()) { pintar(); ir(); } else cargar().then(ir); }
     } else if (el.hasAttribute('data-anadir')) { abrirAnadir(el.dataset.fecha, el.dataset.turno);
