@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Casa Abuela</title>
 <meta name="apple-mobile-web-app-title" content="Casa Abuela">
 <meta name="theme-color" content="#0B6E61">
@@ -21,7 +21,7 @@
     --color-principal-claro: #D3EEEA;
     --color-texto: #1C2B26;
     --color-texto-suave: #4A5A55;
-    --color-accion: #FF5A3C;
+    --color-accion: #D9480F;  /* v4.91: más oscuro, para que el texto blanco se lea (contraste 4,6) */
     --color-destacado: #FFC845;
     --color-destacado-claro: #FFF0C2;
     --color-linea: #EADFD2;
@@ -47,10 +47,12 @@
   html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body { font-family: var(--letra-texto); font-size: 17px; line-height: 1.4; padding-bottom: env(safe-area-inset-bottom, 0px); }
   /* v4.89: todo un 10 % más pequeño, menos en la vista de la abuela (que sigue grande) */
-  body:not(.modo-abuela) .cabecera-dentro, body:not(.modo-abuela) .pagina, body:not(.modo-abuela) dialog.editor, body:not(.modo-abuela) .ev-fab, body:not(.modo-abuela) #per-arbol-btn, body:not(.modo-abuela) .toast { zoom: .9; }
+  body.vista-agil:not(.modo-abuela) .cabecera-dentro, body.vista-agil:not(.modo-abuela) .pagina, body.vista-agil:not(.modo-abuela) dialog.editor, body.vista-agil:not(.modo-abuela) .ev-fab, body.vista-agil:not(.modo-abuela) #per-arbol-btn, body.vista-agil:not(.modo-abuela) .toast { zoom: .9; }
+  /* v4.91: la vista cómoda: letra y botones algo más grandes */
+  body.vista-comoda:not(.modo-abuela) .cabecera-dentro, body.vista-comoda:not(.modo-abuela) .pagina, body.vista-comoda:not(.modo-abuela) dialog.editor, body.vista-comoda:not(.modo-abuela) .ev-fab, body.vista-comoda:not(.modo-abuela) #per-arbol-btn, body.vista-comoda:not(.modo-abuela) .toast { zoom: 1.08; }
   [hidden] { display: none !important; }
   button, select, input { font: inherit; }
-  :focus-visible { outline: 3px solid var(--color-destacado); outline-offset: 2px; }
+  :focus-visible { outline: 3px solid #0B6E61; outline-offset: 2px; box-shadow: 0 0 0 5px #fff; }  /* v4.91: se ve sobre el crema */
 
   /* Cabecera */
   .cabecera { background: var(--color-principal-oscuro); color: #fff; padding: calc(20px + env(safe-area-inset-top, 0px)) 0 0; }
@@ -64,8 +66,18 @@
   @media (max-width: 500px) { .cabecera p#subtitulo { margin-top: 8px; } }
   @media (orientation: landscape) and (max-height: 500px) { .cabecera .cabecera-dentro p#subtitulo { display: none; } }
   .modo-abuela .yo-chip { display: none; }
+  /* v4.92: en la vista sencilla, la salida a la vista, arriba a la derecha */
+  .salir-arriba { display: none; position: absolute; top: 0; right: max(16px, var(--lado-der, 0px)); min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 2px solid #fff; background: rgba(255,255,255,.15); color: #fff; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
+  .modo-abuela .salir-arriba { display: inline-flex; align-items: center; }
   @media (min-width: 760px) { .yo-chip { right: 32px; } }
   .yo-menu { display: grid; gap: 8px; }
+  .dlg-salir { margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; background: #FFF0C2; border: 1px solid #F1C85A; }
+  .dlg-salir p { margin: 0 0 8px; font-weight: 800; }
+  .yo-vista { border: 0; padding: 0; margin: 0; }
+  .yo-vista legend { font-weight: 800; font-size: 14px; margin-bottom: 6px; }
+  .yo-vista .forma-ev { grid-template-columns: repeat(3, 1fr); }
+  .yo-vista .forma-ev button { display: grid; gap: 2px; padding: 8px 6px; min-height: 56px; text-align: center; }
+  .yo-vista .forma-ev small { font-size: 11px; font-weight: 600; opacity: .9; }
   .yo-menu button { width: 100%; justify-content: flex-start; text-align: left; }
   .cabecera h1 { font-family: var(--letra-titulos); font-weight: 600; font-size: 30px; line-height: 1.1; margin: 0; }
   .cabecera p { margin: 4px 0 0; font-size: 18px; font-weight: 600; }
@@ -136,7 +148,7 @@
   .comida-cab h4 { margin: 0; font-size: 15px; font-weight: 800; color: var(--color-principal-oscuro); }
   button.mas {
     margin-left: auto;
-    display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; flex: none; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; flex: none; cursor: pointer;  /* v4.91: 44 px */
     border: 1.5px solid var(--color-principal-oscuro); border-radius: calc(var(--radio) / 2); background: #fff; color: var(--color-principal-oscuro);
   }
   button.mas svg { width: 20px; height: 20px; }
@@ -163,6 +175,25 @@
   .evento-dia .ev-barra-total { margin: 6px 0 0; height: 7px; }
   .rt-total { display: flex; align-items: center; gap: 8px; width: 100%; padding: 2px 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; color: var(--color-texto); }
   .rt-total b { font-size: 15px; }
+  .ev-estado-yo { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 800; }
+  .ev-estado-yo.si { color: var(--color-principal-oscuro); }
+  .ev-estado-yo.no { color: var(--color-error); }
+  .ev-estado-yo .ico-marca { width: 18px; height: 18px; }
+  .mc-eventos { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+  .mc-eventos span { color: var(--color-texto-suave); font-size: 14px; }
+  .tu-vas { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0 2px; padding: 6px 6px 6px 10px; border-radius: 10px; background: var(--color-principal-claro); }
+  .tu-vas span { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-principal-oscuro); }
+  .tu-vas .ico-marca { width: 18px; height: 18px; }
+  .tu-vas button { min-height: 40px; padding: 0 12px; font-size: 14px; background: #fff; }
+  .falta-suave { background: #FFF0C2; color: #7A4B00; }
+  .falta-suave .enlace { color: #7A4B00; font-weight: 800; }
+  .rt-desglose { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
+  .rt-ver { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--color-principal-oscuro); }
+  .rt-ver + .rt-flecha { margin-left: 2px; }
+  /* v4.90: los días pasados, en una línea; «Nota», discreto; lo que falta en una ficha, en ámbar (el rojo, para lo urgente) */
+  .pasados-toggle { display: flex; align-items: center; gap: 6px; width: 100%; padding: 10px 14px; border-radius: var(--radio); border: 1px dashed var(--color-linea); background: transparent; font: inherit; font-weight: 800; color: var(--color-texto-suave); cursor: pointer; }
+  .pasados-toggle span { font-weight: 600; }
+  .dia-cab button.mini[data-dia] { min-height: 36px; padding: 2px 10px; font-size: 13px; opacity: .85; }
   .rt-flecha { margin-left: auto; font-size: 20px; color: var(--color-texto-suave); }
   .rt-marca { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
   .rt-marca.rt-alergias { background: #FDE8E6; color: var(--color-error); }
@@ -272,7 +303,7 @@
   .dlg-pie { padding: 12px 20px 16px; border-top: 1px solid var(--color-linea); display: grid; gap: 8px; }
   .dlg-error { margin: 0; color: var(--color-error); font-weight: 700; }
   .toast {
-    position: fixed; z-index: 20; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); top: calc(12px + env(safe-area-inset-top, 0px));
     max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: var(--radio); background: var(--color-texto); color: #fff; font-weight: 700;
     box-shadow: 0 8px 24px rgba(28, 43, 38, .25);
   }
@@ -441,12 +472,14 @@
   .pr-card ol { margin: 4px 0 0; padding-left: 22px; display: grid; gap: 2px; font-size: 14px; }
   .pr-card ol li span { font-weight: 700; }
   .pr-card ol li b { float: right; font-size: 13px; }
-  .pr-card ol li small { float: right; margin-right: 6px; font-size: 11px; color: #B8860B; font-weight: 800; }
+  .pr-card ol li small { float: right; margin-right: 6px; margin-left: 6px; font-size: 11px; color: #8A5A00; font-weight: 800; }
   .pr-nadie { list-style: none; margin-left: -22px; color: var(--color-texto-suave); }
   .pr-mas { margin: 0; font-size: 12px; color: var(--color-texto-suave); }
   .pr-medallas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
   .pr-medallas span { color: var(--color-texto-suave); }
-  .pr-pts { font-size: 11px; font-weight: 800; color: #B8860B; }
+  .pr-pts { font-size: 11px; font-weight: 800; color: #8A5A00; }
+  .aj-config fieldset, .aj-config > div { max-width: 560px; }
+  .aj-config .check { display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-weight: 700; }
   .aj-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
   .aj-tabla th { text-align: left; font-size: 12px; color: var(--color-texto-suave); font-weight: 800; padding: 4px 6px 4px 0; }
   .aj-tabla td { padding: 6px 6px 6px 0; border-top: 1px solid var(--color-linea); vertical-align: top; }
@@ -472,14 +505,16 @@
   .mn-datos { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font-size: 15px; color: var(--color-texto-suave); }
   .mn-datos b { color: var(--color-texto); }
   #mis-numeros { display: grid; gap: 10px; }
-  .mn-distinciones li em { font-style: normal; font-size: 12px; font-weight: 800; color: #B8860B; }
+  .mn-distinciones li em { font-style: normal; font-size: 12px; font-weight: 800; color: #8A5A00; }
   .mn-distinciones li:not(.cat) { background: var(--color-principal-claro); border-color: #B9DFD7; }
   .mn-distinciones li:not(.cat) b { color: var(--color-principal-oscuro); }
+  details.mn-distinciones summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
   .mn-como { font-size: 13px; color: var(--color-texto-suave); }
   .mn-como summary { cursor: pointer; font-weight: 800; }
   .mn-como p { margin: 6px 0 0; }
   #yo-medallas { display: grid; gap: 10px; }
-  .mn-distinciones ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; }
+  .mn-distinciones ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 6px; }
+  .mn-distinciones li, .mn-top-caja, .yo-menu button { min-width: 0; overflow-wrap: anywhere; white-space: normal; }  /* v4.91: que no se corte en el móvil */
   .mn-distinciones li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #FFF8E1; border: 1px solid #F1D58A; }
   .mn-distinciones li b { font-size: 14px; color: #7A5300; }
   .mn-distinciones li span { font-size: 12px; color: var(--color-texto-suave); font-weight: 600; }
@@ -535,7 +570,10 @@
   /* v4.89: «Añadir evento», flotando abajo a la derecha; arriba, Eventos o Fechas señaladas */
   .ev-fab { position: fixed; z-index: 40; right: calc(16px + var(--lado-der, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); border-radius: 999px; min-height: 48px; padding: 12px 20px; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); }
   .ev-fab span { font-size: 22px; line-height: 0; margin-right: 2px; }
-  #vista-eventos { padding-bottom: 72px; }
+  #vista-eventos { padding-bottom: 110px; }
+  .ev-fab { transition: transform .2s; }
+  .ev-fab.escondido { transform: translateY(140%); }
+  .ev-fab[hidden] { display: none; }
   .ev-secciones { display: grid; grid-template-columns: 1fr 1fr; margin: 0 0 12px; border-bottom: 2px solid var(--color-linea); }
   .ev-secciones button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 0; background: none; font: inherit; font-weight: 800; font-size: 17px; color: var(--color-texto-suave); cursor: pointer; margin-bottom: -2px; border-bottom: 3px solid transparent; }
   .ev-secciones button[aria-selected="true"] { color: var(--color-principal-oscuro); border-bottom-color: var(--color-principal-oscuro); }
@@ -585,9 +623,9 @@
   .ev-familia summary { cursor: pointer; }
   .ev-familia ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
   .ev-fila { display: flex; align-items: center; gap: 8px; padding-top: 3px; padding-bottom: 3px; }
-  .ev-nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ev-nombre { flex: 1 1 8em; min-width: 7em; overflow-wrap: anywhere; }  /* v4.92: entero (antes «Javi…»); los botones bajan si no caben */
   .ev-bots { display: flex; gap: 6px; flex: none; }
-  .ev-bots button { width: 40px; height: 36px; border-radius: 10px; border: 2px solid var(--color-linea); background: #fff; font: inherit; font-weight: 800; color: var(--color-texto-suave); cursor: pointer; }
+  .ev-bots button { width: 44px; height: 44px; border-radius: 10px; border: 2px solid var(--color-linea); background: #fff; font: inherit; font-weight: 800; color: var(--color-texto-suave); cursor: pointer; }
   .ev-bots .ev-si[aria-pressed="true"] { background: var(--color-principal); border-color: var(--color-principal); color: #fff; }
   .ev-bots .ev-no[aria-pressed="true"] { background: var(--color-error); border-color: var(--color-error); color: #fff; }
   .ev-estado { flex: none; font-weight: 800; }
@@ -770,7 +808,7 @@
   .fp-come { flex-basis: 100%; font-size: 14px; color: var(--color-texto-suave); }
   .fp-come.con-alergia { color: var(--color-error); }
   .marca-politico { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border: 2px solid var(--color-principal); border-radius: 50%; vertical-align: 1px; flex: none; }
-  .fp-falta-corto { flex-basis: 100%; font-size: 14px; font-weight: 800; color: var(--color-error); }
+  .fp-falta-corto { flex-basis: 100%; font-size: 13px; font-weight: 700; color: #9A6B00; }
   .hijos-grupo { margin: 10px 0 0 6px; padding-left: 12px; border-left: 2px solid var(--color-linea); }
   .leyenda-suave { font-weight: 400; color: var(--color-texto-suave); }
   .otra-fecha { border-top: 1px dashed var(--color-linea); padding-top: 8px; margin-top: 8px; }
@@ -866,6 +904,7 @@
 <header class="cabecera">
   <div class="cabecera-dentro">
     <button type="button" id="yo-chip" class="yo-chip" hidden></button>
+    <button type="button" class="salir-arriba" data-salir-sencillo>Salir de la vista sencilla</button>
     <h1>Casa Abuela</h1>
     <p id="subtitulo">Quién viene a comer y a cenar</p>
     <nav class="vistas" aria-label="Vistas">
@@ -933,7 +972,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.89.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.93.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1035,7 +1074,7 @@
       '<div class="dlg-cuerpo"><p class="ayuda">Para ver Casa Abuela hace falta la clave que os hemos pasado por el grupo. Solo se pide una vez en este móvil.</p>' +
       (pista ? '<p class="pista-clave"><strong>Pista:</strong> ' + esc(pista) + '</p>' : '') +
       '<label class="campo" for="dlg-clave">Clave<input id="dlg-clave" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>' +
-      '<div class="dlg-pie"><p class="dlg-error" id="dlg-error"' + (habia ? '' : ' hidden') + '>' + (habia ? 'Esa clave no es. Vuelve a probar.' : '') + '</p><div class="botones">' +
+      '<div class="dlg-pie"><p class="dlg-error" id="dlg-error"' + (habia ? '' : ' hidden') + '>' + (habia ? 'Esa no es la clave. Prueba otra vez.' : '') + '</p><div class="botones">' +
       '<button type="button" class="principal" id="dlg-guardar">Entrar</button></div></div>');
     const entrar = function () {
       const v = $('dlg-clave').value.trim();
@@ -1111,7 +1150,11 @@
   function persona(id) { return datos.personas.find(function (p) { return p.id === id; }); }
   function editor(id) { return (datos.editores || []).find(function (p) { return p.id === id; }); }
   /* v4.35: en el móvil de la abuela, la web es solo para mirar */
-  function modoAbuela() { const e = yo && datos && editor(yo); return !!(e && !e.fallecio); }
+  /* v4.91: cómo quiere ver la web cada uno (en este móvil): «agil», «comoda» o «sencilla» (la de la abuela) */
+  function leerVista() { try { return localStorage.getItem('casa-abuela-vista') || ''; } catch (e) { return ''; } }
+  function guardarVista(v) { try { localStorage.setItem('casa-abuela-vista', v); } catch (e) {} }
+  function vistaElegida() { const v = leerVista(); return v === 'comoda' || v === 'sencilla' || v === 'agil' ? v : 'agil'; }
+  function modoAbuela() { const e = yo && datos && editor(yo); if (e && !e.fallecio) return true; return !!(yo && datos && persona(yo) && leerVista() === 'sencilla'); }
   function quienEs(id) { return id ? (persona(id) || editor(id)) : null; }
   function esServicio(p) { return !!p && p.familia === 'Servicio'; }
   function generacion(p) { return GENERACIONES.find(function (g) { return p && g.clave === p.jerarquia; }) || GENERACIONES[GENERACIONES.length - 1]; }
@@ -1211,6 +1254,7 @@
       const ano = Number((p.cumple || '').slice(6, 10));
       const n = ano ? Number(fecha.slice(0, 4)) - ano : 0;
       if (esFallecido(p)) return 'Cumple de ' + p.apodo + (n > 0 ? ': habría cumplido ' + n + ' años' : '');  // v4.16
+      if (modoAbuela() && p.id === yo) return '¡Hoy es tu cumpleaños!' + (ano ? ' ' + n + ' años' : '');  // v4.91
       return 'Cumple de ' + p.apodo + (ano ? ': ' + n + ' años' : '');
     });
     return out;
@@ -1406,6 +1450,8 @@
     if (eventoPorAbrir && !$dlg.open) { const ide = eventoPorAbrir; eventoPorAbrir = ''; if (evento(ide) && !modoAbuela()) setTimeout(function () { abrirDetalleEvento(ide); }, 0); }
     const sencillo = modoAbuela();  // v4.35
     document.body.classList.toggle('modo-abuela', sencillo);
+    document.body.classList.toggle('vista-agil', vistaElegida() === 'agil');  // v4.91
+    document.body.classList.toggle('vista-comoda', vistaElegida() === 'comoda');
     $('salir-sencillo').hidden = !sencillo;
     if (sencillo && (vista === 'huecos' || vista === 'rellenar')) { ponerVista('semana'); return; }
     $('nav-ajustes').hidden = !esAdmin();  // v4.58
@@ -1454,7 +1500,7 @@
     const vez = function (n, uno, varios) { return n === 1 ? uno : varios.replace('%', n); };
     let html = '<p class="huecos-resumen">' + (!sinNadie && !soloServicio
       ? 'No hay huecos de aquí al ' + diaLargo(fin).toLowerCase() + ': todo tiene a alguien.'
-      : 'De aquí al ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, 'una sin nadie', '% sin nadie') : '', soloServicio ? vez(soloServicio, 'una solo con el servicio', '% solo con el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>';
+      : 'De aquí al ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, '1 hueco sin nadie', '% huecos sin nadie') : '', soloServicio ? vez(soloServicio, '1 solo con el servicio', '% solo con el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>';
     html += dias.map(function (d) {
       return '<section class="huecos-dia"><h3>' + DIAS[dow(d.fecha)] + ' <span>' + (d.fecha === h ? 'Hoy' : ddmm(d.fecha)) + '</span></h3><ul>' +
         d.huecos.map(function (x) {
@@ -1574,6 +1620,9 @@
         if (servTodo.length) html += '<div class="servicio-linea">Servicio:' + servTodo.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
         if (al.length) html += '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>';
       } else if (ids.length) html += resumenTurno(fecha, t.id, ids, fam, servTodo, al, !ft && motivo === null);  // v4.75: fuera, el resumen; al tocarlo, el desglose
+      if (!modoAbuela() && yo && persona(yo) && ids.indexOf(yo) !== -1 && !paso) {  // v4.91: lo tuyo, a la vista, y quitarte en un toque
+        html += '<div class="tu-vas"><span>' + ICONO_SI + 'Tú ' + (t.id === 'DORMIR' ? 'duermes' : 'vas') + '</span><button type="button" class="accion" data-quitarme="' + fecha + '|' + t.id + '">' + (t.id === 'DORMIR' ? 'Ya no duermo' : 'Ya no voy') + '</button></div>';
+      }
       html += '</div>';
     });
     return html + '</article>';
@@ -1588,14 +1637,17 @@
   const famAbiertas = new Set();  // v4.75: las familias desplegadas en cada comida («fecha|turno|familia»)
   function resumenTurno(fecha, turno, ids, fam, serv, al, cuenta) {
     const r = raciones(ids, fecha, turno);
-    const total = turno === 'DORMIR' ? (fam.length ? (fam.length === 1 ? '1 duerme' : fam.length + ' duermen') : '') : cuenta ? r.total + ' a la mesa' : 'Ver quién va';
+    // v4.92: que cuadre con las familias: «10 a la mesa (9 + la abuela)»
+    const extraAco = ids.reduce(function (n, id) { return n + ((apunte(fecha, turno, id) || {}).acompanantes || 0); }, 0);
+    const desglose = [fam.length + extraAco ? String(fam.length + extraAco) : '', abuelas().length && !fueraTurno(fecha, turno) ? 'la abuela' : '', serv.length ? serv.map(function (id) { return (persona(id) || {}).apodo || id; }).join(' y ') : ''].filter(Boolean);
+    const total = turno === 'DORMIR' ? (fam.length ? (fam.length === 1 ? '1 duerme' : fam.length + ' duermen') : '') : cuenta ? r.total + ' a la mesa' + (desglose.length > 1 ? ' <small class="rt-desglose">(' + esc(desglose.join(' + ')) + ')</small>' : '') : 'Ver quién va';
     const conNota = function (id) { const a = apunte(fecha, turno, id); return !!(a && a.nota); };
     // las familias, cada una en su tarjeta pequeña; al tocarla, sus nombres debajo
     const grupos = {}, orden = [];
     fam.forEach(function (id) { const p = persona(id); const f = p && p.familia && p.familia !== 'Otros' ? p.familia : 'Otros'; if (!grupos[f]) { grupos[f] = []; orden.push(f); } grupos[f].push(id); });
     const clave = function (f) { return fecha + '|' + turno + '|' + f; };
     return (total ? '<button type="button" class="rt-total" data-detalle-turno="' + fecha + '|' + turno + '" aria-label="Ver todos los de la ' + esc(nombreTurno(fecha, turno)) + '"><b>' + total + '</b>' +
-        (al.length ? '<span class="rt-marca rt-alergias">alergias</span>' : '') + '<span class="rt-flecha" aria-hidden="true">›</span></button>' : '') +
+        (al.length ? '<span class="rt-marca rt-alergias">alergias</span>' : '') + '<span class="rt-ver">Ver todos</span><span class="rt-flecha" aria-hidden="true">›</span></button>' : '') +
       (orden.length ? '<div class="rt-familias">' + orden.map(function (f) {
         const ab = famAbiertas.has(clave(f)), ids2 = grupos[f];
         const extra = ids2.reduce(function (n, id) { return n + ((apunte(fecha, turno, id) || {}).acompanantes || 0); }, 0);
@@ -1634,11 +1686,22 @@
       if (servicioYo() && b.dataset.persona !== yo) abrirInfoPersona(b.dataset.persona); else abrirPersona(b.dataset.persona, fecha, turno);  // v4.86
     });
   }
+  let verPasados = false;  // v4.90
+  document.addEventListener('click', function (e) { if (e.target.closest('[data-ver-pasados]')) { verPasados = true; pintarSemana(); } });
   function pintarSemana() {
     let html = '';
     if (hoy() < datos.config.inicio && lunesSel === lunesInicio()) html += '<p class="aviso">El calendario empieza el ' + diaLargo(datos.config.inicio).toLowerCase() + '.</p>';
     const tres = enEscritorio();
-    html += '<div class="dias-semana">' + (tres ? ventana() : semana(lunesSel)).map(function (f) { return bloqueDia(f, {}); }).join('') + '</div>';
+    // v4.90: en el móvil, los días que ya pasaron, juntos en una línea (para que hoy salga arriba)
+    let dias = tres ? ventana() : semana(lunesSel), pasadosHtml = '';
+    if (!tres && !verPasados) {
+      const pas = dias.filter(function (f) { return f < hoy() && !abiertos.has(f); });
+      if (pas.length >= 2 && pas.length === dias.indexOf(pas[pas.length - 1]) + 1) {
+        dias = dias.slice(pas.length);
+        pasadosHtml = '<button type="button" class="pasados-toggle" data-ver-pasados>Días pasados <span>(' + DIAS[dow(pas[0])].toLowerCase() + ' a ' + DIAS[dow(pas[pas.length - 1])].toLowerCase() + ')</span><span class="rt-flecha" aria-hidden="true">▾</span></button>';
+      }
+    }
+    html += '<div class="dias-semana">' + pasadosHtml + dias.map(function (f) { return bloqueDia(f, {}); }).join('') + '</div>';
     $('semana-grande').innerHTML = html;
   }
 
@@ -1684,6 +1747,8 @@
 
   /* v4.35: salir del modo sencillo: con la clave de la familia, para que no se salga sin querer */
   function salirSencillo() {
+    // v4.92: si la vista sencilla la eligió uno mismo (no es la abuela), se sale sin clave, a la cómoda
+    if (persona(yo) && !editor(yo)) { guardarVista('comoda'); pintar(); aviso('Listo: vista cómoda. Puedes cambiarla tocando tu nombre.'); return; }
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Salir del modo sencillo</h2></div>' +
       '<div class="dlg-cuerpo"><p class="ayuda">Para volver a la web completa, escribe la clave de la familia.</p>' +
       (pistaClave() ? '<p class="pista-clave"><strong>Pista:</strong> ' + esc(pistaClave()) + '</p>' : '') +  // v4.78
@@ -1692,12 +1757,13 @@
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     const n = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
     const salir = function () {
-      if (leerClave() && n($('dlg-salir-clave').value) !== n(leerClave())) { errorDialogo('Esa clave no es.'); return; }
-      yo = ''; guardarYo('');
+      if (leerClave() && n($('dlg-salir-clave').value) !== n(leerClave())) { errorDialogo('Esa no es la clave. Prueba otra vez.'); return; }
+      if (persona(yo) && leerVista() === 'sencilla') guardarVista('comoda'); else { yo = ''; guardarYo(''); }  // v4.91
       cerrarDialogo(); pintar();
     };
     $('dlg-guardar').addEventListener('click', salir);
-    $('dlg-salir-clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') salir(); });
+    $('dlg-salir-clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); salir(); } });
+    $('dlg-cerrar').textContent = 'Cancelar';  // v4.92
   }
 
   /* v4.28 (v4.42, para todos): por núcleos: los padres y, debajo y metidos, sus hijos (y los hijos de sus hijos) */
@@ -1999,7 +2065,7 @@
       (nunca.length ? '<h3 class="rf-sec">No la han usado nunca (' + nunca.length + ')</h3>' + porFam.filter(function (x) { return x.nunca.length; }).map(function (x) {
         return '<div class="aj-grupo"><p class="aj-grupo-t">' + esc(famNom(x.f)) + ' <span>' + x.nunca.length + '</span></p><ul class="aj-filas">' + x.nunca.map(function (p) {
           return '<li><span><b>' + esc(p.apodo) + '</b>' + ([p.nombre, p.apellido].filter(Boolean).join(' ') && [p.nombre, p.apellido].filter(Boolean).join(' ') !== p.apodo ? ' <small>' + esc([p.nombre, p.apellido].filter(Boolean).join(' ')) + '</small>' : '') + '</span>' +
-            '<button type="button" class="mini" data-no-cuenta="' + esc(p.id) + '" aria-label="' + esc(p.apodo) + ' no cuenta">No cuenta</button></li>';
+            '<button type="button" class="mini" data-no-cuenta="' + esc(p.id) + '" aria-label="' + esc(p.apodo) + ' no usa la web">No usa la web</button></li>';
         }).join('') + '</ul></div>';
       }).join('') + '<p class="ayuda">Si alguien no va a usarla (no tiene móvil, por ejemplo), toca «No cuenta» y deja de salir aquí y en las cifras.</p>' : '') +
       (noCuentan.length ? '<h3 class="rf-sec">No cuentan (' + noCuentan.length + ')</h3><ul class="aj-filas gris">' + noCuentan.map(function (id) { return '<li><span>' + esc(nombre(id)) + '</span><button type="button" class="mini" data-si-cuenta="' + esc(id) + '" aria-label="Volver a contar a ' + esc(nombre(id)) + '">Volver a contar</button></li>'; }).join('') + '</ul>' : '') +
@@ -2016,11 +2082,25 @@
     llamar('guardarAjustes', [{ noCuentan: lista }, yo, rango()]).then(function (d) { datos = d; guardarLocal(); })
       .catch(function (err) { aviso('No se ha guardado. ' + mensajeError(err), 9000); ajustes = null; pintarAjustes(); });
   });
+  /* v4.91: la clave de administrador (en este móvil), para Ajustes y Premios */
+  function claveAdmin() { try { return localStorage.getItem('casa-abuela-admin') || ''; } catch (e) { return ''; } }
+  function esErrorAdmin(err) { return /ADMIN:/.test(String((err && err.message) || err || '')); }
+  function pedirClaveAdmin(seguir) {
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Clave de administrador</h2></div><div class="dlg-cuerpo"><p class="ayuda">Ajustes y Premios son solo para quien lleva la web. Escribe tu clave de administrador (se guarda en este móvil).</p>' +
+      '<label class="campo" for="dlg-admin">Clave<input id="dlg-admin" type="password" autocomplete="off" autocapitalize="off"></label></div>' + pie('Entrar'));
+    $('dlg-cerrar').addEventListener('click', function () { cerrarDialogo(); ponerVista('semana'); });
+    const ok = function () { const v = $('dlg-admin').value.trim(); if (!v) { errorDialogo('Escribe la clave.'); return; } try { localStorage.setItem('casa-abuela-admin', v); } catch (e) {} cerrarDialogo(); seguir(); };
+    $('dlg-guardar').addEventListener('click', ok);
+    $('dlg-admin').addEventListener('keydown', function (e) { if (e.key === 'Enter') ok(); });
+    setTimeout(function () { if ($('dlg-admin')) $('dlg-admin').focus(); }, 50);
+  }
   function cargarAjustes() {
     if (ajCargando) return;
     ajCargando = true;
-    llamar('getAjustes', [yo]).then(function (a) { ajCargando = false; ajustes = a; pintarAjustes(); })
-      .catch(function (err) { ajCargando = false; if (esErrorClave(err)) { pedirClave(err); return; } $('ajustes').innerHTML = '<p class="vacio">' + esc(mensajeError(err)) + '</p>'; });
+    llamar('getAjustes', [yo, claveAdmin()]).then(function (a) { ajCargando = false; ajustes = a; pintarAjustes(); })
+      .catch(function (err) { ajCargando = false; if (esErrorClave(err)) { pedirClave(err); return; }
+        if (esErrorAdmin(err)) { if (claveAdmin()) aviso('Esa clave de administrador no es.', 5000); pedirClaveAdmin(function () { ajustes = null; pintarAjustes(); }); return; }
+        $('ajustes').innerHTML = '<p class="vacio">' + esc(mensajeError(err)) + '</p>'; });
   }
   /* ---------- v4.85: el portal de premios (solo para quien lleva la web) ---------- */
   const UNIDAD_CAT = { secretaria: ['vez', 'veces'], comidas: ['comida', 'comidas'], cenas: ['cena', 'cenas'], noches: ['noche', 'noches'], eventos: ['evento', 'eventos'], finde: ['visita', 'visitas'], semana: ['visita', 'visitas'], compania: ['acompañante', 'acompañantes'] };
@@ -2035,14 +2115,14 @@
       '<p class="pr-totales">Entre todos: <b>' + t.comidas + '</b> comidas, <b>' + t.cenas + '</b> cenas y <b>' + t.noches + '</b> noches con la abuela · <b>' + t.personas + '</b> personas distintas.</p>' +
       '<div><button type="button" class="principal" id="pr-compartir">Compartir el resumen del mes</button></div>' +
       '<div class="pr-grid">' +
-        '<article class="pr-card pr-oro"><h3>Top 10 general</h3><ol>' + (top.length ? top.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + g.puntos + ' pts</b></li>'; }).join('') : '<li>Aún nadie.</li>') + '</ol>' +
+        '<article class="pr-card pr-oro"><h3>Top 10 general</h3><ol>' + (top.length ? top.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + g.puntos + ' puntos</b></li>'; }).join('') : '<li>Aún nadie.</li>') + '</ol>' +
           (pr.general.length > top.length ? '<p class="pr-mas">Y ' + (pr.general.length - top.length) + ' más con puntos.</p>' : '') + '</article>' +
         (pr.familias.length ? '<article class="pr-card"><h3>Familias del mes</h3><ol>' + pr.familias.map(function (f) { return '<li><span>' + esc(cortoFamilia(f.familia)) + '</span><b>' + f.visitas + '</b></li>'; }).join('') + '</ol></article>' : '') +
         pr.categorias.map(function (c) {
           return '<article class="pr-card"><h3>' + esc(c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^./, function (x) { return x.toUpperCase(); })) + '</h3><p class="pr-texto">' + esc(c.texto) + '</p><ol>' +
             (c.gente.length ? c.gente.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + esc(valorCat(c.id, g.valor)) + '</b><small>+' + g.puntos + '</small></li>'; }).join('') : '<li class="pr-nadie">Aún nadie.</li>') + '</ol></article>';
         }).join('') +
-        (pr.medallas.length ? '<article class="pr-card pr-ancha"><h3>Medallas</h3><ul class="pr-medallas">' + pr.medallas.map(function (m) { return '<li><b>' + esc(m.titulo) + '</b> <small class="pr-pts">+' + (m.puntos || pr.puntosMedalla) + '</small> <span>' + esc(m.gente.join(', ')) + '</span></li>'; }).join('') + '</ul></article>' : '') +
+        (pr.medallas.length ? '<article class="pr-card pr-ancha"><h3>Medallas</h3><ul class="pr-medallas">' + pr.medallas.map(function (m) { return '<li><b>' + esc(m.titulo) + '</b> <small class="pr-pts">' + (m.puntos || pr.puntosMedalla) + ((m.puntos || pr.puntosMedalla) === 1 ? ' punto' : ' puntos') + '</small> <span>' + esc(m.gente.join(', ')) + '</span></li>'; }).join('') + '</ul></article>' : '') +
         (pr.servicio.length ? '<article class="pr-card pr-ancha"><h3>El servicio</h3><ul class="pr-medallas">' + pr.servicio.map(function (x) { return '<li><b>' + esc(x.apodo) + '</b> <span>' + esc(x.medallas.length ? x.medallas.map(function (m) { return m.titulo; }).join(' · ') : 'sin medallas este mes') + '</span></li>'; }).join('') + '</ul></article>' : '') +
       '</div><p class="ayuda">Solo lo ves tú. En el resumen para el grupo solo van los destacados y las gracias: nunca quién va menos.</p>';
   }
@@ -2056,9 +2136,8 @@
     const ICONO = { secretaria: '📋', comidas: '🍽️', cenas: '🌙', noches: '🛏️', eventos: '🎉', avisa: '⏰', finde: '☀️', semana: '📅', compania: '👥' };
     const enlace = datos.url ? '\n\n👉 ' + datos.url.replace(/#.*$/, '') : '';
     return '🏆 *Casa Abuela · el último mes*\n¡Gracias a todos! Entre todos, ' + t.comidas + ' comidas, ' + t.cenas + ' cenas y ' + t.noches + ' noches con la abuela (' + t.personas + ' personas distintas).' +
-      (pr.familias.length ? '\n\n👑 *Familia del mes:* ' + cortoFamilia(pr.familias[0].familia) : '') +
-      (top.length ? '\n\n⭐ *Top 10:* ' + top.map(function (g) { return g.apodo; }).join(', ') : '') +
-      '\n\n*Los que más*\n' + pr.categorias.filter(function (c) { return c.gente.length; }).map(function (c) {
+      '\n\n💛 Gracias a todas las familias: cada visita cuenta.' +  // v4.92: sin el top 10 con nombres ni la familia del mes
+      '\n\n*Destacados del mes*\n' + pr.categorias.filter(function (c) { return c.gente.length; }).map(function (c) {
         return (ICONO[c.id] || '•') + ' ' + c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^De los que antes avisan$/, 'avisan con tiempo').replace(/^./, function (x) { return x.toUpperCase(); }) + ': ' + primeros(c).join(', ');
       }).join('\n') +
       (pr.medallas.length ? '\n\n🏅 *Medallas*\n' + pr.medallas.map(function (m) { return (PARA_GRUPO[m.titulo] || m.titulo) + ': ' + nombres(m.gente, 8); }).join('\n') : '') +
@@ -2072,8 +2151,9 @@
       abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Resumen del mes</h2></div>' +
         '<div class="dlg-cuerpo"><p class="ayuda">Solo los destacados y las gracias. Cópialo y pégalo en el grupo.</p>' +
         '<label class="campo" for="dlg-texto">Mensaje (puedes cambiarlo)<textarea id="dlg-texto" rows="14"></textarea></label></div>' +
-        '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-copiar">Copiar el mensaje</button><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+        '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-wa">Enviar por WhatsApp</button><button type="button" class="accion" id="dlg-copiar">Copiar</button><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
       $('dlg-texto').value = resumenPremios(pr);
+      $('dlg-wa').addEventListener('click', function () { abrirWhatsApp($('dlg-texto').value); });
       $('dlg-cerrar').addEventListener('click', cerrarDialogo);
       $('dlg-copiar').addEventListener('click', function () {
         const t = $('dlg-texto'), hecho = function () { aviso('Mensaje copiado. Pégalo en el grupo.'); };
@@ -2101,7 +2181,7 @@
     const campo = function (id, et, tipo, v, extra) { return '<label class="campo" for="aj-' + id + '">' + et + '<input id="aj-' + id + '" type="' + tipo + '" value="' + esc(v == null ? '' : v) + '"' + (extra || '') + '></label>'; };
     $a.innerHTML =
       '<section class="aj-sec aj-config"><h2>Configuración</h2>' +  // v4.62: en bloques de una columna (en el móvil se descuadraba)
-        '<fieldset><legend>Clave</legend>' + campo('clave', 'Clave de la familia', 'text', c.clave, ' maxlength="40" autocomplete="off" autocapitalize="off"') + campo('pista', 'Pista', 'text', c.pista, ' maxlength="100" autocomplete="off"') +
+        '<fieldset><legend>Clave</legend>' + campo('clave', 'Clave de la familia', 'password', c.clave, ' maxlength="40" autocomplete="off" autocapitalize="off"') + '<label class="check"><input type="checkbox" id="aj-ver-clave"> Mostrar la clave</label>' + campo('pista', 'Pista', 'text', c.pista, ' maxlength="100" autocomplete="off"') +
           '<p class="ayuda">Si cambias la clave, a todos les pedirá la nueva la próxima vez que entren (con la pista).</p></fieldset>' +
         '<fieldset><legend>Horas</legend><div class="aj-horas">' + campo('comida', 'Comida', 'time', c.horaComida) + campo('cena', 'Cena', 'time', c.horaCena) + campo('dormir', 'Dormir', 'time', c.horaDormir) + '</div></fieldset>' +
         '<fieldset><legend>Avisos y calendario</legend>' +
@@ -2111,7 +2191,7 @@
       panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan) +
       '<section class="aj-sec" id="aj-premios"><h2>Premios</h2><p class="ayuda">Contando los premios del último mes…</p></section>' +  // v4.85
       '<section class="aj-sec"><h2>Historial de cambios</h2>' +
-        '<label class="buscar" for="aj-q"><span class="oculto">Buscar</span><input id="aj-q" type="search" autocomplete="off" placeholder="Buscar (persona, fecha, qué)"></label>' +
+        '<label class="buscar" for="aj-q"><span class="oculto">Buscar</span><input id="aj-q" type="search" autocomplete="off" placeholder="Buscar"></label>' +
         '<ul class="aj-hist" id="aj-hist"></ul></section>';
     const pintarHist = function () {
       const q = sinAcentos($('aj-q').value.trim());
@@ -2122,7 +2202,8 @@
       }).join('') : '<li>Nada con eso.</li>';
     };
     $('aj-q').addEventListener('input', pintarHist);
-    llamar('getPremios', [yo]).then(function (pr) { const $p = $('aj-premios'); if ($p) { $p.innerHTML = htmlPremios(pr); montarPremios(pr); } })
+    $('aj-ver-clave').addEventListener('change', function () { $('aj-clave').type = this.checked ? 'text' : 'password'; });  // v4.91
+    llamar('getPremios', [yo, claveAdmin()]).then(function (pr) { const $p = $('aj-premios'); if ($p) { $p.innerHTML = htmlPremios(pr); montarPremios(pr); } })
       .catch(function (err) { const $p = $('aj-premios'); if ($p) $p.innerHTML = '<h2>Premios</h2><p class="ayuda">' + esc(mensajeError(err)) + '</p>'; });
 
     if ($('aj-pedir')) $('aj-pedir').addEventListener('click', function () {  // v4.61: el mensaje para el grupo, con el enlace a Rellenar
@@ -2155,7 +2236,7 @@
       if (!Object.keys(aj).length) { aviso('No has cambiado nada.'); return; }
       if (aj.clave !== undefined && !aj.clave) { aviso('La clave no puede quedar vacía.', 6000); return; }
       aviso('Guardando…', 0);
-      llamar('guardarAjustes', [aj, yo, rango()]).then(function (d) {
+      llamar('guardarAjustes', [aj, yo, rango(), claveAdmin()]).then(function (d) {
         if (aj.clave) guardarClave(aj.clave);  // en este móvil, ya con la clave nueva
         datos = d; guardarLocal(); ajustes = null; pintar(); aviso('Ajustes guardados.');
       }).catch(function (err) { if (esErrorClave(err)) { pedirClave(err); return; } aviso('No se ha guardado. ' + mensajeError(err), 9000); });
@@ -2214,9 +2295,9 @@
       '<div class="evento-botones">' + (pasado || modoAbuela() ? '' :
         '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? ICONO_SI + 'Voy' : 'Voy') + '</button>' +
         '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '" aria-pressed="' + noVoy + '">' + (noVoy ? ICONO_NO + 'No voy' : 'No voy') + '</button>') +
-      '<button type="button" class="principal boton-evento" data-ev-ver="' + esc(e.id) + '">Ver quién va</button>' +
+      '<button type="button" class="accion ev-ver-btn" data-ev-ver="' + esc(e.id) + '">Ver quién va</button>' +
       (modoAbuela() ? '' : '<button type="button" class="accion ev-compartir" data-ev-compartir="' + esc(e.id) + '" aria-label="Compartir por WhatsApp" title="Compartir">' + ICONO_COMPARTIR + '</button>') + '</div>' +  // v4.71
-      (pasado || modoAbuela() || !(voy || noVoy) ? '' : '<div class="ev-mio">' +  // v4.68: tus días y tu nota, sin abrir el evento
+      (pasado || modoAbuela() || !(voy || noVoy) ? '' : '<div class="ev-mio"><p class="ev-estado-yo ' + (voy ? 'si' : 'no') + '">' + (voy ? ICONO_SI + 'Has dicho que vas' + (diasDe(e, yo) ? ' (' + textoDias(diasDe(e, yo)) + ')' : '') : ICONO_NO + 'Has dicho que no puedes') + '</p>' +  // v4.68: tus días y tu nota, sin abrir el evento
         (voy && diasDelEvento(e).length > 1 ? botonesDias(e, yo, 'Qué días vas:') : '') + lineaNota(e, yo) + '</div>') +
       '</article>';
   }
@@ -2405,6 +2486,8 @@
     return out;
   }
   let evFiltro = '';  // v4.80
+  let ultimoY = 0;  // v4.92: el botón flotante se esconde al bajar y vuelve al subir
+  window.addEventListener('scroll', function () { const b = $('ev-anadir'); if (!b) return; const y = window.scrollY; b.classList.toggle('escondido', y > ultimoY + 4 && y > 120); if (y < ultimoY - 4) b.classList.remove('escondido'); ultimoY = y; }, { passive: true });
   /* v4.86: quien entra es del servicio: ve lo suyo y solo cambia lo suyo */
   function servicioYo() { const p = yo && datos && persona(yo); return !!(p && esServicio(p)); }
   function apuntarme(fecha, turno) {
@@ -2431,6 +2514,7 @@
     const pest = [modoAbuela() || !persona(yo) ? null : ['confirmar', 'Por confirmar', porConfirmar.length], ['proximos', 'Próximos', proximos.length], ['pasados', 'Pasados', pasados.length]].filter(Boolean);
     const lista = evFiltro === 'confirmar' ? porConfirmar : evFiltro === 'pasados' ? pasados : proximos;
     const enFechas = evFiltro === 'fechas';
+    $('ev-anadir').hidden = enFechas;  // v4.92: en las fechas señaladas no se añaden eventos
     $l.innerHTML = '<div class="ev-secciones" role="tablist"><button type="button" role="tab" data-ev-filtro="' + (porConfirmar.length && !modoAbuela() ? 'confirmar' : 'proximos') + '" aria-selected="' + !enFechas + '">Eventos' + (porConfirmar.length && !modoAbuela() ? ' <span class="ev-filtro-n alerta">' + porConfirmar.length + '</span>' : '') + '</button>' +
         '<button type="button" role="tab" data-ev-filtro="fechas" aria-selected="' + enFechas + '">Fechas señaladas</button></div>' +
       (enFechas ? '' : '<div class="ev-filtros" role="tablist">' + pest.map(function (x) {
@@ -2599,13 +2683,15 @@
     }
     const q = sinAcentos($('per-q').value.trim());
     // v4.20: los abuelos, en una caja como las de las familias («Familia Ribas Coll»), sin más protagonismo que los demás
-    $('per-abuela').innerHTML = q || hayFiltros() ? '' : cajaAbuelos();
+    const abuelosCoinciden = q && (datos.editores || []).some(function (p) { return sinAcentos(p.apodo + ' ' + (p.nombre || '') + ' ' + (p.apellido || '') + ' abuelos').indexOf(q) !== -1; });  // v4.93
+    $('per-abuela').innerHTML = hayFiltros() || (q && !abuelosCoinciden) ? '' : cajaAbuelos();
     let lista = datos.personas.filter(function (p) { return pasaFiltros(p); });
     if (q) lista = lista.filter(function (p) { return sinAcentos(p.apodo + ' ' + (p.nombre || '') + ' ' + (p.apellido || '') + ' ' + p.familia + ' ' + nombreFamilia(p.familia) + ' ' + deQuien(p)).indexOf(q) !== -1; });
     const $r = $('per-resultado');
     $r.hidden = !hayFiltros() && !q;
     if (!$r.hidden) $r.innerHTML = (lista.length === 1 ? 'Sale 1 persona' : 'Salen ' + lista.length + ' personas') +
       (hayFiltros() ? '<button type="button" class="enlace" data-quitar-filtros>Quitar filtros</button>' : '');
+    if (!lista.length && abuelosCoinciden) { $('per-lista').innerHTML = ''; return; }  // v4.93: solo los abuelos
     if (!lista.length) {
       $('per-lista').innerHTML = '<p class="vacio">' + (hayFiltros() ? 'Nadie cumple estos filtros.' : 'No hay nadie con ese nombre en la lista. Puedes añadirlo con «Añadir».') + '</p>';
       return;
@@ -3169,7 +3255,7 @@
 
   /* v4.13: el año del cumpleaños, opcional (para saber cuántos cumple) */
   function campoAno(v) {
-    return '<label class="campo" for="dlg-cano">Año<input id="dlg-cano" type="number" inputmode="numeric" min="1900" max="' + (Number(hoy().slice(0, 4)) + 1) + '" placeholder="aaaa" value="' + esc(v || '') + '"></label>';
+    return '<label class="campo" for="dlg-cano">Año<input id="dlg-cano" type="number" inputmode="numeric" min="1900" max="' + (Number(hoy().slice(0, 4)) + 1) + '" placeholder="año" value="' + esc(v || '') + '"></label>';
   }
   /* v4.16: una fecha como se sepa: día y mes (con o sin año), mes y año, o solo el año */
   function leerFecha(pre, que, desde, futuro) {  // v4.23: futuro = años por delante de hoy (la boda)
@@ -3177,7 +3263,7 @@
     if (d && !m) return { error: 'Para ' + que + ', con el día elige también el mes.' };
     if (!d && m && !a) return { error: 'Para ' + que + ', con el mes pon también el día o el año.' };
     const max = Number(hoy().slice(0, 4)) + (futuro || 0);
-    if (a && !(/^\d{4}$/.test(a) && Number(a) >= desde && Number(a) <= max)) return { error: 'El año de ' + que + ' tiene que ser de ' + desde + ' a ' + max + ', con cuatro cifras.' };
+    if (a && !(/^\d{4}$/.test(a) && Number(a) >= desde && Number(a) <= max)) return { error: ('Escribe el año de ' + que + ' con cuatro cifras, de ' + desde + ' a ' + max + '.').replace(/ de el /g, ' del ') };
     const dd = ('0' + (d || 0)).slice(-2), mm = ('0' + (m || 0)).slice(-2);
     return { valor: d && !a ? dd + '/' + mm : (a ? dd + '/' + mm + '/' + a : '') };
   }
@@ -3190,7 +3276,7 @@
       Array.from({ length: 31 }, function (_, k) { return '<option value="' + (k + 1) + '"' + (fd === k + 1 ? ' selected' : '') + '>' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-' + pre + 'mes">Mes<select id="dlg-' + pre + 'mes"><option value="">—</option>' +
       MESES.map(function (m, k) { return '<option value="' + (k + 1) + '"' + (fm === k + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
-      '<label class="campo" for="dlg-' + pre + 'ano">Año<input id="dlg-' + pre + 'ano" type="number" inputmode="numeric" min="1850" max="' + (Number(hoy().slice(0, 4)) + (futuro || 0)) + '" placeholder="aaaa" value="' + esc(v ? v.slice(6, 10) : '') + '"></label></div>';
+      '<label class="campo" for="dlg-' + pre + 'ano">Año<input id="dlg-' + pre + 'ano" type="number" inputmode="numeric" min="1850" max="' + (Number(hoy().slice(0, 4)) + (futuro || 0)) + '" placeholder="año" value="' + esc(v ? v.slice(6, 10) : '') + '"></label></div>';
   }
   function leerFechaPareja(pre, que, futuro) {
     const r = leerFecha(pre, que, 1850, futuro);
@@ -3245,7 +3331,7 @@
       Array.from({ length: 31 }, function (_, k) { return '<option value="' + (k + 1) + '"' + (fd === k + 1 ? ' selected' : '') + '>' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-fmes">Mes<select id="dlg-fmes"><option value="">—</option>' +
       MESES.map(function (m, k) { return '<option value="' + (k + 1) + '"' + (fm === k + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
-      '<label class="campo" for="dlg-fano">Año<input id="dlg-fano" type="number" inputmode="numeric" min="1850" max="' + hoy().slice(0, 4) + '" placeholder="aaaa" value="' + esc(v ? v.slice(6, 10) : '') + '"></label></div>' +
+      '<label class="campo" for="dlg-fano">Año<input id="dlg-fano" type="number" inputmode="numeric" min="1850" max="' + hoy().slice(0, 4) + '" placeholder="año" value="' + esc(v ? v.slice(6, 10) : '') + '"></label></div>' +
       '<p class="ayuda">Lo que sepáis: el día, el mes y el año; el mes y el año; o solo el año.</p>' +
       '<label class="check"><input id="dlg-fsin" type="checkbox"' + (sinFecha ? ' checked' : '') + '> Ha fallecido, no sabemos cuándo</label></fieldset>';
   }
@@ -3388,14 +3474,21 @@
     const p = yo && persona(yo), ed = !p && yo && editor(yo), q = p || ed;
     if (!q) { preguntarQuien(null); return; }
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(q.apodo) + '</h2>' + (p ? '<div><small>' + esc(deQuien(p)) + '</small></div>' : '') + '</div>' +
-      '<div class="dlg-cuerpo">' + (p ? '<div id="yo-medallas"><p class="ayuda">Mirando tus medallas…</p></div>' : '') + '<p class="ayuda">Los cambios que hagas se guardan a tu nombre.</p><div class="yo-menu">' +
-      (p ? '<button type="button" class="accion" id="dlg-yo-datos">Mis datos</button><button type="button" class="accion" id="dlg-yo-comidas">Mis comidas</button>' : '') +
-      '<button type="button" class="accion" id="dlg-yo-otro">No soy ' + esc(q.apodo) + ' (cambiar de persona)</button></div></div>' +
+      '<div class="dlg-cuerpo">' +
+      '<div class="yo-menu">' + (p ? '<button type="button" class="accion" id="dlg-yo-comidas">' + (servicioYo() ? 'Mis días' : 'Mis comidas') + '</button><button type="button" class="accion" id="dlg-yo-datos">Mis datos</button>' : '') +
+        '<button type="button" class="accion" id="dlg-yo-otro">No soy ' + esc(q.apodo) + ' (cambiar de persona)</button></div>' +
+      (p ? '<fieldset class="yo-vista"><legend>Cómo quieres ver la web</legend><div class="forma-ev" role="radiogroup">' + [['agil', 'Ágil', 'Letra pequeña, cabe más'], ['comoda', 'Cómoda', 'Letra y botones grandes'], ['sencilla', 'Sencilla', 'Solo para mirar, como la abuela']].map(function (x) {
+        return '<button type="button" role="radio" data-vista-elige="' + x[0] + '" aria-pressed="' + (vistaElegida() === x[0]) + '" aria-checked="' + (vistaElegida() === x[0]) + '"><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div><p class="ayuda">Se guarda en este móvil. Para salir de la sencilla hace falta la clave.</p></fieldset>' : '') +
+      (p ? '<div id="yo-medallas"><p class="ayuda">Mirando tus medallas…</p></div>' : '') + '</div>' +
       '<div class="dlg-pie"><div class="botones"><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     if ($('dlg-yo-datos')) $('dlg-yo-datos').addEventListener('click', function () { cerrarDialogo(); abrirPersona(yo); });
     if ($('dlg-yo-comidas')) $('dlg-yo-comidas').addEventListener('click', function () { cerrarDialogo(); abrirMisComidas(); });
-    $('dlg-yo-otro').addEventListener('click', function () { cerrarDialogo(); olvidarYo(); preguntarQuien(null); });
+    $('dlg-yo-otro').addEventListener('click', function () { cerrarDialogo(); olvidarYo(true); preguntarQuien(null); });
+    $dlg.querySelectorAll('[data-vista-elige]').forEach(function (b) { b.addEventListener('click', function () {  // v4.91
+      guardarVista(b.dataset.vistaElige); cerrarDialogo(); pintar();
+      aviso(b.dataset.vistaElige === 'sencilla' ? 'Vista sencilla: solo para mirar. Para salir, abajo, «Salir del modo sencillo».' : 'Listo: vista ' + (b.dataset.vistaElige === 'agil' ? 'ágil' : 'cómoda') + '.');
+    }); });
     if (p) llamar('misNumeros', [yo]).then(function (n) { const $m = $('yo-medallas'); if ($m) $m.innerHTML = htmlMedallas(n); })
       .catch(function () { const $m = $('yo-medallas'); if ($m) $m.innerHTML = ''; });
   }
@@ -3410,19 +3503,19 @@
     }
     return (n.top10 ? '<div class="mn-top-caja"><b>Top 10 general · ' + n.puntos + ' puntos</b><span>¡Estás entre los que más acompañan a la abuela! Por eso tu nombre sale en dorado.</span></div>'
         : '<div class="mn-top-caja fuera"><b>' + (n.puntos ? 'Llevas ' + n.puntos + (n.puntos === 1 ? ' punto' : ' puntos') : 'Aún no tienes puntos') + '</b><span>Suma puntos en las categorías para entrar en el top 10 general y que tu nombre salga en dorado.</span></div>') +
-      (l.length ? '<div class="mn-distinciones"><p class="mn-dias-tit">Tus medallas</p><ul>' + l.map(function (d) {
-        return '<li' + (d.categoria ? ' class="cat"' : '') + '><b>' + esc(d.titulo) + (d.puntos ? ' <em>+' + d.puntos + '</em>' : '') + '</b><span>' + esc(d.texto) + '</span></li>'; }).join('') + '</ul></div>'
+      (l.length ? '<details class="mn-distinciones"><summary class="mn-dias-tit">Tus medallas (' + l.length + ')</summary><ul>' + l.map(function (d) {
+        return '<li' + (d.categoria ? ' class="cat"' : '') + '><b>' + esc(d.titulo) + '</b>' + (d.puntos ? '<em>' + d.puntos + (d.puntos === 1 ? ' punto' : ' puntos') + '</em>' : '') + '<span>' + esc(d.texto) + '</span></li>'; }).join('') + '</ul></details>'
         : '<p class="ayuda">Aún no tienes medallas. Ve a comer con la abuela, apúntate con tiempo, contesta a los eventos… y irán saliendo.</p>') +
       '<details class="mn-como"><summary>Cómo funciona</summary><p>Hay nueve categorías, de los últimos 30 días: comidas, cenas, noches, eventos, avisar con tiempo, fin de semana, entre semana, traer compañía y la secretaría de la familia (apuntar y contestar por los demás). En cada una, los 10 primeros se llevan medalla y puntos: 10 al primero, 9 al segundo… y 1 al décimo (los empatados, igual).</p>' +
         '<p>El <b>top 10 general</b> suma todos los puntos (los de las categorías y los de las medallas): puedes estar en el top de una categoría y no en el general. Su nombre sale en dorado.</p>' +
         '<p>Además hay muchas medallas que no compiten con nadie. Las que cuestan más suman <b>3 puntos</b>: no perderte ningún evento, contestar siempre, cuatro semanas seguidas, tener tu día fijo, tu primera vez o ayudar a rellenar los datos de la familia. Las de participar suman <b>1 punto</b>: una noche, un fin de semana, comida y cena el mismo día, ir con tu familia, traer a alguien, dejar notas, apuntarte con tiempo, ir a los planes o echar una mano. No se enseña quién más está en cada top.</p></details>';
   }
   $('yo-chip').addEventListener('click', function () { if (datos) abrirYo(); });
-  function olvidarYo() {
+  function olvidarYo(callado) {
     const antes = quienEs(yo);
     yo = ''; guardarYo('');
     pintar();
-    aviso((antes ? 'Los cambios ya no se guardan a nombre de ' + antes.apodo + '. ' : '') + 'Al apuntarte o cambiar algo, te preguntaremos quién eres.', 6000);
+    if (!callado) aviso((antes ? 'Los cambios ya no se guardan a nombre de ' + antes.apodo + '. ' : '') + 'Al apuntarte o cambiar algo, te preguntaremos quién eres.', 6000);
   }
   function conQuien(siguiente) { if (quienEs(yo)) siguiente(); else preguntarQuien(siguiente); }
   function preguntarQuien(siguiente) {
@@ -3436,7 +3529,8 @@
     $('dlg-guardar').addEventListener('click', function () {
       if (!elegidoBuscador) { errorDialogo('Busca y toca tu nombre para seguir.'); return; }
       yo = elegidoBuscador; guardarYo(yo);
-      cerrarDialogo();
+      cerrarDialogo(); pintar();  // v4.92: arriba, ya con tu nombre
+      const qq = quienEs(yo); if (qq) aviso('Hola, ' + qq.apodo + '. Ahora los cambios van a tu nombre.');
       cargar().then(function () { if (siguiente) siguiente(); });
     });
   }
@@ -3595,6 +3689,7 @@
 
   /* ---------- Ventanas ---------- */
   function abrirDialogo(html) {
+    dlgCambiado = false;
     $dlg.innerHTML = html;
     if (!$dlg.open) { if (typeof $dlg.showModal === 'function') $dlg.showModal(); else $dlg.setAttribute('open', ''); }
     // v4.63: el foco, en el título (si no, el móvil abre solo el primer desplegable o la primera fecha)
@@ -3605,7 +3700,24 @@
   function errorDialogo(t) { const e = $('dlg-error'); if (e) { e.textContent = t; e.hidden = false; } }
   // El aviso «close» llega un momento después: si para entonces ya se ha abierto otra ventana, no se vacía (v4.12)
   $dlg.addEventListener('close', function () { if (!$dlg.open) $dlg.innerHTML = ''; });
-  $dlg.addEventListener('click', function (e) { if (e.target === $dlg && !pidiendoClave) cerrarDialogo(); });
+  let dlgCambiado = false;  // v4.91: si has escrito algo, tocar fuera pregunta antes de cerrar
+  $dlg.addEventListener('input', function () { dlgCambiado = true; });
+  $dlg.addEventListener('change', function () { dlgCambiado = true; });
+  function preguntarSalir() {  // v4.92: dentro de la ventana (los avisos del navegador no siempre salen)
+    if ($dlg.querySelector('.dlg-salir')) return;
+    const pieDlg = $dlg.querySelector('.dlg-pie') || $dlg;
+    pieDlg.insertAdjacentHTML('afterbegin', '<div class="dlg-salir" role="alert"><p>¿Salir sin guardar? Se perderá lo que has escrito.</p><div class="botones"><button type="button" class="principal" data-salir-seguir>Seguir escribiendo</button><button type="button" class="accion quitar" data-salir-si>Salir sin guardar</button></div></div>');
+    const caja = $dlg.querySelector('.dlg-salir');
+    caja.querySelector('[data-salir-seguir]').addEventListener('click', function () { caja.remove(); });
+    caja.querySelector('[data-salir-si]').addEventListener('click', function () { dlgCambiado = false; cerrarDialogo(); });
+    caja.querySelector('[data-salir-seguir]').focus();
+  }
+  $dlg.addEventListener('click', function (e) {
+    if (e.target !== $dlg || pidiendoClave) return;
+    if (dlgCambiado) { preguntarSalir(); return; }
+    cerrarDialogo();
+  });
+  $dlg.addEventListener('cancel', function (e) { if (dlgCambiado && !pidiendoClave) { e.preventDefault(); preguntarSalir(); } });
   $dlg.addEventListener('cancel', function (e) { if (pidiendoClave) e.preventDefault(); });  // v4.17: la clave no se puede saltar
   function pie(textoGuardar, extra) {
     return '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones">' +
@@ -3638,12 +3750,19 @@
     return '<dl class="basico">' + l.map(function (b) { return '<div' + (b[0] === 'No come' ? ' class="alergia"' : '') + '><dt>' + b[0] + '</dt><dd>' + esc(b[1]) + '</dd></div>'; }).join('') + '</dl>';
   }
   /* v4.36: en el modo sencillo, al tocar a alguien: solo para mirar */
-  function abrirInfoPersona(id) {
+  function abrirInfoPersona(id, conEditar) {
     const p = persona(id) || editor(id);
     if (!p) return;
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2></div><div class="dlg-cuerpo">' + datosBasicos(p) + '</div>' +
-      '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-cerrar">Cerrar</button></div></div>');
+    // v4.93: desde Personas, la ficha se abre primero para leer; lo que falta, arriba, y «Editar» lleva al formulario
+    const fl = conEditar && persona(id) ? falta(p) : [];
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2></div><div class="dlg-cuerpo">' +
+      (fl.length ? '<p class="falta-ficha falta-suave">Falta: ' + esc(lista(fl)) + '. <button type="button" class="enlace" id="dlg-completar">Completarlo</button></p>' : '') + datosBasicos(p) + '</div>' +
+      '<div class="dlg-pie"><div class="botones">' + (conEditar ? '<button type="button" class="principal" id="dlg-editar">Editar</button>' : '') +
+      '<button type="button" class="' + (conEditar ? 'accion quitar' : 'principal') + '" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    const editar = function () { cerrarDialogo(); abrirPersona(id); };
+    if ($('dlg-editar')) $('dlg-editar').addEventListener('click', editar);
+    if ($('dlg-completar')) $('dlg-completar').addEventListener('click', editar);
   }
   function abrirPersona(id, fecha, turno) {
     const esAbuelo = !persona(id) && !!editor(id);  // v4.53: los abuelos, con su ficha como todos (sin comidas ni quitarlos)
@@ -3799,7 +3918,7 @@
       '<div class="dlg-cuerpo">' + (sinServicio(fecha, turno) && !fueraTurno(fecha, turno) ? '<p class="aviso-servicio">' + esc(avisoSinServicio(fecha, turno)) + '</p>' : '') + buscadorHtml('Quién viene') +
       '<label class="campo" for="dlg-nota">Nota para ese día (si hace falta)<input id="dlg-nota" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: llega a las 21:30"></label>' +
       campoAcompanantes(0) + '</div>' +
-      pie('Apuntar a esta persona'));
+      pie('Apuntar'));
     montarBuscador({ excluir: ya, seleccion: ya.indexOf(yo) === -1 && persona(yo) ? yo : '', alta: true });
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
@@ -3960,9 +4079,14 @@
         ? '<table class="tabla-turnos"><tbody>' + l.map(function (a) {
             return '<tr><td>' + diaLargo(a.fecha) + '</td><td>' + etiquetaTurno(a.turno) + '</td><td>' + esc(a.nota || (a.fijo ? 'siempre' : '')) + '</td></tr>';
           }).join('') + '</tbody></table>'
-        : '<p class="ayuda">No tienes nada apuntado a partir de hoy.</p>') +
+        : '<p class="ayuda">Aún no te has apuntado a nada a partir de hoy.</p>' + (servicioYo() ? '' : '<p><button type="button" class="accion" id="dlg-ir-huecos">Ver los huecos libres</button></p>')) +
+      (function () {  // v4.91: los eventos a los que vas
+        const evs = (datos.eventos || []).filter(function (e) { return e.hasta >= hoy() && e.van.indexOf(yo) !== -1; });
+        return evs.length ? '<h3 class="rf-sec">Eventos a los que vas</h3><ul class="mc-eventos">' + evs.map(function (e) { const d = diasDe(e, yo); return '<li><b>' + esc(e.nombre) + '</b> <span>' + esc(fechaEvento(e)) + (d ? ' · ' + esc(textoDias(d)) : '') + '</span></li>'; }).join('') + '</ul>' : '';
+      })() +
       '</div><div class="dlg-pie"><div class="botones"><button type="button" class="accion" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    if ($('dlg-ir-huecos')) $('dlg-ir-huecos').addEventListener('click', function () { cerrarDialogo(); ponerVista('huecos'); window.scrollTo(0, 0); });
     // v4.79: tus números, desde que empezó el calendario (los calcula el servidor)
     if (!persona(yo)) { $('mis-numeros').innerHTML = ''; return; }
     llamar('misNumeros', [yo]).then(function (n) { const $n = $('mis-numeros'); if ($n) $n.innerHTML = htmlMisNumeros(n); })
@@ -3983,7 +4107,7 @@
       dias.map(function (d) { const v = n.porDia[d]; return '<span class="mn-barra' + (v === max ? ' max' : '') + '" title="' + DIAS[d] + ': ' + v + '"><b>' + (v || '') + '</b><i style="height:' + Math.round(v / max * 100) + '%"></i><small>' + 'DLMXJVS'.charAt(d) + '</small></span>'; }).join('') + '</div></div>' : '';
     // v4.81: compacto: lo grande arriba, el top 10 explicado, dos datos en una línea y la gráfica
     return '<div class="mn-hero"><div><b>' + n.total + '</b> <span>' + (n.total === 1 ? 'vez con la abuela' : 'veces con la abuela') + '</span><small>' + esc(detalle) + ' · ' + esc(desde) + '</small></div>' +
-        '<div class="mn-mes"><b>' + n.mes + '</b><span>este mes</span></div></div>' +
+        '<div class="mn-mes"><b>' + n.mes + '</b><span>últimos 30 días</span></div></div>' +
       ((aviso || n.ultima) ? '<p class="mn-datos">' + (aviso ? '<span>Sueles avisar <b>' + aviso + '</b></span>' : '') + (n.ultima ? '<span>La última vez <b>' + esc(haceCuanto(n.ultima)) + '</b></span>' : '') + '</p>' : '') +
       grafica;
   }
@@ -4086,7 +4210,8 @@
         if (prox && yaPaso(f, t.id)) return;  // v4.73
         const ids = idsDe(f, t.id), comp = compania(ids, t.id), serv = servicioDe(ids, t.id), motivo = sinTurno(f, t.id);
         const total = comp.length + acompanantesDe(comp, f, t.id);
-        b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (total > 1 ? ' (' + total + ')' : '');
+        const mesa = t.id !== 'DORMIR' && comp.length && !fueraTurno(f, t.id) && motivo === null ? raciones(ids, f, t.id).total : 0;  // v4.92: como en la web
+        b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (mesa ? ' (' + mesa + ' a la mesa, con la abuela)' : total > 1 ? ' (' + total + ')' : '');
         if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? ' 🎉 ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
         else if (motivo !== null && !comp.length) { b += '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.'; return; }
         else if (!comp.length) b += yaPaso(f, t.id) ? '\nNo fue nadie.' : '\n⚠️ Falta alguien';  // v4.63
@@ -4127,8 +4252,9 @@
       '<div class="forma-ev" id="dlg-forma" role="group" aria-label="Cómo"><button type="button" data-forma="resumen">Resumen</button><button type="button" data-forma="lista">Lista completa</button></div>' +  // v4.72
       '<label class="campo" for="dlg-texto">Mensaje (puedes cambiarlo)<textarea id="dlg-texto"></textarea></label></div>' +
       // v4.15.1: solo copiar (se pega en el grupo); sin «Abrir WhatsApp»
-      '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-copiar">Copiar el mensaje</button>' +
+      '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-wa">Enviar por WhatsApp</button><button type="button" class="accion" id="dlg-copiar">Copiar</button>' +
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+    $('dlg-wa').addEventListener('click', function () { abrirWhatsApp($('dlg-texto').value); });  // v4.91
     function poner() {
       const v = $('dlg-que').value;
       $('dlg-forma').hidden = v.indexOf('ev:') !== 0;
@@ -4150,8 +4276,10 @@
   }
 
   /* v4.38: el mensaje de quién viene un día, copiado para pegarlo en el grupo (desde el modo sencillo) */
+  function abrirWhatsApp(texto) { window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank'); }  // v4.91
   function preguntarDia(fecha) {
     const texto = mensaje(fecha);
+    abrirWhatsApp(texto); return;  // v4.91: directamente a WhatsApp, con el mensaje escrito (sin copiar y pegar)
     const ventana = function () {  // si el móvil no deja copiar solo
       abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Quién viene el ' + esc(diaLargo(fecha).toLowerCase()) + '?</h2></div>' +
         '<div class="dlg-cuerpo"><label class="campo" for="dlg-texto">Mensaje<textarea id="dlg-texto"></textarea></label></div>' +
@@ -4195,9 +4323,12 @@
   let temporizador = null;
   function aviso(t, ms) {
     const $t = $('toast');
+    // v4.91: con una ventana abierta, el aviso va dentro de ella (si no, queda detrás del fondo oscuro)
+    const dentro = $dlg.open ? $dlg : document.body;
+    if ($t.parentNode !== dentro) dentro.appendChild($t);
     $t.textContent = t; $t.hidden = false;
     clearTimeout(temporizador);
-    if (ms !== 0) temporizador = setTimeout(function () { $t.hidden = true; }, ms || (t.length > 70 ? 7000 : 3500));  // v4.74: los largos, más rato
+    if (ms !== 0) temporizador = setTimeout(function () { $t.hidden = true; }, ms || (t.length > 70 ? 6000 : 4000));  // v4.74: los largos, más rato
   }
 
   /* v4.3: Safari del iPhone no hace caso a user-scalable=no; así tampoco se pellizca */
@@ -4205,11 +4336,15 @@
 
   /* ---------- Clics ---------- */
   document.addEventListener('click', function (e) {
-    const el = e.target.closest('[data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
+    const el = e.target.closest('[data-quitarme], [data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
     if (modoAbuela() && el.hasAttribute('data-persona')) { abrirInfoPersona(el.dataset.persona); return; }  // v4.36: quién es, para mirar
     if (servicioYo() && el.hasAttribute('data-persona') && el.dataset.persona !== yo) { abrirInfoPersona(el.dataset.persona); return; }  // v4.86
     if (servicioYo() && el.hasAttribute('data-anadir')) { apuntarme(el.dataset.fecha, el.dataset.turno); return; }  // v4.86: el «+», a ella misma
+    if (el.hasAttribute('data-quitarme')) {  // v4.91
+      const x = el.dataset.quitarme.split('|'), cambio = { fecha: x[0], turno: x[1], apuntado: false };
+      guardarCambios(yo, { turnos: [cambio] }, 'Hecho: ya no vas a la ' + nombreTurno(x[0], x[1]) + '.'); return;
+    }
     if (el.hasAttribute('data-rt-fam')) { const k = el.dataset.rtFam; if (famAbiertas.has(k)) famAbiertas.delete(k); else famAbiertas.add(k); pintarSemana(); return; }  // v4.75
     if (el.hasAttribute('data-detalle-turno')) { const x = el.dataset.detalleTurno.split('|'); abrirDetalleTurno(x[0], x[1]); return; }  // v4.75
     if (el.hasAttribute('data-preguntar')) { preguntarDia(el.dataset.preguntar); return; }  // v4.38
@@ -4243,6 +4378,7 @@
       if (seVe) ir();
       else { irADia(fecha); if (cubierto()) { pintar(); ir(); } else cargar().then(ir); }
     } else if (el.hasAttribute('data-anadir')) { abrirAnadir(el.dataset.fecha, el.dataset.turno);
+    } else if (!el.dataset.fecha && vista === 'personas') { abrirInfoPersona(el.dataset.persona, true);  // v4.93: primero, para leer
     } else { abrirPersona(el.dataset.persona, el.dataset.fecha, el.dataset.turno); }
   });
 
@@ -4297,6 +4433,7 @@
   }
   function ponerVista(v) {
     if (v === 'ajustes') ajustes = null;  // v4.58: al entrar, lo último
+    if (v === 'eventos') evFiltro = '';  // v4.92: al entrar, «Por confirmar» si hay algo
     if (v === 'rellenar') { rfSucio = true; const y = yo && persona(yo); if (!rfFamilia && y && !esServicio(y) && y.familia !== 'Otros') rfFamilia = familiaDe(y); }  // v4.40; v4.65: directamente la tuya
     vista = SUBTITULOS[v] ? v : 'semana';
     ['semana', 'eventos', 'personas', 'huecos', 'rellenar', 'ajustes'].forEach(function (n) { $('vista-' + n).hidden = vista !== n; });
