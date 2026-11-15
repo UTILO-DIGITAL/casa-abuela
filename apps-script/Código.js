@@ -203,90 +203,96 @@ function datos_(ss, p) {
     dias: leerDias_(ss).filter(function (d) { return d.fecha >= desde && d.fecha <= hasta; }),
     admins: config.admins,  // v4.58: quién ve los Ajustes
     eventos: leerEventos_(ss).filter(function (e) { return e.hasta >= (desde < sumarDias_(hoy, -60) ? desde : sumarDias_(hoy, -60)); }),  // v4.28
-    yoTop10: p.yo ? top10_(visitas_(ss, config, personas)).esta(p.yo) : false,  // v4.81: la etiqueta dorada
+    yoTop10: p.yo ? enTop_(categorias_(ss, config, personas).puntos, p.yo) : false,  // v4.81: la etiqueta dorada; v4.83: del top 10 general
     misProximas: p.yo ? efectivos_(crudos, fijos, hoy, sumarDias_(hoy, 60)).filter(function (a) { return a.persona === p.yo; }).slice(0, 12) : [],
     bajas: leerBajas_(ss).map(function (b) { return { id: b.id, apodo: b.apodo, jerarquia: b.jerarquia, familia: b.familia, menu: b.menu, baja: b.baja }; }),
     huerfanos: huerfanos_(crudos, fijos, personas.concat(leerEditores_(ss, config.excluir), leerBajas_(ss)), hoy),
   };
 }
 
-/** v4.81: lo que ha ido cada uno desde que empezó el calendario hasta ayer (ef) y, sin el servicio, en los últimos 30 días (n) */
-function visitas_(ss, config, personas) {
+/** v4.81: lo que ha ido cada uno desde que empezó el calendario hasta ayer (efectivos, también los fijos) */
+function visitas_(ss, config) {
   return memo_('visitas', function () {
     const hoy = hoy_(), ayer = sumarDias_(hoy, -1);
     const inicio = esFecha_(config.inicio) ? config.inicio : sumarDias_(hoy, -365);
-    const ef = inicio <= ayer ? efectivos_(leerApuntes_(ss), leerFijos_(ss), inicio, ayer) : [];
-    const familia = {};
-    personas.forEach(function (x) { if (x.familia !== 'Servicio' && x.familia !== 'Otros') familia[x.id] = true; });
-    // v4.81: el top 10 mira los últimos 30 días (no todo el historial), para que se pueda entrar y salir
-    const hace30 = sumarDias_(hoy, -30), n = {};
-    ef.forEach(function (a) { if (familia[a.persona] && a.fecha >= hace30) n[a.persona] = (n[a.persona] || 0) + 1; });
-    return { ef: ef, n: n, inicio: inicio };
+    return { ef: inicio <= ayer ? efectivos_(leerApuntes_(ss), leerFijos_(ss), inicio, ayer) : [], inicio: inicio };
   });
 }
-/** v4.81: el top 10 (con empates): quién está y cuántas visitas hacen falta para entrar */
-function top10_(v) {
-  const totales = Object.keys(v.n).map(function (id) { return v.n[id]; }).sort(function (a, b) { return b - a; });
-  const corte = totales.length >= 10 ? Math.max(1, totales[9]) : 1;  // con menos de 10 que hayan ido, entra cualquiera que haya ido
-  return { corte: corte, esta: function (id) { return (v.n[id] || 0) >= corte && (v.n[id] || 0) > 0; } };
+function horasDe_(config) { return { COMIDA: config.horaComida || '14:00', CENA: config.horaCena || '21:00', DORMIR: config.horaDormir || '22:30' }; }
+/** Horas entre que se apuntó y la hora de esa comida, cena o noche (o null si no se sabe) */
+function antelacion_(a, horaDe) {
+  if (!a.creado || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(a.creado)) return null;
+  const h = String(horaDe[a.turno] || '14:00');
+  const x = (aUTC_(a.fecha) + (Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))) * 60000 - aUTC_(a.creado.slice(0, 10)) - (Number(a.creado.slice(11, 13)) * 60 + Number(a.creado.slice(14, 16))) * 60000) / 3600000;
+  return x >= 0 ? x : null;
 }
-
-/** v4.82: ¿está en el top 10 de este mapa (id → número)? Con empates; si «menos», gana el número más bajo */
-function enTop_(mapa, id, menos) {
-  if (!(id in mapa)) return false;
-  const v = Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) { return menos ? a - b : b - a; });
-  const corte = v[Math.min(9, v.length - 1)];
-  return menos ? mapa[id] <= corte : mapa[id] >= corte && mapa[id] > 0;
+/** v4.82: ¿está en el top 10 de este mapa (id → número)? Con empates */
+function enTop_(mapa, id) {
+  if (!(id in mapa) || !(mapa[id] > 0)) return false;
+  const v = Object.keys(mapa).map(function (k) { return mapa[k]; }).filter(function (x) { return x > 0; }).sort(function (a, b) { return b - a; });
+  return mapa[id] >= v[Math.min(9, v.length - 1)];
+}
+/** v4.83: los puntos de una categoría: 10 al primero, 9 al segundo… 1 al décimo (los empatados, igual) */
+function puntosCat_(mapa) {
+  const out = {};
+  Object.keys(mapa).forEach(function (id) {
+    if (!(mapa[id] > 0)) return;
+    const puesto = 1 + Object.keys(mapa).filter(function (k) { return mapa[k] > mapa[id]; }).length;
+    if (puesto <= 10) out[id] = 11 - puesto;
+  });
+  return out;
 }
 /**
- * v4.82: las distinciones de una persona: solo en positivo (se enseñan las que tiene, nunca las que le faltan)
- * y casi todas se pueden tener a la vez entre muchos.
+ * v4.83: las categorías de los últimos 30 días (comidas, cenas, noches, eventos y avisar con tiempo), cada una con su top 10,
+ * y los puntos de cada uno: la suma de lo que le da cada categoría. El top 10 general sale de esa suma.
  */
-function distinciones_(ss, config, personas, v, crudos, horaDe, id) {
-  const hoy = hoy_(), hace30 = sumarDias_(hoy, -30), ayer = sumarDias_(hoy, -1);
-  const deFamilia = {};
-  personas.forEach(function (x) { if (x.familia !== 'Servicio' && x.familia !== 'Otros') deFamilia[x.id] = true; });
-  if (!deFamilia[id]) return [];
-  const out = [];
-  const pon = function (clave, titulo, texto) { out.push({ id: clave, titulo: titulo, texto: texto }); };
-  // por comidas, cenas y noches (últimos 30 días)
-  const porTurno = { COMIDA: {}, CENA: {}, DORMIR: {} };
-  v.ef.forEach(function (a) { if (deFamilia[a.persona] && a.fecha >= hace30) porTurno[a.turno][a.persona] = (porTurno[a.turno][a.persona] || 0) + 1; });
-  if (enTop_(porTurno.COMIDA, id)) pon('comidas', 'Top 10 en comidas', 'De los que más han comido con la abuela este último mes.');
-  if (enTop_(porTurno.CENA, id)) pon('cenas', 'Top 10 en cenas', 'De los que más han cenado con ella este último mes.');
-  if (enTop_(porTurno.DORMIR, id)) pon('noches', 'Top 10 en noches', 'De los que más noches le han hecho compañía este último mes.');
-  // los que antes avisan (la mediana de antelación, con al menos 3 apuntes)
-  const ante = {};
-  crudos.forEach(function (a) {
-    if (!deFamilia[a.persona] || a.no || !a.creado || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(a.creado)) return;
-    const h = String(horaDe[a.turno] || '14:00');
-    const x = (aUTC_(a.fecha) + (Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))) * 60000 - aUTC_(a.creado.slice(0, 10)) - (Number(a.creado.slice(11, 13)) * 60 + Number(a.creado.slice(14, 16))) * 60000) / 3600000;
-    if (x >= 0) (ante[a.persona] = ante[a.persona] || []).push(x);
+const CATEGORIAS = {
+  comidas: { titulo: 'Top 10 en comidas', texto: 'De los que más han comido con la abuela.' },
+  cenas: { titulo: 'Top 10 en cenas', texto: 'De los que más han cenado con ella.' },
+  noches: { titulo: 'Top 10 en noches', texto: 'De los que más noches le han hecho compañía.' },
+  eventos: { titulo: 'Top 10 en eventos', texto: 'De los que más se apuntan a los planes de la familia.' },
+  avisa: { titulo: 'De los que antes avisan', texto: 'Te apuntas con tiempo: así se organiza mejor la casa.' },
+};
+function categorias_(ss, config, personas) {
+  return memo_('categorias', function () {
+    const hoy = hoy_(), hace30 = sumarDias_(hoy, -30), v = visitas_(ss, config);
+    const deFamilia = {};
+    personas.forEach(function (x) { if (x.familia !== 'Servicio' && x.familia !== 'Otros') deFamilia[x.id] = true; });
+    const cats = { comidas: {}, cenas: {}, noches: {}, eventos: {}, avisa: {} };
+    const k = { COMIDA: 'comidas', CENA: 'cenas', DORMIR: 'noches' };
+    v.ef.forEach(function (a) { if (deFamilia[a.persona] && a.fecha >= hace30) cats[k[a.turno]][a.persona] = (cats[k[a.turno]][a.persona] || 0) + 1; });
+    leerEventos_(ss).filter(function (e) { return e.hasta >= hace30; }).forEach(function (e) { e.van.forEach(function (id) { if (deFamilia[id]) cats.eventos[id] = (cats.eventos[id] || 0) + 1; }); });
+    const horaDe = horasDe_(config), ante = {};
+    leerApuntes_(ss).forEach(function (a) {
+      if (!deFamilia[a.persona] || a.no || a.fecha < hace30 || a.fecha > hoy) return;
+      const x = antelacion_(a, horaDe);
+      if (x !== null) (ante[a.persona] = ante[a.persona] || []).push(x);
+    });
+    Object.keys(ante).forEach(function (id) { if (ante[id].length >= 2) { const l = ante[id].sort(function (a, b) { return a - b; }); cats.avisa[id] = Math.max(0.01, l[Math.floor(l.length / 2)]); } });
+    const pts = {}, puntos = {};
+    Object.keys(cats).forEach(function (c) { pts[c] = puntosCat_(cats[c]); Object.keys(pts[c]).forEach(function (id) { puntos[id] = (puntos[id] || 0) + pts[c][id]; }); });
+    return { cats: cats, pts: pts, puntos: puntos };
   });
-  const mediana = {};
-  Object.keys(ante).forEach(function (k) { if (ante[k].length >= 3) { const l = ante[k].sort(function (a, b) { return a - b; }); mediana[k] = -l[Math.floor(l.length / 2)]; } });
-  if (enTop_(mediana, id)) pon('avisa', 'De los que antes avisan', 'Te apuntas con tiempo: así se organiza mejor la casa.');
-  // eventos
+}
+/** v4.82: las medallas de una persona, solo en positivo: las de cada categoría y las que no compiten con nadie */
+function distinciones_(ss, config, personas, id) {
+  const hoy = hoy_(), ayer = sumarDias_(hoy, -1), v = visitas_(ss, config), c = categorias_(ss, config, personas);
+  const out = [];
+  const pon = function (clave, titulo, texto, extra) { out.push(Object.assign({ id: clave, titulo: titulo, texto: texto }, extra || {})); };
+  Object.keys(CATEGORIAS).forEach(function (k) { if (c.pts[k][id]) pon(k, CATEGORIAS[k].titulo, CATEGORIAS[k].texto, { puntos: c.pts[k][id], categoria: true }); });
   const eventos = leerEventos_(ss).filter(function (e) { return e.desde >= v.inicio; });
   const pasados = eventos.filter(function (e) { return e.hasta < hoy; });
-  const vaA = {};
-  eventos.forEach(function (e) { e.van.forEach(function (p) { if (deFamilia[p]) vaA[p] = (vaA[p] || 0) + 1; }); });
-  if (enTop_(vaA, id)) pon('eventos', 'Top 10 en eventos', 'De los que más se apuntan a los planes de la familia.');
   if (pasados.length >= 2 && pasados.every(function (e) { return e.van.indexOf(id) !== -1; })) pon('ni-uno', 'No te pierdes ni uno', 'Has ido a todos los eventos que ha habido.');
   if (eventos.length >= 2 && eventos.every(function (e) { return e.van.indexOf(id) !== -1 || e.noVan.indexOf(id) !== -1; })) pon('contesta', 'Siempre contestas', 'Has dicho si vas o no a todos los eventos. ¡Gracias!');
-  // cuatro semanas seguidas (al menos una vez cada semana de las últimas 4)
   const mias = v.ef.filter(function (a) { return a.persona === id; }).map(function (a) { return a.fecha; });
-  const semanas = [0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); });
-  if (semanas) pon('semanas', 'Cuatro semanas seguidas', 'Has ido al menos una vez cada semana del último mes.');
-  // un día fijo
+  if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) pon('semanas', 'Cuatro semanas seguidas', 'Has ido al menos una vez cada semana del último mes.');
   if (leerFijos_(ss).some(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy); })) pon('fijo', 'Tienes tu día', 'Tienes un día fijo con la abuela cada semana.');
   return out;
 }
 
 /**
- * v4.79: los números de una persona, desde que empezó el calendario hasta ayer: cuántas veces ha estado con la abuela
- * (comidas, cenas y noches, también las fijas), este mes, su día de la semana, con cuánta antelación avisa,
- * la última vez y su puesto en su familia. Solo lee.
+ * v4.79: los números de una persona, desde que empezó el calendario hasta ayer; v4.83: con sus medallas, sus puntos
+ * y si está en el top 10 general (la suma de los puntos de las categorías). Solo lee.
  */
 function misNumeros(personaId) {
   reiniciar_();
@@ -298,7 +304,7 @@ function misNumeros(personaId) {
   const hoy = hoy_(), ayer = sumarDias_(hoy, -1);
   const inicio = esFecha_(config.inicio) ? config.inicio : sumarDias_(hoy, -365);
   const crudos = leerApuntes_(ss);
-  const v = visitas_(ss, config, personas), ef = v.ef;
+  const v = visitas_(ss, config), ef = v.ef;
   const mios = ef.filter(function (a) { return a.persona === personaId; });
   const cuenta = { COMIDA: 0, CENA: 0, DORMIR: 0 }, porDia = [0, 0, 0, 0, 0, 0, 0];
   let mes = 0, ultima = '';
@@ -311,7 +317,7 @@ function misNumeros(personaId) {
   const maxDia = Math.max.apply(null, porDia);
   const diaFav = maxDia >= 2 ? porDia.indexOf(maxDia) : -1;
   // con cuánta antelación avisa: de cuándo se apuntó a la hora de esa comida, cena o noche (la mediana, en horas)
-  const horaDe = { COMIDA: config.horaComida || '14:00', CENA: config.horaCena || '21:00', DORMIR: config.horaDormir || '22:30' };
+  const horaDe = horasDe_(config);
   const antes = crudos.filter(function (a) { return a.persona === personaId && !a.no && a.creado && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(a.creado); }).map(function (a) {
     const h = String(horaDe[a.turno] || '14:00');
     const cuando = aUTC_(a.fecha) + (Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))) * 60000;
@@ -319,13 +325,10 @@ function misNumeros(personaId) {
     return (cuando - creado) / 3600000;
   }).filter(function (x) { return x >= 0; }).sort(function (a, b) { return a - b; });
   const antelacion = antes.length >= 2 ? Math.round(antes[Math.floor(antes.length / 2)]) : null;
-  // v4.81: el top 10 de toda la familia (sin decir quién más está) y, si no estás, cuántas visitas te faltan
-  const t = top10_(v), yo = mios.length;
-  const top10 = t.esta(personaId);
-  const yo30 = v.n[personaId] || 0;
-  const distinciones = distinciones_(ss, config, personas, v, crudos, horaDe, personaId);
-  return { distinciones: distinciones, desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav, porDia: porDia,
-    antelacionHoras: antelacion, ultima: ultima, top10: top10, faltanTop10: top10 ? 0 : Math.max(1, t.corte - yo30) };
+  // v4.83: las medallas, los puntos y el top 10 general (la suma de las categorías)
+  const c = categorias_(ss, config, personas), yo = mios.length;
+  return { distinciones: distinciones_(ss, config, personas, personaId), puntos: c.puntos[personaId] || 0, top10: enTop_(c.puntos, personaId), desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav, porDia: porDia,
+    antelacionHoras: antelacion, ultima: ultima };
 }
 
 function leerConfig_(ss) { return memo_('config', function () { return leerConfigSin_(ss); }); }

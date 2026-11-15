@@ -393,14 +393,15 @@ ver('mis números: cuántas veces (sin el «no voy» ni lo de hoy)', mn.total >=
 ver('mi día: el martes (sus comidas fijas cuentan)', mn.diaFav === 2);
 ver('con cuánta antelación aviso (horas, la mediana)', mn.antelacionHoras === 76);
 ver('los 7 días, para la gráfica', mn.porDia.length === 7 && mn.porDia.reduce((x, y) => x + y, 0) === mn.total);
-ver('con menos de 10 que hayan ido, quien ha ido está en el top 10', mn.top10 === true && mn.faltanTop10 === 0);
+ver('top 10 general: con puntos (y menos de 10 con puntos), dentro', mn.puntos > 0 && mn.top10 === true);
 const nadie = R.misNumeros(M_);
-ver('quien no ha ido: fuera del top 10 y le falta al menos 1', nadie.top10 === (nadie.total > 0) && (nadie.top10 || nadie.faltanTop10 >= 1));
+ver('sin puntos, fuera del top 10 general', nadie.top10 === (nadie.puntos > 0));
 const dis = (mn.distinciones || []).map(x => x.id);
 const janFijo = R.getDatos(V2).fijos.some(f => f.persona === '(N) - Jan');
 ver('distinciones: top de comidas y cuatro semanas seguidas', dis.indexOf('comidas') !== -1 && dis.indexOf('semanas') !== -1);
 ver('«tienes tu día» solo si tiene un fijo', (dis.indexOf('fijo') !== -1) === janFijo);
 ver('distinciones: cada una con su título y su explicación', (mn.distinciones || []).every(x => x.titulo && x.texto));
+ver('los puntos son la suma de las categorías', mn.puntos === (mn.distinciones || []).filter(x => x.categoria).reduce((t, x) => t + x.puntos, 0));
 ver('quien no ha ido no tiene las de ir (solo en positivo)', !(R.misNumeros(M_).distinciones || []).some(x => x.id === 'comidas' && !nadie.total));
 ver('la etiqueta dorada llega con los datos', R.getDatos(Object.assign({}, V2, { yo: '(N) - Jan' })).yoTop10 === true);
 err = ''; try { R.misNumeros('(X) - Nadie'); } catch (e) { err = e.message; }

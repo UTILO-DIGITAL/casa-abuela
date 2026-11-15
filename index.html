@@ -447,6 +447,13 @@
   .mn-datos { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font-size: 15px; color: var(--color-texto-suave); }
   .mn-datos b { color: var(--color-texto); }
   #mis-numeros { display: grid; gap: 10px; }
+  .mn-distinciones li em { font-style: normal; font-size: 12px; font-weight: 800; color: #B8860B; }
+  .mn-distinciones li:not(.cat) { background: var(--color-principal-claro); border-color: #B9DFD7; }
+  .mn-distinciones li:not(.cat) b { color: var(--color-principal-oscuro); }
+  .mn-como { font-size: 13px; color: var(--color-texto-suave); }
+  .mn-como summary { cursor: pointer; font-weight: 800; }
+  .mn-como p { margin: 6px 0 0; }
+  #yo-medallas { display: grid; gap: 10px; }
   .mn-distinciones ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; }
   .mn-distinciones li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #FFF8E1; border: 1px solid #F1D58A; }
   .mn-distinciones li b { font-size: 14px; color: #7A5300; }
@@ -891,7 +898,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.82.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.83.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -1604,7 +1611,7 @@
     $c.hidden = false;
     $c.classList.toggle('sin-yo', !q);
     $c.classList.toggle('top', !!(p && datos.yoTop10));  // v4.81: en el top 10 de la familia, dorada
-    $c.title = p && datos.yoTop10 ? 'Top 10 de la familia en los últimos 30 días' : '';
+    $c.title = p && datos.yoTop10 ? 'Top 10 general: toca para ver tus medallas' : '';
     $c.innerHTML = q ? '<span class="yo-ini" aria-hidden="true">' + esc((q.apodo || '?').trim().charAt(0).toUpperCase()) + '</span><span class="yo-nom">' + esc(q.apodo) + '</span>' : '<span class="yo-nom">¿Quién eres?</span>';
     $c.setAttribute('aria-label', q ? 'Eres ' + q.apodo + '. Tus datos o cambiar de persona' : 'Decir quién eres');
     $q.hidden = !!q;  // v4.35: en el modo sencillo lo esconde el estilo
@@ -3263,7 +3270,7 @@
     const p = yo && persona(yo), ed = !p && yo && editor(yo), q = p || ed;
     if (!q) { preguntarQuien(null); return; }
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(q.apodo) + '</h2>' + (p ? '<div><small>' + esc(deQuien(p)) + '</small></div>' : '') + '</div>' +
-      '<div class="dlg-cuerpo"><p class="ayuda">Los cambios que hagas se guardan a tu nombre.</p><div class="yo-menu">' +
+      '<div class="dlg-cuerpo">' + (p ? '<div id="yo-medallas"><p class="ayuda">Mirando tus medallas…</p></div>' : '') + '<p class="ayuda">Los cambios que hagas se guardan a tu nombre.</p><div class="yo-menu">' +
       (p ? '<button type="button" class="accion" id="dlg-yo-datos">Mis datos</button><button type="button" class="accion" id="dlg-yo-comidas">Mis comidas</button>' : '') +
       '<button type="button" class="accion" id="dlg-yo-otro">No soy ' + esc(q.apodo) + ' (cambiar de persona)</button></div></div>' +
       '<div class="dlg-pie"><div class="botones"><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
@@ -3271,6 +3278,21 @@
     if ($('dlg-yo-datos')) $('dlg-yo-datos').addEventListener('click', function () { cerrarDialogo(); abrirPersona(yo); });
     if ($('dlg-yo-comidas')) $('dlg-yo-comidas').addEventListener('click', function () { cerrarDialogo(); abrirMisComidas(); });
     $('dlg-yo-otro').addEventListener('click', function () { cerrarDialogo(); olvidarYo(); preguntarQuien(null); });
+    if (p) llamar('misNumeros', [yo]).then(function (n) { const $m = $('yo-medallas'); if ($m) $m.innerHTML = htmlMedallas(n); })
+      .catch(function () { const $m = $('yo-medallas'); if ($m) $m.innerHTML = ''; });
+  }
+  /* v4.83: tus medallas (las de las categorías suman puntos; el top 10 general es la suma) y cómo funciona */
+  function htmlMedallas(n) {
+    if (!n) return '';
+    const l = n.distinciones || [];
+    return (n.top10 ? '<div class="mn-top-caja"><b>Top 10 general · ' + n.puntos + ' puntos</b><span>¡Estás entre los que más acompañan a la abuela! Por eso tu nombre sale en dorado.</span></div>'
+        : '<div class="mn-top-caja fuera"><b>' + (n.puntos ? 'Llevas ' + n.puntos + (n.puntos === 1 ? ' punto' : ' puntos') : 'Aún no tienes puntos') + '</b><span>Suma puntos en las categorías para entrar en el top 10 general y que tu nombre salga en dorado.</span></div>') +
+      (l.length ? '<div class="mn-distinciones"><p class="mn-dias-tit">Tus medallas</p><ul>' + l.map(function (d) {
+        return '<li' + (d.categoria ? ' class="cat"' : '') + '><b>' + esc(d.titulo) + (d.puntos ? ' <em>+' + d.puntos + '</em>' : '') + '</b><span>' + esc(d.texto) + '</span></li>'; }).join('') + '</ul></div>'
+        : '<p class="ayuda">Aún no tienes medallas. Ve a comer con la abuela, apúntate con tiempo, contesta a los eventos… y irán saliendo.</p>') +
+      '<details class="mn-como"><summary>Cómo funciona</summary><p>Hay cinco categorías, de los últimos 30 días: comidas, cenas, noches, eventos y avisar con tiempo. En cada una, los 10 primeros se llevan medalla y puntos: 10 al primero, 9 al segundo… y 1 al décimo (los empatados, igual).</p>' +
+        '<p>El <b>top 10 general</b> suma los puntos de todas las categorías: puedes estar en el top de una categoría y no en el general. Su nombre sale en dorado.</p>' +
+        '<p>Hay medallas que no compiten con nadie: no perderte ningún evento, contestar siempre, ir cuatro semanas seguidas o tener tu día fijo. No se enseña quién más está en cada top.</p></details>';
   }
   $('yo-chip').addEventListener('click', function () { if (datos) abrirYo(); });
   function olvidarYo() {
@@ -3837,14 +3859,8 @@
     const grafica = dias.length && max ? '<div class="mn-dias"><p class="mn-dias-tit">Tus días' + (n.diaFav >= 0 ? ': sobre todo los ' + DIAS[n.diaFav].toLowerCase() + (/s$/.test(DIAS[n.diaFav]) ? '' : 's') : '') + '</p><div class="mn-barras">' +
       dias.map(function (d) { const v = n.porDia[d]; return '<span class="mn-barra' + (v === max ? ' max' : '') + '" title="' + DIAS[d] + ': ' + v + '"><b>' + (v || '') + '</b><i style="height:' + Math.round(v / max * 100) + '%"></i><small>' + 'DLMXJVS'.charAt(d) + '</small></span>'; }).join('') + '</div></div>' : '';
     // v4.81: compacto: lo grande arriba, el top 10 explicado, dos datos en una línea y la gráfica
-    const criterio = 'Cuenta las comidas, cenas y noches de los últimos 30 días (el servicio no cuenta). Entran los 10 que más han ido y los empatados con el décimo.';
     return '<div class="mn-hero"><div><b>' + n.total + '</b> <span>' + (n.total === 1 ? 'vez con la abuela' : 'veces con la abuela') + '</span><small>' + esc(detalle) + ' · ' + esc(desde) + '</small></div>' +
         '<div class="mn-mes"><b>' + n.mes + '</b><span>este mes</span></div></div>' +
-      (n.top10 ? '<div class="mn-top-caja"><b>Top 10 de la familia</b><span>¡Estás entre los que más acompañan a la abuela! Por eso tu nombre sale en dorado.</span><small>' + criterio + '</small></div>'
-        : n.faltanTop10 ? '<div class="mn-top-caja fuera"><b>' + (n.faltanTop10 === 1 ? 'Te falta 1 visita' : 'Te faltan ' + n.faltanTop10 + ' visitas') + ' para el top 10</b><span>Si entras, tu nombre saldrá en dorado.</span><small>' + criterio + '</small></div>' : '') +
-      // v4.82: las distinciones (solo las que tienes)
-      ((n.distinciones || []).length ? '<div class="mn-distinciones"><p class="mn-dias-tit">Tus distinciones</p><ul>' + n.distinciones.map(function (d) {
-        return '<li><b>' + esc(d.titulo) + '</b><span>' + esc(d.texto) + '</span></li>'; }).join('') + '</ul></div>' : '') +
       ((aviso || n.ultima) ? '<p class="mn-datos">' + (aviso ? '<span>Sueles avisar <b>' + aviso + '</b></span>' : '') + (n.ultima ? '<span>La última vez <b>' + esc(haceCuanto(n.ultima)) + '</b></span>' : '') + '</p>' : '') +
       grafica;
   }
