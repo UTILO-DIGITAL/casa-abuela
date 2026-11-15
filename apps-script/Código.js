@@ -231,6 +231,58 @@ function top10_(v) {
   return { corte: corte, esta: function (id) { return (v.n[id] || 0) >= corte && (v.n[id] || 0) > 0; } };
 }
 
+/** v4.82: ¿está en el top 10 de este mapa (id → número)? Con empates; si «menos», gana el número más bajo */
+function enTop_(mapa, id, menos) {
+  if (!(id in mapa)) return false;
+  const v = Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) { return menos ? a - b : b - a; });
+  const corte = v[Math.min(9, v.length - 1)];
+  return menos ? mapa[id] <= corte : mapa[id] >= corte && mapa[id] > 0;
+}
+/**
+ * v4.82: las distinciones de una persona: solo en positivo (se enseñan las que tiene, nunca las que le faltan)
+ * y casi todas se pueden tener a la vez entre muchos.
+ */
+function distinciones_(ss, config, personas, v, crudos, horaDe, id) {
+  const hoy = hoy_(), hace30 = sumarDias_(hoy, -30), ayer = sumarDias_(hoy, -1);
+  const deFamilia = {};
+  personas.forEach(function (x) { if (x.familia !== 'Servicio' && x.familia !== 'Otros') deFamilia[x.id] = true; });
+  if (!deFamilia[id]) return [];
+  const out = [];
+  const pon = function (clave, titulo, texto) { out.push({ id: clave, titulo: titulo, texto: texto }); };
+  // por comidas, cenas y noches (últimos 30 días)
+  const porTurno = { COMIDA: {}, CENA: {}, DORMIR: {} };
+  v.ef.forEach(function (a) { if (deFamilia[a.persona] && a.fecha >= hace30) porTurno[a.turno][a.persona] = (porTurno[a.turno][a.persona] || 0) + 1; });
+  if (enTop_(porTurno.COMIDA, id)) pon('comidas', 'Top 10 en comidas', 'De los que más han comido con la abuela este último mes.');
+  if (enTop_(porTurno.CENA, id)) pon('cenas', 'Top 10 en cenas', 'De los que más han cenado con ella este último mes.');
+  if (enTop_(porTurno.DORMIR, id)) pon('noches', 'Top 10 en noches', 'De los que más noches le han hecho compañía este último mes.');
+  // los que antes avisan (la mediana de antelación, con al menos 3 apuntes)
+  const ante = {};
+  crudos.forEach(function (a) {
+    if (!deFamilia[a.persona] || a.no || !a.creado || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(a.creado)) return;
+    const h = String(horaDe[a.turno] || '14:00');
+    const x = (aUTC_(a.fecha) + (Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))) * 60000 - aUTC_(a.creado.slice(0, 10)) - (Number(a.creado.slice(11, 13)) * 60 + Number(a.creado.slice(14, 16))) * 60000) / 3600000;
+    if (x >= 0) (ante[a.persona] = ante[a.persona] || []).push(x);
+  });
+  const mediana = {};
+  Object.keys(ante).forEach(function (k) { if (ante[k].length >= 3) { const l = ante[k].sort(function (a, b) { return a - b; }); mediana[k] = -l[Math.floor(l.length / 2)]; } });
+  if (enTop_(mediana, id)) pon('avisa', 'De los que antes avisan', 'Te apuntas con tiempo: así se organiza mejor la casa.');
+  // eventos
+  const eventos = leerEventos_(ss).filter(function (e) { return e.desde >= v.inicio; });
+  const pasados = eventos.filter(function (e) { return e.hasta < hoy; });
+  const vaA = {};
+  eventos.forEach(function (e) { e.van.forEach(function (p) { if (deFamilia[p]) vaA[p] = (vaA[p] || 0) + 1; }); });
+  if (enTop_(vaA, id)) pon('eventos', 'Top 10 en eventos', 'De los que más se apuntan a los planes de la familia.');
+  if (pasados.length >= 2 && pasados.every(function (e) { return e.van.indexOf(id) !== -1; })) pon('ni-uno', 'No te pierdes ni uno', 'Has ido a todos los eventos que ha habido.');
+  if (eventos.length >= 2 && eventos.every(function (e) { return e.van.indexOf(id) !== -1 || e.noVan.indexOf(id) !== -1; })) pon('contesta', 'Siempre contestas', 'Has dicho si vas o no a todos los eventos. ¡Gracias!');
+  // cuatro semanas seguidas (al menos una vez cada semana de las últimas 4)
+  const mias = v.ef.filter(function (a) { return a.persona === id; }).map(function (a) { return a.fecha; });
+  const semanas = [0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); });
+  if (semanas) pon('semanas', 'Cuatro semanas seguidas', 'Has ido al menos una vez cada semana del último mes.');
+  // un día fijo
+  if (leerFijos_(ss).some(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy); })) pon('fijo', 'Tienes tu día', 'Tienes un día fijo con la abuela cada semana.');
+  return out;
+}
+
 /**
  * v4.79: los números de una persona, desde que empezó el calendario hasta ayer: cuántas veces ha estado con la abuela
  * (comidas, cenas y noches, también las fijas), este mes, su día de la semana, con cuánta antelación avisa,
@@ -271,7 +323,8 @@ function misNumeros(personaId) {
   const t = top10_(v), yo = mios.length;
   const top10 = t.esta(personaId);
   const yo30 = v.n[personaId] || 0;
-  return { desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav, porDia: porDia,
+  const distinciones = distinciones_(ss, config, personas, v, crudos, horaDe, personaId);
+  return { distinciones: distinciones, desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav, porDia: porDia,
     antelacionHoras: antelacion, ultima: ultima, top10: top10, faltanTop10: top10 ? 0 : Math.max(1, t.corte - yo30) };
 }
 
