@@ -403,7 +403,20 @@ ver('«tienes tu día» solo si tiene un fijo', (dis.indexOf('fijo') !== -1) ===
 ver('distinciones: cada una con su título y su explicación', (mn.distinciones || []).every(x => x.titulo && x.texto));
 ver('los puntos son la suma de las categorías y de las medallas (3 las difíciles, 1 las de participar)', mn.puntos === (mn.distinciones || []).reduce((t, x) => t + x.puntos, 0) && (mn.distinciones || []).filter(x => !x.categoria).every(x => x.puntos === 3 || x.puntos === 1));
 ver('quien no ha ido no tiene las de ir (solo en positivo)', !(R.misNumeros(M_).distinciones || []).some(x => x.id === 'comidas' && !nadie.total));
+// v4.93: las medallas de eventos
+const evA = R.guardarEvento({ nombre: 'Merienda de octubre', desde: '2026-10-10' }, M_, V2).eventos.find(e => e.nombre === 'Merienda de octubre');
+const evB = R.guardarEvento({ nombre: 'Paseo de octubre', desde: '2026-10-20' }, M_, V2).eventos.find(e => e.nombre === 'Paseo de octubre');
+R.apuntarEvento(evA.id, '(N) - Jan', true, M_, V2); R.apuntarEvento(evB.id, '(N) - Jan', true, M_, V2);
+let dj = R.misNumeros('(N) - Jan').distinciones.map(x => x.id);
+ver('medalla: no te pierdes ni uno (ha ido a todos los eventos pasados)', dj.indexOf('ni-uno') !== -1);
+R.getDatos(V2).eventos.forEach(e => { if (e.van.indexOf('(N) - Jan') === -1 && e.noVan.indexOf('(N) - Jan') === -1) R.apuntarEvento(e.id, '(N) - Jan', false, M_, V2); });
+dj = R.misNumeros('(N) - Jan').distinciones.map(x => x.id);
+ver('medalla: siempre contestas (ha contestado todos)', dj.indexOf('contesta') !== -1);
+R.apuntarEvento(evB.id, '(N) - Jan', false, M_, V2);
+ver('sin ir a uno, ya no tiene «no te pierdes ni uno»', R.misNumeros('(N) - Jan').distinciones.every(x => x.id !== 'ni-uno'));
+R.borrarEvento(evA.id, M_, V2); R.borrarEvento(evB.id, M_, V2);
 // v4.84: el servicio, con sus medallas (sin competir con la familia ni entrar en el top)
+const janAntes = R.misNumeros('(N) - Jan').puntos;
 const anchoP = hojas.PERSONAS.filas[0].length;
 hojas.PERSONAS.filas.push(['(O) - Soledad', 'Soledad', 'Otros', 'Servicio', '', '🌕 Entero', '', ''].concat(Array(Math.max(0, anchoP - 8)).fill('')));
 ['2026-10-20', '2026-10-21', '2026-10-22', '2026-10-27', '2026-10-28', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-10'].forEach((f, i) => hojas.MESA_APUNTES.filas.push(['s' + i, f, 'DORMIR', '(O) - Soledad', '', '', '', '', '', '']));
@@ -411,7 +424,7 @@ const sol = R.misNumeros('(O) - Soledad'), dsol = (sol.distinciones || []).map(x
 ver('servicio: la que más noches le hace compañía', sol.servicio === true && dsol.indexOf('mas-noches') !== -1);
 ver('servicio: cuatro semanas seguidas', dsol.indexOf('semanas') !== -1);
 ver('servicio: sin puntos ni top 10 de la familia', !sol.top10 && !sol.puntos && !dsol.some(x => x === 'comidas' && (sol.distinciones.find(d => d.id === x) || {}).categoria));
-ver('servicio: no sale en las medallas de la familia', R.misNumeros('(N) - Jan').puntos === mn.puntos);
+ver('servicio: no sale en las medallas de la familia', R.misNumeros('(N) - Jan').puntos === janAntes);
 ver('servicio: siempre un gracias con sus días del mes', dsol.indexOf('dias') !== -1);
 // v4.86: desde el servicio, solo lo suyo
 err = ''; try { R.guardarPersona('(N) - Jan', { alergias: 'x' }, '(O) - Soledad', V2); } catch (e) { err = e.message; }

@@ -185,6 +185,8 @@
   .tu-vas span { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; color: var(--color-principal-oscuro); }
   .tu-vas .ico-marca { width: 18px; height: 18px; }
   .tu-vas button { min-height: 40px; padding: 0 12px; font-size: 14px; background: #fff; }
+  .falta-suave { background: #FFF0C2; color: #7A4B00; }
+  .falta-suave .enlace { color: #7A4B00; font-weight: 800; }
   .rt-desglose { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
   .rt-ver { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--color-principal-oscuro); }
   .rt-ver + .rt-flecha { margin-left: 2px; }
@@ -970,7 +972,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.92.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.93.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -2681,13 +2683,15 @@
     }
     const q = sinAcentos($('per-q').value.trim());
     // v4.20: los abuelos, en una caja como las de las familias («Familia Ribas Coll»), sin más protagonismo que los demás
-    $('per-abuela').innerHTML = q || hayFiltros() ? '' : cajaAbuelos();
+    const abuelosCoinciden = q && (datos.editores || []).some(function (p) { return sinAcentos(p.apodo + ' ' + (p.nombre || '') + ' ' + (p.apellido || '') + ' abuelos').indexOf(q) !== -1; });  // v4.93
+    $('per-abuela').innerHTML = hayFiltros() || (q && !abuelosCoinciden) ? '' : cajaAbuelos();
     let lista = datos.personas.filter(function (p) { return pasaFiltros(p); });
     if (q) lista = lista.filter(function (p) { return sinAcentos(p.apodo + ' ' + (p.nombre || '') + ' ' + (p.apellido || '') + ' ' + p.familia + ' ' + nombreFamilia(p.familia) + ' ' + deQuien(p)).indexOf(q) !== -1; });
     const $r = $('per-resultado');
     $r.hidden = !hayFiltros() && !q;
     if (!$r.hidden) $r.innerHTML = (lista.length === 1 ? 'Sale 1 persona' : 'Salen ' + lista.length + ' personas') +
       (hayFiltros() ? '<button type="button" class="enlace" data-quitar-filtros>Quitar filtros</button>' : '');
+    if (!lista.length && abuelosCoinciden) { $('per-lista').innerHTML = ''; return; }  // v4.93: solo los abuelos
     if (!lista.length) {
       $('per-lista').innerHTML = '<p class="vacio">' + (hayFiltros() ? 'Nadie cumple estos filtros.' : 'No hay nadie con ese nombre en la lista. Puedes añadirlo con «Añadir».') + '</p>';
       return;
@@ -3746,12 +3750,19 @@
     return '<dl class="basico">' + l.map(function (b) { return '<div' + (b[0] === 'No come' ? ' class="alergia"' : '') + '><dt>' + b[0] + '</dt><dd>' + esc(b[1]) + '</dd></div>'; }).join('') + '</dl>';
   }
   /* v4.36: en el modo sencillo, al tocar a alguien: solo para mirar */
-  function abrirInfoPersona(id) {
+  function abrirInfoPersona(id, conEditar) {
     const p = persona(id) || editor(id);
     if (!p) return;
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2></div><div class="dlg-cuerpo">' + datosBasicos(p) + '</div>' +
-      '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-cerrar">Cerrar</button></div></div>');
+    // v4.93: desde Personas, la ficha se abre primero para leer; lo que falta, arriba, y «Editar» lleva al formulario
+    const fl = conEditar && persona(id) ? falta(p) : [];
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2></div><div class="dlg-cuerpo">' +
+      (fl.length ? '<p class="falta-ficha falta-suave">Falta: ' + esc(lista(fl)) + '. <button type="button" class="enlace" id="dlg-completar">Completarlo</button></p>' : '') + datosBasicos(p) + '</div>' +
+      '<div class="dlg-pie"><div class="botones">' + (conEditar ? '<button type="button" class="principal" id="dlg-editar">Editar</button>' : '') +
+      '<button type="button" class="' + (conEditar ? 'accion quitar' : 'principal') + '" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    const editar = function () { cerrarDialogo(); abrirPersona(id); };
+    if ($('dlg-editar')) $('dlg-editar').addEventListener('click', editar);
+    if ($('dlg-completar')) $('dlg-completar').addEventListener('click', editar);
   }
   function abrirPersona(id, fecha, turno) {
     const esAbuelo = !persona(id) && !!editor(id);  // v4.53: los abuelos, con su ficha como todos (sin comidas ni quitarlos)
@@ -4367,6 +4378,7 @@
       if (seVe) ir();
       else { irADia(fecha); if (cubierto()) { pintar(); ir(); } else cargar().then(ir); }
     } else if (el.hasAttribute('data-anadir')) { abrirAnadir(el.dataset.fecha, el.dataset.turno);
+    } else if (!el.dataset.fecha && vista === 'personas') { abrirInfoPersona(el.dataset.persona, true);  // v4.93: primero, para leer
     } else { abrirPersona(el.dataset.persona, el.dataset.fecha, el.dataset.turno); }
   });
 
