@@ -108,6 +108,7 @@ const API_ = {
   borrarEvento: function (a) { return borrarEvento(a[0], a[1], a[2]); },
   apuntarEvento: function (a) { return apuntarEvento(a[0], a[1], a[2], a[3], a[4], a[5]); },  // v4.67: a[5], los días
   notaEvento: function (a) { return notaEvento(a[0], a[1], a[2], a[3], a[4]); },  // v4.68
+  misNumeros: function (a) { return misNumeros(a[0]); },  // v4.79
   guardarAusencia: function (a) { return guardarAusencia(a[0], a[1], a[2], a[3], a[4], a[5]); },
   crearPersona: function (a) { return crearPersona(a[0], a[1], a[2]); },
   darDeBaja: function (a) { return darDeBaja(a[0], a[1], a[2]); },
@@ -208,6 +209,51 @@ function datos_(ss, p) {
   };
 }
 
+/**
+ * v4.79: los números de una persona, desde que empezó el calendario hasta ayer: cuántas veces ha estado con la abuela
+ * (comidas, cenas y noches, también las fijas), este mes, su día de la semana, con cuánta antelación avisa,
+ * la última vez y su puesto en su familia. Solo lee.
+ */
+function misNumeros(personaId) {
+  reiniciar_();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const config = leerConfig_(ss);
+  const personas = leerPersonas_(ss, config.excluir);
+  const p = personas.filter(function (x) { return x.id === personaId; })[0];
+  if (!p) throw new Error('No encontramos ese nombre en la lista.');
+  const hoy = hoy_(), ayer = sumarDias_(hoy, -1);
+  const inicio = esFecha_(config.inicio) ? config.inicio : sumarDias_(hoy, -365);
+  const crudos = leerApuntes_(ss), fijos = leerFijos_(ss);
+  const ef = inicio <= ayer ? efectivos_(crudos, fijos, inicio, ayer) : [];
+  const mios = ef.filter(function (a) { return a.persona === personaId; });
+  const cuenta = { COMIDA: 0, CENA: 0, DORMIR: 0 }, porDia = [0, 0, 0, 0, 0, 0, 0];
+  let mes = 0, ultima = '';
+  mios.forEach(function (a) {
+    cuenta[a.turno] = (cuenta[a.turno] || 0) + 1;
+    porDia[diaSemana_(a.fecha)]++;
+    if (a.fecha.slice(0, 7) === hoy.slice(0, 7)) mes++;
+    if (a.fecha > ultima) ultima = a.fecha;
+  });
+  const maxDia = Math.max.apply(null, porDia);
+  const diaFav = maxDia >= 2 ? porDia.indexOf(maxDia) : -1;
+  // con cuánta antelación avisa: de cuándo se apuntó a la hora de esa comida, cena o noche (la mediana, en horas)
+  const horaDe = { COMIDA: config.horaComida || '14:00', CENA: config.horaCena || '21:00', DORMIR: config.horaDormir || '22:30' };
+  const antes = crudos.filter(function (a) { return a.persona === personaId && !a.no && a.creado && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(a.creado); }).map(function (a) {
+    const h = String(horaDe[a.turno] || '14:00');
+    const cuando = aUTC_(a.fecha) + (Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))) * 60000;
+    const creado = aUTC_(a.creado.slice(0, 10)) + (Number(a.creado.slice(11, 13)) * 60 + Number(a.creado.slice(14, 16))) * 60000;
+    return (cuando - creado) / 3600000;
+  }).filter(function (x) { return x >= 0; }).sort(function (a, b) { return a - b; });
+  const antelacion = antes.length >= 2 ? Math.round(antes[Math.floor(antes.length / 2)]) : null;
+  // su puesto en su familia (sin el servicio)
+  const deFamilia = personas.filter(function (x) { return x.familia === p.familia && x.familia && x.familia !== 'Otros' && x.familia !== 'Servicio'; });
+  const total = function (id) { return ef.filter(function (a) { return a.persona === id; }).length; };
+  const yo = mios.length;
+  const puesto = deFamilia.length > 1 && yo ? 1 + deFamilia.filter(function (x) { return x.id !== personaId && total(x.id) > yo; }).length : null;
+  return { desde: inicio, total: yo, comidas: cuenta.COMIDA, cenas: cuenta.CENA, noches: cuenta.DORMIR, mes: mes, diaFav: diaFav,
+    antelacionHoras: antelacion, ultima: ultima, puesto: puesto, enFamilia: deFamilia.length };
+}
+
 function leerConfig_(ss) { return memo_('config', function () { return leerConfigSin_(ss); }); }
 function leerConfigSin_(ss) {
   const filas = ss.getSheetByName(HOJA_CONFIG).getDataRange().getValues().slice(1);
@@ -303,7 +349,7 @@ function leerApuntesSin_(ss) {
   const alias = resolverAlias_(ss);
   return abrirTabla_(ss.getSheetByName(HOJA_APUNTES), COLS_APUNTES, aFilaApunte_).vivas().map(function (x) {
     const f = x.v;
-    return { id: f[0], fecha: f[1], turno: f[2], persona: alias(f[3]), nota: f[5], no: f[6] === 'NO', notaPor: f[7], notaEn: f[8], acompanantes: Number(f[9]) || 0 };
+    return { id: f[0], fecha: f[1], turno: f[2], persona: alias(f[3]), creado: f[4], nota: f[5], no: f[6] === 'NO', notaPor: f[7], notaEn: f[8], acompanantes: Number(f[9]) || 0 };
   });
 }
 

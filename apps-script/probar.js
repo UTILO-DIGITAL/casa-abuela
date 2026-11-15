@@ -60,7 +60,7 @@ const ctx = {
   ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, guardarPersonas, getAjustes, guardarAjustes, api_ };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, misNumeros, guardarPersonas, getAjustes, guardarAjustes, api_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -381,6 +381,20 @@ err = ''; try { R.guardarPersona('(A) - Abuela', { fallecio: '03/05' }, JP_, V2)
 ver('el fallecimiento sin año, no', /fallecimiento/.test(err));
 d = R.guardarPersona('(A) - Abuela', { fallecio: '' }, JP_, V2);
 ver('(se deshace)', !quien('(A) - Abuela').fallecio);
+
+// ---------- v4.79: Mis números ----------
+hojas.MESA_APUNTES.filas.push(['n1', '2026-11-01', 'COMIDA', '(N) - Jan', '2026-10-31T14:00:00', '', '', '', '', ''],
+  ['n2', '2026-11-08', 'COMIDA', '(N) - Jan', '2026-11-05T10:00:00', '', '', '', '', ''],
+  ['n3', '2026-11-10', 'CENA', '(N) - Jan', '', '', '', '', '', ''],
+  ['n4', '2026-11-11', 'COMIDA', '(N) - Jan', '2026-11-01T10:00:00', '', 'NO', '', '', '']);
+R.guardarAjustes({ inicio: '2026-10-01' }, M_, V2);
+const mn = R.misNumeros('(N) - Jan');
+ver('mis números: cuántas veces (sin el «no voy» ni lo de hoy)', mn.total >= 4 && mn.cenas >= 1 && mn.ultima === '2026-11-10' && mn.mes >= 4);
+ver('mi día: el martes (sus comidas fijas cuentan)', mn.diaFav === 2);
+ver('con cuánta antelación aviso (horas, la mediana)', mn.antelacionHoras === 76);
+ver('mi puesto en la familia', mn.puesto >= 1 && mn.enFamilia >= 2);
+err = ''; try { R.misNumeros('(X) - Nadie'); } catch (e) { err = e.message; }
+ver('de alguien que no está, no', /No encontramos/.test(err));
 
 // ---------- v4.17: la clave de la familia ----------
 ver('sin CLAVE en MESA_CONFIG, no se pide', R.api_('getDatos', [V2], undefined).ok === true);

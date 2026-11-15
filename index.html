@@ -429,6 +429,10 @@
   @media (min-width: 640px) { .aj-kpis { grid-template-columns: repeat(4, 1fr); } }
   .aj-kpi { padding: 10px 12px; border-radius: 10px; background: var(--color-fondo); border: 1px solid var(--color-linea); display: grid; gap: 2px; }
   .aj-kpi b { font-size: 26px; line-height: 1.1; color: var(--color-principal-oscuro); font-variant-numeric: tabular-nums; }
+  .mn-kpis { margin: 4px 0 8px; }
+  .aj-kpi .mn-txt { font-size: 18px; }
+  .mn-sub { font-size: 12px; color: var(--color-texto-suave); font-weight: 700; }
+  .mn-animo { margin: 0; font-weight: 700; }
   .aj-kpi b small { font-size: 14px; color: var(--color-texto-suave); font-weight: 700; }
   .aj-kpi span { font-size: 13px; color: var(--color-texto-suave); font-weight: 600; }
   .aj-acc { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
@@ -843,7 +847,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v4.78.0</footer>
+  <footer>Hecho con cariño por Utilo · v4.79.0</footer>
 </div>
 
 <div id="impresion"></div>
@@ -3743,14 +3747,36 @@
 
   function abrirMisComidas() {
     const l = datos.misProximas || [];
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Mis próximas comidas y cenas</h2></div>' +
-      '<div class="dlg-cuerpo">' + (l.length
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Mis comidas</h2></div>' +
+      '<div class="dlg-cuerpo"><div id="mis-numeros"><p class="ayuda">Contando tus visitas…</p></div><h3 class="rf-sec">Lo próximo</h3>' + (l.length
         ? '<table class="tabla-turnos"><tbody>' + l.map(function (a) {
             return '<tr><td>' + diaLargo(a.fecha) + '</td><td>' + etiquetaTurno(a.turno) + '</td><td>' + esc(a.nota || (a.fijo ? 'siempre' : '')) + '</td></tr>';
           }).join('') + '</tbody></table>'
         : '<p class="ayuda">No tienes nada apuntado a partir de hoy.</p>') +
       '</div><div class="dlg-pie"><div class="botones"><button type="button" class="accion" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    // v4.79: tus números, desde que empezó el calendario (los calcula el servidor)
+    if (!persona(yo)) { $('mis-numeros').innerHTML = ''; return; }
+    llamar('misNumeros', [yo]).then(function (n) { const $n = $('mis-numeros'); if ($n) $n.innerHTML = htmlMisNumeros(n); })
+      .catch(function () { const $n = $('mis-numeros'); if ($n) $n.innerHTML = ''; });
+  }
+  function htmlMisNumeros(n) {
+    if (!n) return '';
+    const desde = 'desde el ' + Number(n.desde.slice(8, 10)) + ' de ' + MESES[Number(n.desde.slice(5, 7)) - 1];
+    if (!n.total) return '<p class="mn-animo">Aún no has ido ' + esc(desde) + '. ¡La abuela te espera!</p>';
+    const plural = function (k, uno, varios) { return k ? (k === 1 ? '1 ' + uno : k + ' ' + varios) : ''; };
+    const detalle = [plural(n.comidas, 'comida', 'comidas'), plural(n.cenas, 'cena', 'cenas'), plural(n.noches, 'noche', 'noches')].filter(Boolean).join(' · ');
+    const h = n.antelacionHoras;
+    const aviso = h === null || h === undefined ? '' : h < 24 ? (h < 2 ? 'a última hora' : 'unas ' + h + ' horas antes') : (Math.round(h / 24) === 1 ? '1 día antes' : Math.round(h / 24) + ' días antes');
+    const cifra = function (num, et, sub) { return '<div class="aj-kpi"><b>' + num + '</b><span>' + et + '</span>' + (sub ? '<small class="mn-sub">' + sub + '</small>' : '') + '</div>'; };
+    return '<p class="mn-animo">' + (n.puesto === 1 ? '¡Eres quien más va de tu familia! ' : '') + 'Gracias por acompañar a la abuela.</p><div class="aj-kpis mn-kpis">' +
+      cifra(n.total, n.total === 1 ? 'vez con la abuela' : 'veces con la abuela', esc(detalle + ' · ' + desde)) +
+      cifra(n.mes, 'este mes', '') +
+      (n.diaFav >= 0 ? cifra('<span class="mn-txt">los ' + DIAS[n.diaFav].toLowerCase() + (/s$/.test(DIAS[n.diaFav]) ? '' : 's') + '</span>', 'tu día de la semana', '') : '') +
+      (aviso ? cifra('<span class="mn-txt">' + aviso + '</span>', 'sueles avisar', '') : '') +
+      (n.ultima ? cifra('<span class="mn-txt">' + esc(haceCuanto(n.ultima)) + '</span>', 'la última vez', '') : '') +
+      (n.puesto ? cifra(n.puesto + '.º<small> de ' + n.enFamilia + '</small>', 'en tu familia', '') : '') +
+      '</div>';
   }
 
   /* ---------- Compartir por WhatsApp ---------- */
