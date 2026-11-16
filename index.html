@@ -243,11 +243,14 @@
   .fd-et small { font-weight: 600; color: var(--color-texto-suave); }
   .franja-detalle input { font: inherit; font-weight: 400; min-height: 44px; padding: 8px 12px; border-radius: calc(var(--radio) / 2); border: 1px solid var(--color-principal-oscuro); background: #fff; color: var(--color-texto); min-width: 0; }
   .franja-detalle input[type=text] { width: 100%; }
-  .franja-detalle:not(:has(.fd-acomp)) input[type=text] { grid-column: 1 / -1; }
+  .franja-detalle > * { grid-column: 1 / -1; }
   .comida.con-detalle { cursor: pointer; }  /* v5.28: al tocar el bloque, todo lo suyo */
   .se-quita .fd-et { color: var(--color-texto-suave); }
-  .fd-acomp { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
-  .fd-acomp input { width: 56px; }
+  .fd-fuera-abrir { justify-self: start; font-size: 14px; padding: 4px 0; }
+  .fd-fuera { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 700; }
+  .fd-contador { display: inline-flex; align-items: center; gap: 6px; }
+  .franja-detalle .fd-contador input { width: 52px; flex: none; text-align: center; font-weight: 800; padding: 8px 4px; }
+  .franja-detalle .fd-contador button { width: 44px; height: 44px; min-width: 44px; flex: none; padding: 0; font-size: 22px; line-height: 1; border-radius: 50%; }
   .comida-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .comida-cab h4 { margin: 0; font-size: 15px; font-weight: 800; color: var(--color-principal-oscuro); }
   button.mas {
@@ -4401,7 +4404,7 @@
         $('bus-titulo').textContent = '';
       } else {
         res = candidatos.filter(function (p) { return sinAcentos(p.apodo + ' ' + (p.nombre || '') + ' ' + (p.apellido || '') + ' ' + p.familia + ' ' + deQuien(p)).indexOf(q) !== -1; }).slice(0, 15);
-        $('bus-titulo').textContent = res.length ? '' : 'No hay nadie con ese nombre en la lista.';
+        $('bus-titulo').textContent = res.length ? '' : (opciones.sinResultado || 'No hay nadie con ese nombre en la lista.');
       }
       $('bus-res').innerHTML = res.map(function (p) {
         return '<button type="button" class="p ' + (editor(p.id) ? 'g-otros' : clase(p)) + '" data-elegir="' + esc(p.id) + '" aria-pressed="' + (p.id === elegidoBuscador) + '"><b>' + esc(p.apodo) + (editor(p.id) ? '' : marcaMenu(p)) + '</b><small>' + esc(editor(p.id) ? '' : deQuien(p)) + '</small></button>';
@@ -4917,7 +4920,7 @@
     return Number(v);
   }
   /* v5.28 (T0586): tu día, en una sola ventana. Arriba, quién; debajo, sus franjas (por la mañana, comida, por la tarde, cena, noche):
-     marcadas las que ya tiene y, si se entra desde un «+», también la tocada. Cada franja marcada, con su nota (y «con … más» si come,
+     marcadas las que ya tiene y, si se entra desde un «+», también la tocada. Cada franja marcada, con su nota (y quien venga de fuera de la familia, si come,
      cena o duerme); lo que tenía y se desmarca, tachado («se quitará»). Todos los «+», «Falta alguien» y los nombres de un día llevan aquí. */
   const FRANJAS = [{ id: 'MANANA', corto: 'Por la mañana' }, { id: 'COMIDA', corto: 'Comida' }, { id: 'TARDE', corto: 'Por la tarde' }, { id: 'CENA', corto: 'Cena' }, { id: 'DORMIR', corto: 'Noche' }];
   function abrirAnadir(fecha, turno, quien) {
@@ -4960,7 +4963,9 @@
         const acomp = b.acomp !== undefined ? b.acomp : String(a && a.acompanantes || 0);
         return '<div class="franja-detalle"><span class="fd-et">' + ICONO_TURNO_SVG[t] + esc(f.corto) + (a && a.fijo ? ' <small>· va siempre</small>' : '') + '</span>' +
           '<input type="text" data-nota="' + t + '" maxlength="140" autocomplete="off" aria-label="Nota de ' + esc(f.corto.toLowerCase()) + '" placeholder="Nota (si hace falta)" value="' + esc(nota) + '">' +
-          (esVisita(t) ? '' : '<label class="fd-acomp">con<input type="number" inputmode="numeric" min="0" max="20" data-acomp="' + t + '" aria-label="Gente que viene con él o ella y no está en la lista" title="Gente que viene y no está en la lista" value="' + esc(acomp) + '">más</label>') + '</div>';
+          (esVisita(t) ? '' : Number(acomp) > 0
+            ? '<div class="fd-fuera"><span>De fuera de la familia</span><span class="fd-contador"><button type="button" class="mini" data-fuera-menos="' + t + '" aria-label="Uno menos">−</button><input type="text" readonly data-acomp="' + t + '" value="' + esc(acomp) + '" aria-label="Cuántos vienen de fuera de la familia"><button type="button" class="mini" data-fuera-mas="' + t + '" aria-label="Uno más">+</button></span></div>'
+            : '<button type="button" class="enlace fd-fuera-abrir" data-fuera-mas="' + t + '">+ Viene alguien de fuera (un amigo, una invitada…)</button>') + '</div>';
       }).join('');
     }
     function cargarPersona(id) {  // lo que esa persona ya tiene ese día
@@ -4984,7 +4989,7 @@
         let acomp = 0;
         if (!esVisita(t)) {
           const v = String(b.acomp !== undefined ? b.acomp : (a && a.acompanantes || 0)).trim() || '0';
-          if (!/^\d+$/.test(v) || Number(v) > 20) return { error: 'En «con … más» de la ' + etiquetaTurno(t).toLowerCase() + ', pon cuántos vienen con él o ella, de 0 a 20.' };
+          if (!/^\d+$/.test(v) || Number(v) > 20) return { error: 'De fuera de la familia pueden venir de 0 a 20 en la ' + etiquetaTurno(t).toLowerCase() + '.' };
           acomp = Number(v);
         }
         if (!a || nota !== (a.nota || '') || (!esVisita(t) && acomp !== (a.acompanantes || 0))) {
@@ -5005,10 +5010,20 @@
     const foto = function () { guardarBorrador(); return JSON.stringify([elegidoBuscador, marcadas(), FRANJAS.map(function (f) { const b = borrador[f.id] || {}; return [b.nota || '', b.acomp || '']; }), !!($('dlg-cada-semana') && $('dlg-cada-semana').checked)]); };
     let fotoInicial = '';
     dlgComprobar = function () { return foto() !== fotoInicial; };
-    montarBuscador({ seleccion: inicial, alta: true, alElegir: cargarPersona });
+    montarBuscador({ seleccion: inicial, alElegir: cargarPersona, sinResultado: 'No está en la lista. Si viene alguien de fuera de la familia, apúntate tú y súmalo en «Viene alguien de fuera».' });  // v5.28: sin «añadir a la lista»: la familia ya está; quien viene de fuera, en «Viene alguien de fuera»
     cargarPersona(inicial);
     fotoInicial = foto();
     $dlg.querySelectorAll('.franja input').forEach(function (c) { c.addEventListener('change', function () { guardarBorrador(); pintarDetalle(); }); });
+    $('dlg-detalle').addEventListener('click', function (e) {  // los de fuera de la familia: solo cuántos, sin darlos de alta
+      const b = e.target.closest('[data-fuera-mas], [data-fuera-menos]');
+      if (!b) return;
+      guardarBorrador();
+      const t = b.dataset.fueraMas || b.dataset.fueraMenos, x = borrador[t] = borrador[t] || {};
+      const a = apunte(fecha, t, elegidoBuscador);
+      const n = Number(x.acomp !== undefined ? x.acomp : (a && a.acompanantes || 0)) || 0;
+      x.acomp = String(Math.max(0, Math.min(20, n + (b.dataset.fueraMas ? 1 : -1))));
+      pintarDetalle();
+    });
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
       const id = elegidoBuscador;
