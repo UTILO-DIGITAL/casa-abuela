@@ -79,6 +79,8 @@
   /* v4.92: en la vista sencilla, la salida a la vista, arriba a la derecha */
   .salir-arriba { display: none; position: absolute; top: 0; right: max(16px, var(--lado-der, 0px)); min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 2px solid #fff; background: rgba(255,255,255,.15); color: #fff; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
   .modo-abuela .salir-arriba { display: inline-flex; align-items: center; }
+  .salir-arriba .sa-corto { display: none; }
+  @media (max-width: 560px) { .salir-arriba .sa-largo { display: none; } .salir-arriba .sa-corto { display: inline; } .modo-abuela .cabecera h1 { padding-right: 84px; } }  /* v5.16: que no pise el título */
   @media (min-width: 760px) { .yo-chip { right: 32px; } }
   .yo-menu { display: grid; gap: 8px; }
   .dlg-salir { margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; background: #FFF0C2; border: 1px solid #F1C85A; }
@@ -108,6 +110,21 @@
   nav.vistas.hay-antes.hay-mas { -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 44px), transparent); }
   nav.vistas.hay-antes:not(.hay-mas) { -webkit-mask-image: linear-gradient(to right, transparent, #000 32px); mask-image: linear-gradient(to right, transparent, #000 32px); }
   nav.vistas a { flex: none; }
+  /* v5.16: en el móvil, cuatro pestañas y «Más ▾» con Por rellenar y Ajustes (antes se cortaban y Ajustes no se veía) */
+  #nav-mas { display: none; }
+  @media (max-width: 560px) {
+    nav.vistas.con-mas #nav-rellenar, nav.vistas.con-mas #nav-ajustes { display: none; }
+    nav.vistas.con-mas #nav-mas { display: inline-flex; }
+    nav.vistas.con-mas { -webkit-mask-image: none; mask-image: none; }
+    nav.vistas.con-mas { gap: 0; justify-content: space-between; }
+    nav.vistas.con-mas a { padding-left: 6px; padding-right: 6px; font-size: 14px; }
+    nav.vistas.con-mas #nav-mas { padding-right: 4px; }
+    #badge-mas { min-width: 0; width: 9px; height: 9px; padding: 0; font-size: 0; margin-left: 3px; align-self: flex-start; margin-top: 10px; }  /* un punto: el número sale dentro */
+  }
+  .casilla { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 700; cursor: pointer; }
+  .casilla input { width: 22px; height: 22px; margin: 0; }
+  .mas-menu { display: grid; gap: 10px; }
+  .mas-menu button { justify-content: space-between; min-height: 52px; font-size: 18px; }
   nav.vistas a[aria-current="page"] { background: var(--color-fondo); color: var(--color-principal-oscuro); }
 
   .pagina { max-width: 1360px; margin: 0 auto; padding: 20px 16px 48px; }
@@ -129,8 +146,8 @@
   .g-parejas { background: var(--gen-parejas-fondo); color: var(--gen-parejas-texto); }
   .g-bisnietos { background: var(--gen-bisnietos-fondo); color: var(--gen-bisnietos-texto); }
   .g-otros { background: var(--gen-otros-fondo); color: var(--gen-otros-texto); }
-  .p.soy-yo { box-shadow: inset 0 0 0 3px var(--color-accion); }
-  button.fila-persona.soy-yo, button.fila-persona.fila-caja.soy-yo { box-shadow: inset 0 0 0 3px var(--color-accion); border-radius: calc(var(--radio) / 2); padding-left: 10px; padding-right: 10px; }
+  .p.soy-yo { box-shadow: inset 0 0 0 3px var(--color-principal); }
+  button.fila-persona.soy-yo, button.fila-persona.fila-caja.soy-yo { box-shadow: inset 0 0 0 3px var(--color-principal); border-radius: calc(var(--radio) / 2); padding-left: 10px; padding-right: 10px; }
   button.p { border: 0; font: inherit; text-align: left; cursor: pointer; min-height: 40px; }
   button.p:hover { filter: brightness(.95); }
 
@@ -351,6 +368,11 @@
   }
   dialog.editor[open] { display: flex; flex-direction: column; }
   dialog::backdrop { background: rgba(28, 43, 38, .45); }
+  /* v5.16: con el zoom de las vistas Cómoda y Ágil, el diálogo se medía antes de agrandarse y se salía por arriba */
+  body.vista-comoda:not(.modo-abuela) dialog.editor { max-height: calc((100dvh - 24px) / 1.08); width: min(560px, calc((100vw - 24px) / 1.08)); }
+  body.vista-agil:not(.modo-abuela) dialog.editor { max-height: calc((100dvh - 24px) / .9); width: min(560px, calc((100vw - 24px) / .9)); }
+  /* UX-07: el botón flotante no tapa la última tarjeta */
+  #vista-eventos { padding-bottom: 88px; }
   .dlg-cab { padding: 16px 20px 12px; border-bottom: 1px solid var(--color-linea); display: grid; gap: 6px; }
   .dlg-cab h2 { font-family: var(--letra-titulos); font-weight: 600; font-size: 24px; line-height: 1.15; margin: 0; }
   .dlg-cuerpo { padding: 16px 20px; display: grid; gap: 16px; overflow: auto; }
@@ -809,7 +831,7 @@
   .arbol-et .barra-embarazo { margin: 3px 0 0; max-width: none; flex: none; }
   .arbol-et.fuera-filtro { opacity: .28; }
   .arbol-caja.fuera-filtro { opacity: .45; }
-  .arbol-et.soy-yo { box-shadow: inset 0 0 0 2.5px var(--color-accion); }
+  .arbol-et.soy-yo { box-shadow: inset 0 0 0 2.5px var(--color-principal); }
   .arbol-ano-et { position: absolute; height: 20px; line-height: 20px; font-family: var(--letra-texto); font-size: 11.5px; font-weight: 700; color: var(--color-principal-oscuro); text-align: right; pointer-events: none; }
   .arbol-ano-et.futuro { color: var(--color-futuro); }
   .arbol-lineas path { fill: none; stroke: #CDBFAD; stroke-width: 2; stroke-linejoin: round; }
@@ -832,7 +854,7 @@
   .arbol-zona { fill: transparent; }
   .arbol-persona[data-persona], .arbol-persona[data-comida-abuela] { cursor: pointer; }
   .arbol-persona[data-persona]:hover .arbol-zona, .arbol-persona[data-comida-abuela]:hover .arbol-zona { fill: rgba(14, 138, 122, .06); }
-  .arbol-persona.soy-yo .arbol-zona { stroke: var(--color-accion); stroke-width: 2.5; }
+  .arbol-persona.soy-yo .arbol-zona { stroke: var(--color-principal); stroke-width: 2.5; }
   .arbol-nombre { font-family: var(--letra-texto); font-weight: 800; font-size: 15px; fill: var(--color-texto); }
   .arbol-dato { font-family: var(--letra-texto); font-weight: 600; font-size: 12.5px; fill: var(--color-texto-suave); }
   .arbol-ano { font-family: var(--letra-texto); font-weight: 700; font-size: 11.5px; fill: var(--color-principal-oscuro); }
@@ -981,8 +1003,17 @@
   .buscador input { font: inherit; min-height: 44px; padding: 8px 12px; border-radius: calc(var(--radio) / 2); border: 1px solid var(--color-principal-oscuro); background: #fff; color: var(--color-texto); }
   .buscador .titulo-lista { margin: 0; font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
   .resultados { display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow: auto; }
-  .resultados .p[aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--color-accion); }
-  .elegido { margin: 0; font-weight: 800; }
+  .resultados .p[aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--color-principal); }
+  .resultados .p[aria-pressed="true"] b::before { content: '✓ '; color: var(--color-principal); }
+  .elegido { margin: 0; font-weight: 800; color: var(--color-principal-oscuro); }
+  /* v5.16 (UX-37): zonas táctiles de 44 px como mínimo */
+  .ev-familia .ev-ver { min-height: 40px; min-width: 64px; display: inline-flex; align-items: center; justify-content: center; }
+  .ev-bots .ev-si:not(.grande), .ev-bots .ev-no:not(.grande) { min-width: 44px; min-height: 44px; }
+  .cal-cab .icono { min-width: 44px; min-height: 44px; }
+  td label:has(input[type="checkbox"]) { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; }
+  td input[type="checkbox"], label.check input[type="checkbox"] { width: 22px; height: 22px; }
+  label.check { min-height: 44px; display: flex; align-items: center; gap: 10px; }
+  .rt-total { min-height: 44px; }
   button.enlace.alta-nueva { justify-self: start; margin: 0; padding: 8px 0; text-align: left; }
   #impresion { display: none; }
   @media print {
@@ -1000,7 +1031,7 @@
 <header class="cabecera">
   <div class="cabecera-dentro">
     <button type="button" id="yo-chip" class="yo-chip" hidden></button>
-    <button type="button" class="salir-arriba" data-salir-sencillo>Salir de la vista sencilla</button>
+    <button type="button" class="salir-arriba" data-salir-sencillo><span class="sa-largo">Salir de la vista sencilla</span><span class="sa-corto">Salir</span></button>
     <h1>Casa Abuela</h1>
     <p id="subtitulo">Quién viene a comer y a cenar</p>
     <nav class="vistas" aria-label="Vistas">
@@ -1008,8 +1039,9 @@
       <a href="#eventos" data-vista="eventos">Eventos<span class="nav-badge" id="badge-eventos" hidden></span></a>
       <a href="#personas" data-vista="personas">Personas</a>
       <a href="#huecos" data-vista="huecos">Huecos</a>
-      <a href="#rellenar" data-vista="rellenar" id="nav-rellenar" hidden><span class="nav-largo">Por rellenar</span><span class="nav-corto">Rellenar</span><span class="nav-badge" id="badge-rellenar" hidden></span></a>
+      <a href="#rellenar" data-vista="rellenar" id="nav-rellenar" hidden>Por rellenar<span class="nav-badge" id="badge-rellenar" hidden></span></a>
       <a href="#ajustes" data-vista="ajustes" id="nav-ajustes" hidden>Ajustes</a>
+      <a href="#mas" id="nav-mas" role="button" aria-haspopup="dialog"><span id="nav-mas-t">Más</span> ▾<span class="nav-badge" id="badge-mas" hidden></span></a>
     </nav>
   </div>
 </header>
@@ -1065,8 +1097,8 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.15.0</footer>
+  <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
+  <footer>Hecho con cariño por Utilo · v5.16.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1639,6 +1671,12 @@
     $('badge-eventos').hidden = !pend; $('badge-eventos').textContent = pend; $('badge-eventos').setAttribute('aria-label', pend + ' por contestar');
     $('badge-rellenar').hidden = !mios.length; $('badge-rellenar').textContent = mios.length; $('badge-rellenar').setAttribute('aria-label', mios.length + ' por rellenar');
     document.querySelector('nav.vistas').classList.toggle('muchas', !$('nav-rellenar').hidden);
+    // v5.16: «Más ▾» en el móvil
+    const conMas = !$('nav-rellenar').hidden || !$('nav-ajustes').hidden;
+    document.querySelector('nav.vistas').classList.toggle('con-mas', conMas);
+    $('badge-mas').hidden = $('nav-rellenar').hidden || !mios.length; $('badge-mas').textContent = mios.length;
+    $('nav-mas-t').textContent = vista === 'rellenar' ? 'Por rellenar' : vista === 'ajustes' ? 'Ajustes' : 'Más';
+    if (vista === 'rellenar' || vista === 'ajustes') $('nav-mas').setAttribute('aria-current', 'page'); else $('nav-mas').removeAttribute('aria-current');
     bordesNav();  // v4.87
     if (vista === 'ajustes') { if (!esAdmin()) { ponerVista('semana'); return; } if (!ajustes) pintarAjustes(); }  // v4.35: la Semana, los Eventos y (v4.37) las Personas, para mirar
     pintarNavegador();
@@ -1943,20 +1981,23 @@
   /* v4.35: salir del modo sencillo: con la clave de la familia, para que no se salga sin querer */
   function salirSencillo() {
     // v4.92: si la vista sencilla la eligió uno mismo (no es la abuela), se sale sin clave, a la cómoda
-    if (persona(yo) && !editor(yo)) { guardarVista('comoda'); pintar(); aviso('Listo: vista cómoda. Puedes cambiarla tocando tu nombre.'); return; }
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Salir del modo sencillo</h2></div>' +
+    const antes = (function () { try { return localStorage.getItem('casa-abuela-vista-antes') || 'comoda'; } catch (e) { return 'comoda'; } })();  // v5.16
+    if (persona(yo) && !editor(yo)) { guardarVista(antes); pintar(); aviso('Listo: vista ' + (antes === 'agil' ? 'ágil' : 'cómoda') + '. Puedes cambiarla tocando tu nombre.'); return; }
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Salir de la vista sencilla</h2></div>' +
       '<div class="dlg-cuerpo"><p class="ayuda">Para volver a la web completa, escribe la clave de la familia.</p>' +
       (pistaClave() ? '<p class="pista-clave"><strong>Pista:</strong> ' + esc(pistaClave()) + '</p>' : '') +  // v4.78
-      '<label class="campo" for="dlg-salir-clave">Clave<input id="dlg-salir-clave" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>' +
+      '<label class="campo" for="dlg-salir-clave">Clave<input id="dlg-salir-clave" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"></label>' +
+      '<label class="casilla"><input type="checkbox" id="dlg-salir-ver"> Ver la clave</label></div>' +
       pie('Salir'));
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     const n = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
     const salir = function () {
       if (leerClave() && n($('dlg-salir-clave').value) !== n(leerClave())) { errorDialogo('Esa no es la clave. Prueba otra vez.'); return; }
-      if (persona(yo) && leerVista() === 'sencilla') guardarVista('comoda'); else { yo = ''; guardarYo(''); }  // v4.91
+      if (persona(yo) && leerVista() === 'sencilla') guardarVista(antes); else { yo = ''; guardarYo(''); }  // v4.91
       cerrarDialogo(); pintar();
     };
     $('dlg-guardar').addEventListener('click', salir);
+    $('dlg-salir-ver').addEventListener('change', function () { $('dlg-salir-clave').type = this.checked ? 'text' : 'password'; });
     $('dlg-salir-clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); salir(); } });
     $('dlg-cerrar').textContent = 'Cancelar';  // v4.92
   }
@@ -4132,7 +4173,7 @@
         return '<button type="button" class="p ' + (editor(p.id) ? 'g-otros' : clase(p)) + '" data-elegir="' + esc(p.id) + '" aria-pressed="' + (p.id === elegidoBuscador) + '"><b>' + esc(p.apodo) + (editor(p.id) ? '' : marcaMenu(p)) + '</b><small>' + esc(editor(p.id) ? 'sin apuntarse a comer' : deQuien(p)) + '</small></button>';
       }).join('');
       const e = quienEs(elegidoBuscador);
-      $('bus-elegido').textContent = e ? 'Elegido: ' + e.apodo : '';
+      $('bus-elegido').textContent = e ? '✓ ' + e.apodo : '';  // v5.16
       // v4.6: si no está en la lista (o es otra persona con el mismo nombre), se puede dar de alta
       const texto = $('bus-q').value.trim();
       $('bus-alta').hidden = !(opciones.alta && texto);
@@ -4163,16 +4204,17 @@
       '<div class="yo-menu">' + (p ? '<button type="button" class="accion" id="dlg-yo-comidas">' + (servicioYo() ? 'Mis días' : 'Mis comidas') + '</button><button type="button" class="accion" id="dlg-yo-datos">Mis datos</button>' : '') +
         '<button type="button" class="accion" id="dlg-yo-otro">No soy ' + esc(q.apodo) + ' (cambiar de persona)</button></div>' +
       (p ? '<fieldset class="yo-vista"><legend>Cómo quieres ver la web</legend><div class="forma-ev" role="radiogroup">' + [['agil', 'Ágil', 'Letra pequeña, cabe más'], ['comoda', 'Cómoda', 'Letra y botones grandes'], ['sencilla', 'Sencilla', 'Solo para mirar, como la abuela']].map(function (x) {
-        return '<button type="button" role="radio" data-vista-elige="' + x[0] + '" aria-pressed="' + (vistaElegida() === x[0]) + '" aria-checked="' + (vistaElegida() === x[0]) + '"><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div><p class="ayuda">Se guarda en este móvil. Para salir de la sencilla hace falta la clave.</p></fieldset>' : '') +
+        return '<button type="button" role="radio" data-vista-elige="' + x[0] + '" aria-pressed="' + (vistaElegida() === x[0]) + '" aria-checked="' + (vistaElegida() === x[0]) + '"><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div><p class="ayuda">Se guarda en este aparato. Desde la sencilla se vuelve con «Salir de la vista sencilla», arriba.</p></fieldset>' : '') +
       (p ? '<div id="yo-medallas"><p class="ayuda">Mirando tus medallas…</p></div>' : '') + '</div>' +
       '<div class="dlg-pie"><div class="botones"><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     if ($('dlg-yo-datos')) $('dlg-yo-datos').addEventListener('click', function () { cerrarDialogo(); abrirPersona(yo); });
     if ($('dlg-yo-comidas')) $('dlg-yo-comidas').addEventListener('click', function () { cerrarDialogo(); abrirMisComidas(); });
-    $('dlg-yo-otro').addEventListener('click', function () { cerrarDialogo(); olvidarYo(true); preguntarQuien(null); });
+    $('dlg-yo-otro').addEventListener('click', function () { cerrarDialogo(); preguntarQuien(null, true); });  // v5.16: sigues siendo tú hasta elegir a otro
     $dlg.querySelectorAll('[data-vista-elige]').forEach(function (b) { b.addEventListener('click', function () {  // v4.91
+      if (b.dataset.vistaElige === 'sencilla' && vistaElegida() !== 'sencilla') { try { localStorage.setItem('casa-abuela-vista-antes', vistaElegida() || 'comoda'); } catch (e) {} }  // v5.16: para volver a la de antes
       guardarVista(b.dataset.vistaElige); cerrarDialogo(); pintar();
-      aviso(b.dataset.vistaElige === 'sencilla' ? 'Vista sencilla: solo para mirar. Para salir, abajo, «Salir del modo sencillo».' : 'Listo: vista ' + (b.dataset.vistaElige === 'agil' ? 'ágil' : 'cómoda') + '.');
+      aviso(b.dataset.vistaElige === 'sencilla' ? 'Vista sencilla: solo para mirar. Para salir, arriba, «Salir de la vista sencilla».' : 'Listo: vista ' + (b.dataset.vistaElige === 'agil' ? 'ágil' : 'cómoda') + '.');
     }); });
     if (p) llamar('misNumeros', [yo]).then(function (n) { const $m = $('yo-medallas'); if ($m) $m.innerHTML = htmlMedallas(n); })
       .catch(function () { const $m = $('yo-medallas'); if ($m) $m.innerHTML = ''; });
@@ -4203,13 +4245,13 @@
     if (!callado) aviso((antes ? 'Los cambios ya no se guardan a nombre de ' + antes.apodo + '. ' : '') + 'Al apuntarte o cambiar algo, te preguntaremos quién eres.', 6000);
   }
   function conQuien(siguiente) { if (quienEs(yo)) siguiente(); else preguntarQuien(siguiente); }
-  function preguntarQuien(siguiente) {
+  function preguntarQuien(siguiente, cambiando) {  // v5.16: «cambiando», desde «No soy…»: no se olvida a nadie hasta elegir
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Quién eres?</h2></div>' +
-      '<div class="dlg-cuerpo"><p class="ayuda">Se guarda en este móvil y sirve para saber quién hace cada cambio.</p>' + buscadorHtml('Busca tu nombre') + '</div>' +
+      '<div class="dlg-cuerpo" data-no-preguntar><p class="ayuda">Se guarda en este aparato y sirve para saber quién hace cada cambio.</p>' + buscadorHtml('Busca tu nombre') + '</div>' +
       '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones">' +
       '<button type="button" class="principal" id="dlg-guardar">Seguir</button>' +
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cancelar</button></div></div>');
-    montarBuscador({ editores: true, seleccion: yo });
+    montarBuscador({ editores: true, seleccion: cambiando ? '' : yo });
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
       if (!elegidoBuscador) { errorDialogo('Busca y toca tu nombre para seguir.'); return; }
@@ -4217,14 +4259,15 @@
       const entrar = function () {
         yo = elegido; guardarYo(yo);
         cerrarDialogo(); pintar();  // v4.92: arriba, ya con tu nombre
-        if (q) aviso('Hola, ' + q.apodo + '. Ahora los cambios van a tu nombre.');
+        if (q) aviso(modoAbuela() ? 'Hola, ' + q.apodo.toLowerCase().replace(/^abuel/, 'abuel') + '.' : 'Hola, ' + q.apodo + '. Ahora los cambios van a tu nombre.');
         cargar().then(function () { if (siguiente) siguiente(); });
       };
       // v4.94: para ponerse en el nombre de alguien, su cumpleaños (el día y el mes); quien no lo tiene puesto, entra sin más
       const c = (q && q.cumple) || '', dd = Number(c.slice(0, 2)), mm = Number(c.slice(3, 5));
       if (elegido === yo || !dd || !mm) { entrar(); return; }
-      abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Eres ' + esc(q.apodo) + '?</h2></div>' +
-        '<div class="dlg-cuerpo"><p class="ayuda">Para confirmarlo, dinos qué día es tu cumpleaños.</p><div class="dos dos-iguales">' +
+      const quien = /^abuela$/i.test(q.apodo) ? 'la abuela' : /^abuelo$/i.test(q.apodo) ? 'el abuelo' : q.apodo;  // v5.16
+      abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Eres ' + esc(quien) + '?</h2></div>' +
+        '<div class="dlg-cuerpo" data-no-preguntar><p class="ayuda">Para confirmarlo, dinos qué día es tu cumpleaños.</p><div class="dos dos-iguales">' +
         '<label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' + Array.from({ length: 31 }, function (_, k) { return '<option value="' + (k + 1) + '">' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
         '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' + MESES.map(function (m, k) { return '<option value="' + (k + 1) + '">' + m + '</option>'; }).join('') + '</select></label></div></div>' +
         '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones"><button type="button" class="principal" id="dlg-entrar">Entrar</button>' +
@@ -4405,8 +4448,10 @@
   // El aviso «close» llega un momento después: si para entonces ya se ha abierto otra ventana, no se vacía (v4.12)
   $dlg.addEventListener('close', function () { if (!$dlg.open) $dlg.innerHTML = ''; });
   let dlgCambiado = false;  // v4.91: si has escrito algo, tocar fuera pregunta antes de cerrar
-  $dlg.addEventListener('input', function () { dlgCambiado = true; });
-  $dlg.addEventListener('change', function () { dlgCambiado = true; });
+  // v5.16: al cambiar algo, el error de antes se va; y donde no se escribe nada que perder, no se pregunta al salir
+  const alCambiar = function (e) { const er = $('dlg-error'); if (er) er.hidden = true; if (e.target.closest('[data-no-preguntar]')) return; dlgCambiado = true; };
+  $dlg.addEventListener('input', alCambiar);
+  $dlg.addEventListener('change', alCambiar);
   function preguntarSalir() {  // v4.92: dentro de la ventana (los avisos del navegador no siempre salen)
     if ($dlg.querySelector('.dlg-salir')) return;
     const pieDlg = $dlg.querySelector('.dlg-pie') || $dlg;
@@ -5155,6 +5200,18 @@
     else if (der > n.scrollLeft + n.clientWidth - 8) n.scrollLeft = der - n.clientWidth + 44;
     bordesNav();
   }
+  function abrirMas() {  // v5.16: lo que no cabe en las pestañas del móvil
+    const op = [];
+    if (!$('nav-rellenar').hidden) op.push(['rellenar', 'Por rellenar', $('badge-rellenar').hidden ? '' : $('badge-rellenar').textContent]);
+    if (!$('nav-ajustes').hidden) op.push(['ajustes', 'Ajustes', '']);
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Más</h2></div><div class="dlg-cuerpo"><div class="mas-menu">' +
+      op.map(function (x) { return '<button type="button" class="accion" data-ir-vista="' + x[0] + '"><span>' + x[1] + '</span>' + (x[2] ? '<span class="nav-badge">' + esc(x[2]) + '</span>' : '') + '</button>'; }).join('') +
+      '</div></div><div class="dlg-pie"><div class="botones"><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $dlg.querySelectorAll('[data-ir-vista]').forEach(function (b) { b.addEventListener('click', function () {
+      cerrarDialogo(); ponerVista(b.dataset.irVista); history.replaceState(null, '', '#' + vista); window.scrollTo(0, 0);
+    }); });
+  }
   function ponerVista(v) {
     if (v === 'ajustes') ajustes = null;  // v4.58: al entrar, lo último
     if (v === 'eventos') evFiltro = '';  // v4.92: al entrar, «Por confirmar» si hay algo
@@ -5173,6 +5230,7 @@
   document.querySelectorAll('nav.vistas a').forEach(function (a) {
     a.addEventListener('click', function (e) {
       e.preventDefault();
+      if (a.id === 'nav-mas') { abrirMas(); return; }  // v5.16
       ponerVista(a.dataset.vista);
       if (hayServidor) google.script.history.replace(null, { vista: vista }, vista);
       else history.replaceState(null, '', '#' + vista);
