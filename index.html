@@ -258,6 +258,18 @@
   /* v5.2: menos ruido en la Semana */
   .falta-aviso { font-weight: 800; color: #8A5A00; font-size: 15px; }
   .falta-aviso.pronto { color: var(--color-error); }
+  /* v5.22: «Falta alguien», un botón coral que llama la atención; hoy y mañana, en rojo y con un latido suave */
+  .falta-boton { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 14px; border: 0; border-radius: 14px; background: var(--color-accion); color: #fff; font: inherit; text-align: left; cursor: pointer; box-shadow: 0 3px 10px rgba(217, 72, 15, .3); }
+  .falta-boton svg { width: 24px; height: 24px; flex: none; }
+  .falta-boton span { display: grid; line-height: 1.15; }
+  .falta-boton b { font-size: 17px; font-weight: 800; }
+  .falta-boton small { font-size: 13.5px; font-weight: 700; opacity: .92; }
+  .falta-boton:hover { filter: brightness(1.06); }
+  .falta-boton.pronto { background: var(--color-error); box-shadow: 0 3px 12px rgba(179, 38, 30, .35); }
+  @media (prefers-reduced-motion: no-preference) { .falta-boton.pronto { animation: latido 2.4s ease-in-out infinite; } }
+  @keyframes latido { 0%, 70%, 100% { transform: scale(1); } 80% { transform: scale(1.03); } 90% { transform: scale(1); } }
+  .turno-cont .comida-cab:has(.falta-boton) { display: block; }
+  @media (min-width: 760px) { .dias-semana .falta-boton { padding: 8px 10px; gap: 8px; min-height: 48px; } .dias-semana .falta-boton b { font-size: 15px; white-space: nowrap; } .dias-semana .falta-boton small { font-size: 12.5px; } .dias-semana .falta-boton svg { width: 20px; height: 20px; } }
   /* v5.2: el «+» se ve como botón (círculo blanco con borde y sombra); la etiqueta de la comida, plana */
   .turno-lado button.mas { width: 40px; height: 40px; margin-top: 8px; border-radius: 50%; border: 2px solid currentColor; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
   .turno-lado button.mas svg { width: 20px; height: 20px; }
@@ -884,7 +896,7 @@
   .huecos-dia li:first-child { border-top: 0; }
   .hueco-turno { min-width: 64px; font-weight: 800; color: var(--color-principal-oscuro); }
   .hueco-estado { flex: 1; min-width: 0; font-weight: 700; }
-  .hueco-estado.sin-nadie { color: #8A5A00; }
+  .hueco-estado.sin-nadie { color: var(--color-accion); font-weight: 800; }
   .hueco-estado.sin-nadie.pronto { color: var(--color-error); }
   .hueco-estado.solo-servicio { color: #8A5A00; }
   /* Pestaña Personas */
@@ -1117,7 +1129,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.21.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.22.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1733,7 +1745,7 @@
     const vez = function (n, uno, varios) { return n === 1 ? uno : varios.replace('%', n); };
     let html = '<p class="huecos-resumen">' + (!sinNadie && !soloServicio
       ? 'No hay huecos de aquí al ' + diaLargo(fin).toLowerCase() + ': todo tiene a alguien.'
-      : 'De aquí al ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, '1 comida, cena o noche a la que aún no viene nadie', '% comidas, cenas o noches a las que aún no viene nadie') : '', soloServicio ? vez(soloServicio, '1 solo con el servicio', '% solo con el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>';
+      : 'De aquí al ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, 'falta alguien en 1 comida, cena o noche', 'falta alguien en % comidas, cenas o noches') : '', soloServicio ? vez(soloServicio, '1 solo con el servicio', '% solo con el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>';
     // v5.9: el mismo mensaje de «Lo que falta» que en Semana, a mano desde aquí
     if ((sinNadie || soloServicio) && !modoAbuela()) html += '<div class="huecos-compartir"><button type="button" class="principal con-icono" data-compartir-huecos>' + ICONO_COMPARTIR + '<span>Avisar al grupo por WhatsApp</span></button></div>';
     html += dias.map(function (d) {
@@ -1741,7 +1753,7 @@
         d.huecos.map(function (x) {
           const datosTurno = ' data-anadir data-fecha="' + d.fecha + '" data-turno="' + x.turno.id + '"';
           return '<li><span class="hueco-turno">' + x.turno.nombre + '</span>' +
-            (x.serv.length ? '<span class="hueco-estado solo-servicio">Solo el servicio: ' + esc(lista(x.serv)) + '</span>' : '<span class="hueco-estado sin-nadie' + (diasEntre(hoy(), d.fecha) <= 1 ? ' pronto' : '') + '">Aún no viene nadie</span>') +
+            (x.serv.length ? '<span class="hueco-estado solo-servicio">Solo el servicio: ' + esc(lista(x.serv)) + '</span>' : '<span class="hueco-estado sin-nadie' + (diasEntre(hoy(), d.fecha) <= 1 ? ' pronto' : '') + '">Falta alguien</span>') +
             '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(d.fecha, x.turno.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button></li>';
         }).join('') + '</ul></section>';
     }).join('');
@@ -1855,7 +1867,7 @@
         (conMas ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div><div class="turno-cont"><div class="comida-cab"><h4 class="oculto">' + etiq + '</h4>' +
         (paso && motivo === null && !comp.length ? '<span class="nadie suave">No fue nadie</span>' :
           faltaAlguien && modoAbuela() ? '<span class="nadie suave">Aún sin apuntar</span>' : motivo === null && modoAbuela() ? '' :
-          faltaAlguien ? '<span class="falta-aviso' + (diasEntre(hoy(), fecha) <= 1 ? ' pronto' : '') + '">Aún no viene nadie</span>'  // v5.15: una sola frase; en rojo solo hoy y mañana  // v5.2: aviso, no botón (el «+» de la izquierda añade)
+          faltaAlguien ? '<button type="button" class="falta-boton' + (diasEntre(hoy(), fecha) <= 1 ? ' pronto' : '') + '"' + datosTurno + ' aria-label="Falta alguien en la ' + nombreTurno(fecha, t.id) + ': apúntate">' + ICONO_MAS + '<span><b>Falta alguien</b><small>' + (servicioYo() ? 'Toca para apuntarte' : '¡Apúntate!') + '</small></span></button>'  /* v5.22: un botón que se ve y apunta (la razón de ser de la web) */  // v5.15: una sola frase; en rojo solo hoy y mañana  // v5.2: aviso, no botón (el «+» de la izquierda añade)
           : '') + '</div>';
       const evT = ft && eventoEn(fecha, t.id);  // v4.31
       if (evT) html += '<p class="turno-evento">' + ICONO_EVENTO + esc(evT.nombre) + '</p>';  // v4.32: en el hueco, el evento tal cual
@@ -5021,7 +5033,7 @@
         if (faltan.length) lineas.push('• *' + diaLargo(f) + '*: ' + lista(faltan));
       });
       return '🏡 *Casa Abuela*\n_Lo que falta los próximos ' + n + ' días: del ' + ddmm(diasH[0]) + ' al ' + ddmm(diasH[n - 1]) + '_\n\n' +
-        (lineas.length ? '*Aún no viene nadie a:*\n' + lineas.join('\n') : '✅ Están todas las comidas, cenas y noches cubiertas. ¡Gracias a todos!') + enlace;
+        (lineas.length ? '🙋 *Falta alguien en:*\n' + lineas.join('\n') : '✅ Están todas las comidas, cenas y noches cubiertas. ¡Gracias a todos!') + enlace;
     }
     // v4.73: los próximos N días, desde hoy (de hoy, solo lo que aún no ha pasado)
     const prox = tipo.indexOf('prox:') === 0 ? Number(tipo.slice(5)) : 0;
@@ -5044,7 +5056,7 @@
         b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (mesa ? ' (' + mesa + ' a la mesa, con la abuela)' : total > 1 ? ' (' + total + ')' : '');
         if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? ' 🎉 ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
         else if (motivo !== null && !comp.length) { b += '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.'; return; }
-        else if (!comp.length) b += yaPaso(f, t.id) ? '\nNo fue nadie.' : '\nAún no viene nadie.';  // v4.63
+        else if (!comp.length) b += yaPaso(f, t.id) ? '\nNo fue nadie.' : '\n🙋 Falta alguien. ¿Quién se apunta?';  // v4.63
         comp.concat(serv).forEach(function (id) {
           const a = apunte(f, t.id, id);
           b += '\n• ' + apodo(id) + (a && a.acompanantes ? ' +' + a.acompanantes : '') + (serv.indexOf(id) !== -1 ? ' (servicio)' : '') + (a && a.nota ? ' _(' + a.nota + ')_' : '');
