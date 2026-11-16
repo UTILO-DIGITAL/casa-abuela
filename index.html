@@ -1220,7 +1220,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.29.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.30.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -2078,7 +2078,12 @@
       (VISITA_DE[turno] && idsDe(fecha, VISITA_DE[turno]).length ? '<h3 class="dt-fam">' + esc(etiquetaTurno(VISITA_DE[turno])) + ' <small>' + (idsDe(fecha, VISITA_DE[turno]).length === 1 ? '1 persona' : idsDe(fecha, VISITA_DE[turno]).length + ' personas') + '</small></h3><div class="gente">' + idsDe(fecha, VISITA_DE[turno]).map(function (id) { return chip(id, fecha, VISITA_DE[turno]); }).join('') + '</div>' : '') +  // v5.28
       '<p class="ayuda">' + (servicioYo() ? 'Toca a alguien para ver quién es.' : 'Toca a alguien para cambiar lo suyo.') + '</p></div>' +
       '<div class="dlg-pie"><div class="botones">' + (!modoAbuela() && sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">' + (servicioYo() ? 'Apuntarme' : 'Añadir a alguien') + '</button>' : '') +
+      '<button type="button" class="accion" id="dlg-dt-compartir">' + ICONO_COMPARTIR + 'Compartir</button>' +  // v5.30 (T0588): solo esta comida
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+    $('dlg-dt-compartir').addEventListener('click', function () {
+      if (modoAbuela()) { abrirWhatsApp(mensaje('turno:' + fecha + '|' + turno)); return; }  // la abuela, directo a WhatsApp, como «Preguntar por WhatsApp»
+      abrirCompartir('turno:' + fecha + '|' + turno);
+    });
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     if ($('dlg-dt-anadir')) $('dlg-dt-anadir').addEventListener('click', function () { cerrarDialogo(); if (servicioYo()) apuntarme(fecha, turno); else abrirAnadir(fecha, turno); });
     $dlg.querySelector('.dlg-cuerpo').addEventListener('click', function (e) {
@@ -5280,7 +5285,7 @@
 
   /* ---------- Compartir por WhatsApp ---------- */
   /* v4.14.2: el mensaje de WhatsApp, más legible: negritas (*…*), un icono por cosa y la gente en lista */
-  const ICONO_TURNO = { COMIDA: '🍽️', CENA: '🌙', DORMIR: '🛏️' };
+  const ICONO_TURNO = { COMIDA: '🍽️', CENA: '🌙', DORMIR: '🛏️', MANANA: '☀️', TARDE: '🌇' };  // v5.30: y las visitas
   /* v4.15: el mensaje de un evento, con quién va ya y un enlace que abre la web en ese día */
   function mensajeEvento(f) {
     const nd = notaDia(f) || {};
@@ -5333,6 +5338,34 @@
     const d = diasDe(e, id), n = notaDe(e, id);
     return ((quienEs(id) || {}).apodo || id) + (d ? ' (' + textoDias(d) + ')' : '') + (n ? ' · _' + n + '_' : '');
   }
+  /* El texto de una comida, cena o noche de un día, para el mensaje (v5.30: aparte, para compartirla sola) */
+  function textoTurno(f, t, prox) {
+    if (prox && yaPaso(f, t.id)) return '';  // v4.73
+    const apodo = function (id) { return (persona(id) || {}).apodo || id; };
+    const ids = idsDe(f, t.id), comp = compania(ids, t.id), serv = servicioDe(ids, t.id), motivo = sinTurno(f, t.id);
+    const total = comp.length + acompanantesDe(comp, f, t.id);
+    const mesa = t.id !== 'DORMIR' && comp.length && !fueraTurno(f, t.id) && motivo === null ? raciones(ids, f, t.id).total : 0;  // v4.92: como en la web
+    let b = '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (mesa ? ' (' + mesa + ' a la mesa, con la abuela)' : total > 1 ? ' (' + total + ')' : '');
+    if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? ' 🎉 ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
+    else if (motivo !== null && !comp.length) return b + '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.';
+    else if (!comp.length) b += yaPaso(f, t.id) ? (VISITA_DE[t.id] && soloVisita(f, VISITA_DE[t.id]).length ? '\nNadie se quedó a ' + (t.id === 'COMIDA' ? 'comer.' : 'cenar.') : '\nNo fue nadie.') : '\n🙋 Falta alguien. ¿Quién se apunta?';  // v4.63
+    comp.concat(serv).forEach(function (id) {
+      const a = apunte(f, t.id, id);
+      b += '\n• ' + apodo(id) + (a && a.acompanantes ? ' +' + a.acompanantes : '') + (serv.indexOf(id) !== -1 ? ' (servicio)' : '') + (a && a.nota ? ' _(' + a.nota + ')_' : '');
+    });
+    return b;
+  }
+  /* v5.30 (T0588): quién va por la mañana o por la tarde, en el mensaje; solo si hay alguien */
+  function textoVisita(f, v, prox) {
+    if (prox && yaPaso(f, v)) return '';
+    const ids = idsDe(f, v);
+    if (!ids.length) return '';
+    const come = idsDe(f, COMIDA_DE[v]);
+    return '\n\n' + ICONO_TURNO[v] + ' *' + etiquetaTurno(v) + '* (' + ids.length + ')' + ids.map(function (id) {
+      const a = apunte(f, v, id);
+      return '\n• ' + ((persona(id) || {}).apodo || id) + (a && a.nota ? ' _(' + a.nota + ')_' : '') + (come.indexOf(id) !== -1 ? ' · se queda a ' + (v === 'MANANA' ? 'comer' : 'cenar') : '');
+    }).join('');
+  }
   function mensaje(tipo) {
     if (tipo.indexOf('ev:') === 0) return mensajeEv(tipo.slice(3), formaEv === 'lista');
     if (tipo.indexOf('evento:') === 0) return mensajeEvento(tipo.slice(7));
@@ -5359,6 +5392,13 @@
       return '🏡 *Casa Abuela*\n_Lo que falta los próximos ' + n + ' días: del ' + ddmm(diasH[0]) + ' al ' + ddmm(diasH[n - 1]) + '_\n\n' +
         (lineas.length ? '🙋 *Falta alguien en:*\n' + lineas.join('\n') : '✅ Están todas las comidas, cenas y noches cubiertas. ¡Gracias a todos!') + enlace;
     }
+    // v5.30 (T0588): una comida, cena o noche sola («¿quién come el miércoles?»), con quien va por la mañana o por la tarde
+    if (tipo.indexOf('turno:') === 0) {
+      const f = tipo.slice(6).split('|')[0], t = TURNOS.find(function (x) { return x.id === tipo.split('|')[1]; });
+      const nd = notaDia(f);
+      return '🏡 *Casa Abuela*\n📅 *' + diaLargo(f) + '*' + (nd && nd.nota ? '\n📝 ' + nd.nota : '') +
+        (VISITA_DE[t.id] ? textoVisita(f, VISITA_DE[t.id], false) : '') + textoTurno(f, t, false) + enlace;
+    }
     // v4.73: los próximos N días, desde hoy (de hoy, solo lo que aún no ha pasado)
     const prox = tipo.indexOf('prox:') === 0 ? Number(tipo.slice(5)) : 0;
     const losDias = prox ? Array.from({ length: prox }, function (_, i) { return sumar(hoy(), i); }) : tipo === 'semana' ? dias : [tipo];
@@ -5373,18 +5413,8 @@
       const nd = notaDia(f);
       if (nd && nd.nota) b += '\n📝 ' + nd.nota;
       TURNOS.forEach(function (t) {
-        if (prox && yaPaso(f, t.id)) return;  // v4.73
-        const ids = idsDe(f, t.id), comp = compania(ids, t.id), serv = servicioDe(ids, t.id), motivo = sinTurno(f, t.id);
-        const total = comp.length + acompanantesDe(comp, f, t.id);
-        const mesa = t.id !== 'DORMIR' && comp.length && !fueraTurno(f, t.id) && motivo === null ? raciones(ids, f, t.id).total : 0;  // v4.92: como en la web
-        b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (mesa ? ' (' + mesa + ' a la mesa, con la abuela)' : total > 1 ? ' (' + total + ')' : '');
-        if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? ' 🎉 ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
-        else if (motivo !== null && !comp.length) { b += '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.'; return; }
-        else if (!comp.length) b += yaPaso(f, t.id) ? '\nNo fue nadie.' : '\n🙋 Falta alguien. ¿Quién se apunta?';  // v4.63
-        comp.concat(serv).forEach(function (id) {
-          const a = apunte(f, t.id, id);
-          b += '\n• ' + apodo(id) + (a && a.acompanantes ? ' +' + a.acompanantes : '') + (serv.indexOf(id) !== -1 ? ' (servicio)' : '') + (a && a.nota ? ' _(' + a.nota + ')_' : '');
-        });
+        if (VISITA_DE[t.id]) b += textoVisita(f, VISITA_DE[t.id], prox);  // v5.30: por la mañana antes de la comida; por la tarde antes de la cena
+        b += textoTurno(f, t, prox);
       });
       return b;
     });
@@ -5412,6 +5442,10 @@
       .concat(lunesSel > lunesDe(hoy()) ? [{ v: 'semana', t: 'Quién viene la semana del ' + ddmm(dias[0]) }] : [])
       .concat([{ v: 'huecos:3', t: 'Lo que falta los próximos 3 días' }, { v: 'huecos:7', t: 'Lo que falta los próximos 7 días' }])
       .concat(inicialPedido && /^huecos:\d+$/.test(inicialPedido) && ['huecos:3', 'huecos:7'].indexOf(inicialPedido) === -1 ? [{ v: inicialPedido, t: 'Lo que falta hasta el ' + ddmm(sumar(hoy(), Number(inicialPedido.slice(7)) - 1)) + ' (lo de Huecos)' }] : []);
+    if (inicialPedido && inicialPedido.indexOf('turno:') === 0) {  // v5.30: una comida, cena o noche sola, la primera
+      const x = inicialPedido.slice(6).split('|');
+      opciones.unshift({ v: inicialPedido, t: 'Solo la ' + nombreTurno(x[0], x[1]) });
+    }
     const inicial = inicialPedido || (lunesSel > lunesDe(hoy()) ? 'semana' : hoy());
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Compartir por WhatsApp</h2></div>' +
       '<div class="dlg-cuerpo"><label class="campo" for="dlg-que">Qué quieres compartir<select id="dlg-que">' +
