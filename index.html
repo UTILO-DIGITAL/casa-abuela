@@ -226,10 +226,6 @@
   .visita-fila .visita-nombre, .visita-fila .visita-mas-n { display: inline; min-height: 0; padding: 10px 0; }
   .visita-mas-n { background: none; border: 0; padding: 6px 4px; min-height: 40px; font: inherit; font-weight: 700; color: var(--color-principal-oscuro); cursor: pointer; }
   .nota-chip.desde { font-weight: 600; }
-  /* v5.28: la novedad de las visitas, una vez (hasta que se cierra) */
-  .novedad { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin: 0 0 14px; padding: 12px 14px; border-radius: var(--radio); background: var(--color-principal-claro); }
-  .novedad p { margin: 0; flex: 1 1 260px; }
-  .novedad button { flex: none; }
   /* v5.28: tu día al apuntarte: las franjas en fila y, debajo, cada una marcada con su nota */
   .franjas-op { display: flex; flex-wrap: wrap; gap: 6px; }
   .franja { position: relative; }
@@ -1223,7 +1219,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.31.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.31.1</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -2103,8 +2099,6 @@
     if (e.target.closest('[data-volver-hoy]')) { desdeMovil = ''; diasMovil = 7; pintar(); window.scrollTo(0, 0); return; }  // v4.98
     if (e.target.closest('[data-mas-dias]')) { diasMovil += 7; if (cubierto()) pintarSemana(); else cargar(); }  // v4.97: siete días más, debajo
   });
-  const CLAVE_NOVEDAD = 'casa-abuela-novedad-visitas';  // v5.28
-  function novedadVista() { try { return localStorage.getItem(CLAVE_NOVEDAD) === '1'; } catch (e) { return true; } }
   function pintarSemana() {
     let html = '';
     if (hoy() < datos.config.inicio && lunesSel === lunesInicio()) html += '<p class="aviso">El calendario empieza el ' + diaLargo(datos.config.inicio).toLowerCase() + '.</p>';
@@ -2116,7 +2110,6 @@
       else if (!datos || sumar(hoy(), -1) >= datos.config.inicio) pasadosHtml = '<button type="button" class="enlace dias-antes" data-ver-pasados aria-expanded="' + verPasados + '">' + (verPasados ? 'Ocultar ayer y anteayer ▴' : '‹ Días anteriores') + '</button>';
       masHtml = '<button type="button" class="accion ver-mas-dias" data-mas-dias>Ver 7 días más</button>';
     }
-    if (!modoAbuela() && !servicioYo() && !novedadVista()) html += '<div class="novedad" role="status"><p><b>Novedad:</b> ahora puedes apuntarte por la mañana o por la tarde aunque no te quedes a comer o a cenar. Toca cualquier «+» del día y elige «Por la mañana» o «Por la tarde».</p><button type="button" class="accion" data-novedad-ok>Entendido</button></div>';  // v5.28
     html += '<div class="dias-semana">' + pasadosHtml + dias.map(function (f) { return bloqueDia(f, {}); }).join('') + masHtml + '</div>';
     $('semana-grande').innerHTML = html;
   }
@@ -5546,9 +5539,8 @@
 
   /* ---------- Clics ---------- */
   document.addEventListener('click', function (e) {
-    const el = e.target.closest('[data-novedad-ok], [data-vis-mas], [data-quitarme], [data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-huecos], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
+    const el = e.target.closest('[data-vis-mas], [data-quitarme], [data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-huecos], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
-    if (el.hasAttribute('data-novedad-ok')) { try { localStorage.setItem(CLAVE_NOVEDAD, '1'); } catch (er) {} pintarSemana(); return; }  // v5.28
     if (el.hasAttribute('data-vis-mas')) { const k = el.dataset.visMas; if (visAbiertas.has(k)) visAbiertas.delete(k); else visAbiertas.add(k); pintarSemana(); return; }  // v5.28
     if (modoAbuela() && el.hasAttribute('data-persona')) { abrirInfoPersona(el.dataset.persona); return; }  // v4.36: quién es, para mirar
     if (servicioYo() && el.hasAttribute('data-persona') && el.dataset.persona !== yo) { abrirInfoPersona(el.dataset.persona); return; }  // v4.86
