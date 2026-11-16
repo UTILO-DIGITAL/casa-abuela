@@ -553,11 +553,11 @@
   .modo-abuela .nadie.suave { border: 0; background: none; padding: 0; min-height: 0; color: var(--color-texto-suave); font-weight: 700; }
   .dia-cab .campana { margin-left: auto; white-space: nowrap; }
   /* v5.17: la vista sencilla, grande en todas las pestañas (antes, en el ordenador, la letra era la de siempre) */
-  body.modo-abuela .pagina { font-size: 18px; }
+  /* v5.27: en el móvil, la letra de siempre (los móviles ya son grandes) */
   @media (min-width: 760px) {
-    body.modo-abuela .pagina { zoom: 1.1; }  /* v5.20: un poco más grande, no mucho (la abuela ve bien) */
-    body.modo-abuela dialog.editor { zoom: 1.1; max-height: calc((100dvh - 24px) / 1.1); width: min(560px, calc((100vw - 24px) / 1.1)); }
-    body.modo-abuela #per-arbol-btn { scale: 1.1; transform-origin: right bottom; }
+    body.modo-abuela .pagina { zoom: 1.05; }  /* v5.27: apenas más grande (la abuela ve bien) */
+    body.modo-abuela dialog.editor { zoom: 1.05; max-height: calc((100dvh - 24px) / 1.05); width: min(560px, calc((100vw - 24px) / 1.05)); }
+    body.modo-abuela #per-arbol-btn { scale: 1.05; transform-origin: right bottom; }
   }
   .modo-abuela .dia-cab .campana { white-space: normal; text-align: left; }
   .modo-abuela .arbol-et text, .modo-abuela .arbol text { font-size: 15px; }
@@ -769,7 +769,9 @@
   .ev-familia summary { cursor: pointer; }
   .ev-familia ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
   .ev-fila { display: flex; align-items: center; gap: 8px; padding-top: 3px; padding-bottom: 3px; }
-  .ev-nombre { flex: 1 1 8em; min-width: 7em; overflow-wrap: anywhere; }  /* v4.92: entero (antes «Javi…»); los botones bajan si no caben */
+  .ev-nombre { flex: 1 1 0; min-width: 4.5em; overflow-wrap: anywhere; }  /* v5.27: en el móvil, nombre, lápiz, días y ✓ ✗ en una línea */
+  .ev-fila { gap: 6px; }
+  .ev-fila .ev-lapiz, .ev-fila .ev-chip.todos { width: 30px; height: 30px; }  /* v4.92: entero (antes «Javi…»); los botones bajan si no caben */
   .ev-bots { display: flex; gap: 6px; flex: none; }
   .ev-bots button { width: 44px; height: 44px; border-radius: 10px; border: 2px solid var(--color-linea); background: #fff; font: inherit; font-weight: 800; color: var(--color-texto-suave); cursor: pointer; }
   .ev-bots .ev-si[aria-pressed="true"] { background: var(--color-principal); border-color: var(--color-principal); color: #fff; }
@@ -836,6 +838,10 @@
   .ev-notas-mas { margin: 4px 0 0; font-size: 13px; color: var(--color-texto-suave); font-weight: 700; }
   .ev-lapiz.con-nota { color: #B8860B; background: #FFF6D9; }
   .ev-chip.listo { background: var(--color-principal); color: #fff; }
+  /* v5.27: ir todos los días es lo normal: discreto; solo destaca (ámbar) si falla algún día */
+  .ev-chip.todos { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border-color: transparent; background: none; color: var(--color-texto-suave); }
+  .ev-chip.todos svg { width: 18px; height: 18px; }
+  .ev-chip.parcial { border-color: #E9C46A; background: #FFF3D6; color: #6B4600; }
   .ev-lapiz { flex: none; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--color-texto-suave); border-radius: 8px; cursor: pointer; }
   .ev-nota-boton { border: 0; background: none; padding: 0; font: inherit; font-size: 14px; text-align: left; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
   /* v4.67: las fechas y horas, iguales en el móvil (iOS las centra y las encoge) */
@@ -893,8 +899,8 @@
   /* v4.14: pestaña Huecos */
   .huecos-resumen { margin: 0; font-size: 18px; font-weight: 800; }
   /* v5.24: el buscador, una píldora más de la fila de Próximos · Pasados */
-  .ev-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; }
-  .ev-fila .ev-filtros { margin: 0; }
+  .ev-barra-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; }  /* v5.27: con su propio nombre (ev-fila es la de cada persona en el detalle) */
+  .ev-barra-filtros .ev-filtros { margin: 0; }
   #ev-hueco-buscar { flex: 1 1 220px; display: flex; justify-content: flex-end; min-width: 0; }
   .ev-buscar { position: relative; display: flex; align-items: center; width: 100%; max-width: 320px; }
   .ev-buscar svg { position: absolute; left: 12px; width: 18px; height: 18px; color: var(--color-texto-suave); pointer-events: none; }
@@ -1171,7 +1177,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.26.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.27.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -3112,8 +3118,8 @@
       const p = x.p, st = estado(p);
       const soloVer = pasado || (servicioYo() && p.id !== yo);  // v4.86: desde el servicio, los demás solo para mirar
       const dd = st === 'si' && varios ? diasDe(e, p.id) : null;  // v4.67
-      const chip = st === 'si' && varios ? (soloVer ? (dd ? '<span class="ev-chip">' + esc(textoDias(dd)) + '</span>' : '') :
-        '<button type="button" class="ev-chip' + (diasAbiertos[p.id] ? ' listo' : '') + '" data-ev-dias="' + esc(e.id) + '|' + esc(p.id) + '" aria-expanded="' + !!diasAbiertos[p.id] + '">' + esc(diasAbiertos[p.id] ? 'Listo' : dd ? textoDias(dd) : 'todos los días') + '</button>') : '';  // v4.68: abierto, «Listo» (los días ya se ven debajo)
+      const chip = st === 'si' && varios ? (soloVer ? (dd ? '<span class="ev-chip parcial">' + esc(textoDias(dd)) + '</span>' : '') :
+        '<button type="button" class="ev-chip' + (diasAbiertos[p.id] ? ' listo' : dd ? ' parcial' : ' todos') + '" data-ev-dias="' + esc(e.id) + '|' + esc(p.id) + '" aria-expanded="' + !!diasAbiertos[p.id] + '"' + (!diasAbiertos[p.id] && !dd ? ' aria-label="Va todos los días. Elegir días" title="Va todos los días · tocar para elegir días">' + ICONO_CALENDARIO : '>' + esc(diasAbiertos[p.id] ? 'Listo' : textoDias(dd))) + '</button>') : '';  /* v5.27: todos los días, un icono discreto (una línea) */  // v4.68: abierto, «Listo» (los días ya se ven debajo)
       const tiene = !!notaDe(e, p.id);
       const lapiz = !soloVer && (st || tiene) ? '<button type="button" class="ev-lapiz' + (tiene ? ' con-nota' : '') + '" data-ev-nota="' + esc(e.id) + '|' + esc(p.id) + '" aria-label="' + (tiene ? 'Cambiar la nota de ' : 'Añadir una nota de ') + esc(p.apodo) + '" title="' + (tiene ? 'Tiene nota' : 'Añadir una nota') + '">' + ICONO_LAPIZ + '</button>' : '';  // v4.68
       return '<li class="ev-fila" style="padding-left:' + (x.nivel * 18) + 'px"><span class="ev-nombre">' + esc(p.apodo) + '</span>' + lapiz + chip +
@@ -3139,7 +3145,7 @@
         return diaCortoEv(f) + ': ' + (n === 1 ? 'va 1' : 'van ' + n);
       }).join(' · ')) + '</p>' : '') +
       listaNotas(e, 0, !pasado) +  // v4.68
-      (modoAbuela() ? '' : '<p class="ayuda">En verde, quien va; en rojo, quien no puede; sin marcar, quien aún no ha contestado.' + (servicioYo() ? ' Tú contesta arriba, en «¿Vas?».' : ' Puedes contestar también por otros (por tus hijos, por ejemplo).') + (varios ? ' Si alguien va solo algún día, toca «todos los días» junto a su nombre.' : '') + ' Con el lápiz, una nota.</p>') +
+      (modoAbuela() ? '' : '<p class="ayuda">En verde, quien va; en rojo, quien no puede; sin marcar, quien aún no ha contestado.' + (servicioYo() ? ' Tú contesta arriba, en «¿Vas?».' : ' Puedes contestar también por otros (por tus hijos, por ejemplo).') + (varios ? ' Si alguien va solo algún día, toca el calendario junto a su nombre.' : '') + ' Con el lápiz, una nota.</p>') +
       // v4.30: una sola lista: cada familia con sus números y, al tocar «Ver», quién es justo debajo
       '<div class="ev-resumen">' + porFamiliaEvento(e).map(function (x) {
         return '<details class="ev-familia" data-fam="' + esc(x.f) + '"' + (abiertasEv[x.f] ? ' open' : '') + '><summary>' +
@@ -3392,7 +3398,7 @@
     $l.innerHTML = '<div class="ev-secciones" role="tablist"><button type="button" role="tab" data-ev-filtro="' + (porConfirmar.length && !modoAbuela() ? 'confirmar' : 'proximos') + '" aria-selected="' + !enFechas + '">Eventos</button>' + /* v5.18: el número, una vez */
         '<button type="button" role="tab" data-ev-filtro="fechas" aria-selected="' + enFechas + '">Fechas señaladas</button></div>' +
       (buscando ? '<p class="ev-encontrados">' + (lista.length === 1 ? '1 evento' : lista.length + ' eventos') + ' con «' + esc($('ev-q').value.trim()) + '» <button type="button" class="enlace" data-ev-limpiar>Ver todos</button></p>' : '') +
-      (enFechas ? '' : '<div class="ev-fila"><div class="ev-filtros" role="tablist">' + (buscando ? [] : pest).map(function (x) {
+      (enFechas ? '' : '<div class="ev-barra-filtros"><div class="ev-filtros" role="tablist">' + (buscando ? [] : pest).map(function (x) {
         return '<button type="button" role="tab" data-ev-filtro="' + x[0] + '" aria-selected="' + (evFiltro === x[0]) + '">' + x[1] + (x[2] ? ' <span class="ev-filtro-n' + (x[0] === 'confirmar' ? ' alerta' : '') + '">' + x[2] + '</span>' : '') + '</button>';
       }).join('') + '</div><span id="ev-hueco-buscar"></span></div>') +
       (evFiltro === 'fechas'
