@@ -165,6 +165,7 @@
   .dia-cab h3 { font-family: var(--letra-titulos); font-weight: 600; font-size: 24px; margin: 0; }
   .dia-cab span { font-weight: 800; color: var(--color-texto-suave); }
   .dia.hoy { border-color: var(--color-principal); }
+  .dia.enlazado { outline: 4px solid var(--color-accion); outline-offset: 3px; transition: outline-color .6s; }  /* v5.31: el día del enlace */
   .dia.hoy .dia-cab { background: var(--color-principal); color: #fff; }
   .dia.hoy .dia-cab span { color: #fff; }
   .dia.pasado { opacity: .7; }
@@ -1222,7 +1223,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.30.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.31.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1780,6 +1781,7 @@
   }
 
   /* ---------- Pintar ---------- */
+  let diaResaltado = '';  // v5.31: el día al que lleva el enlace de un mensaje, resaltado unos segundos
   let eventoPorAbrir = '';  // v4.51: el del enlace #evento-…, en cuanto haya datos (también después de pedir la clave)
   function pintar() {
     if (!datos) return;
@@ -1924,7 +1926,7 @@
     const sinTodo = TURNOS.every(function (t) { return sinTurno(fecha, t.id) !== null; });
     const plegable = pasado;
     const abierto = abiertos.has(fecha);
-    let html = '<article class="dia' + (fecha === h ? ' hoy' : '') + (pasado ? ' pasado' : '') + (abierto ? ' abierto' : '') + (sinTodo ? ' sin' : '') + '">';
+    let html = '<article class="dia' + (fecha === h ? ' hoy' : '') + (pasado ? ' pasado' : '') + (abierto ? ' abierto' : '') + (sinTodo ? ' sin' : '') + (fecha === diaResaltado ? ' enlazado' : '') + '" data-fecha-dia="' + fecha + '">';
     html += '<div class="dia-cab"><span class="dia-hoja" aria-hidden="true"><small>' + DIAS[dow(fecha)].slice(0, 3).toUpperCase() + '</small><b>' + Number(fecha.slice(8, 10)) + '</b></span><h3>' + DIAS[dow(fecha)] + '</h3><span>' + (fecha === h ? 'Hoy' : ddmm(fecha)) + '</span>' +
       (plegable ? '<button type="button" class="mini solo-movil" data-plegar="' + fecha + '" aria-expanded="' + abierto + '">' + (abierto ? 'Ocultar' : 'Ver') + '</button>' : '') +
       (modoAbuela() && !pasado && !enEscritorio() ? '<button type="button" class="mini campana" data-preguntar="' + fecha + '" aria-label="Preguntar por WhatsApp quién viene el ' + diaLargo(fecha).toLowerCase() + '">' + ICONO_COMPARTIR + 'Preguntar por WhatsApp</button>' : '') +  // v5.17: en el ordenador, no; y dice lo que hace  // v4.38
@@ -5375,7 +5377,9 @@
     if (tipo.indexOf('ev:') === 0) return mensajeEv(tipo.slice(3), formaEv === 'lista');
     if (tipo.indexOf('evento:') === 0) return mensajeEvento(tipo.slice(7));
     const dias = semana(lunesSel);
-    const enlace = datos.url ? '\n\n👉 Apúntate aquí: ' + datos.url : '';
+    // v5.31 (T0589): un día o una comida sola, el enlace abre ese día; varios días o Huecos, la web
+    const unDia = /^\d{4}-\d{2}-\d{2}$/.test(tipo) ? tipo : tipo.indexOf('turno:') === 0 ? tipo.slice(6, 16) : '';
+    const enlace = datos.url ? '\n\n👉 Apúntate aquí: ' + (unDia ? datos.url.replace(/#.*$/, '') + '#dia-' + unDia : datos.url) : '';
     const titulo = '🏡 *Casa Abuela*\n_Semana del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '_';
     const apodo = function (id) { return (persona(id) || {}).apodo || id; };
     if (tipo.indexOf('huecos') === 0) {
@@ -5699,6 +5703,13 @@
     }).catch(function () {});
   }
 
+  /* v5.31 (T0589): al llegar desde el enlace de un mensaje: en el móvil, la lista hasta ese día y bajar a él; en los dos, resaltado unos segundos */
+  function llegarAlDia(f) {
+    diaResaltado = f;
+    if (!enEscritorio()) irADiaMovil(f);
+    else { pintar(); const d = document.querySelector('[data-fecha-dia="' + f + '"]'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    setTimeout(function () { diaResaltado = ''; document.querySelectorAll('.dia.enlazado').forEach(function (x) { x.classList.remove('enlazado'); }); }, 6000);
+  }
   // v4.15: un enlace que abre la web en un día (el de un evento): #dia-aaaa-mm-dd
   const diaEnlace = (location.hash.match(/^#dia-(\d{4}-\d{2}-\d{2})$/) || [])[1];
   irADia(diaEnlace || diaInicial());
@@ -5710,6 +5721,7 @@
   vistaInicial(function (v) {
     ponerVista(v);
     cargar(!!datos).then(function () {
+      if (diaEnlace) llegarAlDia(diaEnlace);  // v5.31 (T0589)
       setInterval(refrescar, 30000);
       document.addEventListener('visibilitychange', function () { if (!document.hidden) refrescar(); });
     });
