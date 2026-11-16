@@ -42,7 +42,11 @@
     color-scheme: light;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--color-fondo); color: var(--color-texto); }
+  html, body { margin: 0; color: var(--color-texto); }
+  /* v5.13: la franja de la hora del iPhone (instalada como app) toma el COLOR de fondo del body, no sus imágenes: el color es el
+     verde de la cabecera y el crema de la página va pintado encima como imagen. Sin esto salía blanca y difuminada (como en la
+     plataforma de Utilo, T0430). html, sin fondo, para que el del body llegue a toda la pantalla. */
+  body { background-color: var(--color-principal-oscuro); background-image: linear-gradient(var(--color-fondo), var(--color-fondo)); min-height: 100vh; min-height: 100dvh; }
   /* v4.3: tamaño fijo en el móvil, sin pellizcar ni doble toque (en el ordenador queda el zoom del navegador) */
   html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   html, body { overscroll-behavior-x: none; }  /* v4.95: deslizar a los lados no lleva a la página de atrás (Chrome y Android; en el iPhone, instalada como app) */
@@ -1052,7 +1056,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.12.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.13.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
