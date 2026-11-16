@@ -888,8 +888,15 @@
   .arbol-persona.muerto .arbol-nombre { fill: var(--color-texto-suave); }
   /* v4.14: pestaña Huecos */
   .huecos-resumen { margin: 0; font-size: 18px; font-weight: 800; }
-  .ev-buscar { display: block; margin: 0 0 12px; max-width: 520px; }
-  .ev-buscar input { width: 100%; }
+  /* v5.24: el buscador, una píldora más de la fila de Próximos · Pasados */
+  .ev-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; }
+  .ev-fila .ev-filtros { margin: 0; }
+  #ev-hueco-buscar { flex: 1 1 220px; display: flex; justify-content: flex-end; min-width: 0; }
+  .ev-buscar { position: relative; display: flex; align-items: center; width: 100%; max-width: 320px; }
+  .ev-buscar svg { position: absolute; left: 12px; width: 18px; height: 18px; color: var(--color-texto-suave); pointer-events: none; }
+  .ev-buscar input { width: 100%; min-height: 38px; padding: 0 14px 0 38px; border-radius: 999px; border: 1px solid var(--color-linea); background: #fff; font: inherit; font-weight: 700; color: var(--color-texto); }
+  .ev-buscar input:focus { outline: none; border-color: var(--color-principal); box-shadow: 0 0 0 3px var(--color-principal-claro); }
+  @media (max-width: 559px) { #ev-hueco-buscar { justify-content: stretch; } .ev-buscar { max-width: none; } }
   .ev-encontrados { margin: 4px 0 12px; font-weight: 800; }
   /* v5.23: Huecos, más cómodo: los próximos 3 días primero; cada hueco, un botón que apunta */
   .huecos-cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin: 0 0 18px; }
@@ -915,6 +922,9 @@
   .hueco-boton.pronto { background: var(--color-error); }
   .hueco-boton.solo { background: #FFF3D6; color: #6B4600; border: 1.5px solid #E9C46A; }
   .hueco-boton:hover { filter: brightness(1.05); }
+  /* v5.24: lo de más adelante, sin tanta alarma: borde y texto coral (lleno, solo lo urgente) */
+  .huecos-luego .hueco-boton:not(.solo) { background: #fff; color: var(--color-accion); border: 2px solid var(--color-accion); }
+  .huecos-luego .hd { padding: 10px 12px; }
   .huecos-dia { margin: 0 0 12px; padding: 10px 14px; background: #fff; border: 1px solid var(--color-linea); border-radius: var(--radio); }
   .huecos-dia h3 { margin: 0 0 6px; font-family: var(--letra-titulos); font-weight: 600; font-size: 20px; }
   .huecos-dia h3 span { font-family: var(--letra-texto); font-size: 15px; font-weight: 800; color: var(--color-texto-suave); }
@@ -1127,7 +1137,7 @@
   </section>
 
   <section id="vista-eventos" hidden>
-    <label class="buscar ev-buscar" for="ev-q" id="ev-buscar"><span class="oculto">Buscar un evento</span><input id="ev-q" type="search" autocomplete="off" placeholder="Buscar un evento (por ejemplo: Navidad 2025)"></label>
+    <label class="ev-buscar" for="ev-q" id="ev-buscar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span class="oculto">Buscar un evento</span><input id="ev-q" type="search" autocomplete="off" placeholder="Buscar: Navidad 2025…"></label>
     <div id="eventos-lista"><p class="vacio">Cargando…</p></div>
   </section>
   <section id="vista-rellenar" hidden>
@@ -1157,7 +1167,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.23.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.24.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1798,7 +1808,7 @@
       (todos.length && !modoAbuela() ? '<button type="button" class="principal con-icono" data-compartir-huecos>' + ICONO_COMPARTIR + '<span>Avisar al grupo por WhatsApp</span></button>' : '') + '</div>';
     if (pronto.length) html += '<h3 class="huecos-sec urgente">Los próximos 3 días</h3><ul class="huecos-lista">' + pronto.map(dia).join('') + '</ul>';
     else if (todos.length) html += '<p class="huecos-ok">✓ Los próximos 3 días están cubiertos.</p>';
-    if (luego.length) html += '<h3 class="huecos-sec">Más adelante</h3><ul class="huecos-lista">' + luego.map(dia).join('') + '</ul>';
+    if (luego.length) html += '<h3 class="huecos-sec">Más adelante</h3><ul class="huecos-lista huecos-luego">' + luego.map(dia).join('') + '</ul>';
     $('huecos-lista').innerHTML = html;
   }
 
@@ -3341,10 +3351,18 @@
   function sinContestar(e) { return yoSinContestar(e) || pendientesMios(e).length > 0; }
   document.addEventListener('click', function (ev) { const b = ev.target.closest('[data-ev-filtro]'); if (!b) return; evFiltro = b.dataset.evFiltro; pintarEventos(); });
   $('ev-q').addEventListener('input', function () { pintarEventos(); });  // v5.23
+  function colocarBuscador(activo, pos) {  // v5.24: dentro de la fila de Próximos · Pasados, sin perder el foco ni lo escrito
+    const q = $('ev-q'), sitio = $('ev-hueco-buscar'), l = $('ev-buscar');
+    if (sitio && l.parentNode !== sitio) sitio.appendChild(l);
+    if (activo) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (e) {} }
+  }
   document.addEventListener('click', function (ev) { if (!ev.target.closest('[data-ev-limpiar]')) return; $('ev-q').value = ''; pintarEventos(); });
   function pintarEventos() {
     const $l = $('eventos-lista');
     if (!$l) return;
+    // v5.24: el buscador vive dentro de la lista; antes de repintarla se saca (y se recuerda si estabas escribiendo)
+    const qFoco = document.activeElement === $('ev-q'), qPos = $('ev-q').selectionStart;
+    if ($('ev-buscar').parentNode !== $('vista-eventos')) $('vista-eventos').insertBefore($('ev-buscar'), $l);
     const h = hoy(), todos = datos.eventos || [];
     const proximos = todos.filter(function (e) { return e.hasta >= h; });
     const pasados = todos.filter(function (e) { return e.hasta < h; }).reverse();
@@ -3369,14 +3387,15 @@
     $l.innerHTML = '<div class="ev-secciones" role="tablist"><button type="button" role="tab" data-ev-filtro="' + (porConfirmar.length && !modoAbuela() ? 'confirmar' : 'proximos') + '" aria-selected="' + !enFechas + '">Eventos</button>' + /* v5.18: el número, una vez */
         '<button type="button" role="tab" data-ev-filtro="fechas" aria-selected="' + enFechas + '">Fechas señaladas</button></div>' +
       (buscando ? '<p class="ev-encontrados">' + (lista.length === 1 ? '1 evento' : lista.length + ' eventos') + ' con «' + esc($('ev-q').value.trim()) + '» <button type="button" class="enlace" data-ev-limpiar>Ver todos</button></p>' : '') +
-      (enFechas || buscando ? '' : '<div class="ev-filtros" role="tablist">' + pest.map(function (x) {
+      (enFechas ? '' : '<div class="ev-fila"><div class="ev-filtros" role="tablist">' + (buscando ? [] : pest).map(function (x) {
         return '<button type="button" role="tab" data-ev-filtro="' + x[0] + '" aria-selected="' + (evFiltro === x[0]) + '">' + x[1] + (x[2] ? ' <span class="ev-filtro-n' + (x[0] === 'confirmar' ? ' alerta' : '') + '">' + x[2] + '</span>' : '') + '</button>';
-      }).join('') + '</div>') +
+      }).join('') + '</div><span id="ev-hueco-buscar"></span></div>') +
       (evFiltro === 'fechas'
         ? (prox.length ? '<ul class="proximas">' + prox.join('') + '</ul>' : '<p class="vacio">Nada en los próximos 30 días.</p>') +
           '<p class="ayuda">Cumpleaños, aniversarios y las fechas que cada uno guarda en su ficha (bautizo, primera comunión, santo…), de los próximos 30 días. Solo salen las que tienen el día y el mes.</p>'
         : lista.length ? '<div class="ev-lista">' + lista.map(tarjetaEvento).join('') + '</div>'
         : '<p class="vacio">' + (buscando ? 'Ningún evento con eso. Prueba con otra palabra o solo el año.' : evFiltro === 'pasados' ? 'Aún no ha pasado ningún evento.' : evFiltro === 'confirmar' ? '¡Lo tienes todo contestado!' : 'No hay ningún evento a la vista. Añade el primero: una comida especial, una excursión, un viaje…') + '</p>');
+    colocarBuscador(qFoco, qPos);
   }
   function abrirEvento(e) {
     const h = hoy();
