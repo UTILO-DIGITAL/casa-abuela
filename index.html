@@ -5350,11 +5350,14 @@
     let b = '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (mesa ? ' (' + mesa + ' a la mesa, con la abuela)' : total > 1 ? ' (' + total + ')' : '');
     if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? ' 🎉 ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
     else if (motivo !== null && !comp.length) return b + '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.';
-    else if (!comp.length) b += yaPaso(f, t.id) ? (VISITA_DE[t.id] && soloVisita(f, VISITA_DE[t.id]).length ? '\nNadie se quedó a ' + (t.id === 'COMIDA' ? 'comer.' : 'cenar.') : '\nNo fue nadie.') : '\n🙋 Falta alguien. ¿Quién se apunta?';  // v4.63
+    else if (!ids.length) b += yaPaso(f, t.id) ? (VISITA_DE[t.id] && soloVisita(f, VISITA_DE[t.id]).length ? '\nNadie se quedó a ' + (t.id === 'COMIDA' ? 'comer.' : 'cenar.') : '\nNo fue nadie.') : '\n🙋 Falta alguien. ¿Quién se apunta?';  // v4.63
     comp.concat(serv).forEach(function (id) {
       const a = apunte(f, t.id, id);
-      b += '\n• ' + apodo(id) + (a && a.acompanantes ? ' +' + a.acompanantes : '') + (serv.indexOf(id) !== -1 ? ' (servicio)' : '') + (a && a.nota ? ' _(' + a.nota + ')_' : '');
+      b += '\n• ' + apodo(id) + (a && a.acompanantes ? ' +' + a.acompanantes : '') + (esServicio(persona(id)) ? ' (servicio)' : '') + (a && a.nota ? ' _(' + a.nota + ')_' : '');
     });
+    // v5.30: si solo está el servicio, no se dice que esté sola: se la nombra y se anima a que vaya alguien más
+    if (ids.length && ids.every(function (id) { return esServicio(persona(id)); }) && !yaPaso(f, t.id) && !fueraTurno(f, t.id) && motivo === null)
+      b += '\n🙋 ¿Alguien más se queda a ' + (t.id === 'DORMIR' ? 'dormir' : t.id === 'CENA' ? 'cenar' : 'comer') + '?';
     return b;
   }
   /* v5.30 (T0588): quién va por la mañana o por la tarde, en el mensaje; solo si hay alguien */
@@ -5387,7 +5390,7 @@
           if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id) || yaPaso(f, t.id)) return;  // v4.63
           const ids = idsDe(f, t.id);
           if (compania(ids, t.id).length) return;  // v4.73: por la noche, el servicio ya acompaña
-          faltan.push((t.id === 'DORMIR' ? 'noche' : t.nombre.toLowerCase()) + (ids.length ? ' (solo el servicio)' : ''));
+          faltan.push((t.id === 'DORMIR' ? 'noche' : t.nombre.toLowerCase()) + (ids.length ? ' (está ' + lista(ids.map(apodo)) + ')' : ''));  // v5.30: no «solo el servicio»
         });
         if (faltan.length) lineas.push('• *' + diaLargo(f) + '*: ' + lista(faltan));
       });
