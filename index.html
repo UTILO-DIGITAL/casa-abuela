@@ -723,6 +723,12 @@
   .evento-card.pasado { opacity: .7; }
   .evento-card h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 19px; }
   .evento-card h3 svg { width: 20px; height: 20px; flex: none; color: var(--color-accion); }
+  .evento-card h3 { flex-wrap: wrap; }
+  .ev-fui { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-family: var(--letra-texto); font-size: 14px; font-weight: 800; white-space: nowrap; }
+  .evento-card h3 .ev-fui svg { width: 16px; height: 16px; color: currentColor; }
+  .ev-fui.si { background: var(--color-principal); color: #fff; }
+  .ev-fui.no { background: #F6E3E1; color: var(--color-error); }
+  .ev-fui.nada { background: var(--color-linea); color: var(--color-texto-suave); }
   .evento-cuando { margin: 0; font-weight: 700; color: var(--color-principal-oscuro); font-size: 15px; }
   .evento-gente { margin: 0; font-size: 15px; }
   .evento-gente span { color: var(--color-texto-suave); }
@@ -1165,7 +1171,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.25.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.26.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -3071,7 +3077,9 @@
   function tarjetaEvento(e) {
     const h = hoy(), pasado = e.hasta < h;
     const voy = e.van.indexOf(yo) !== -1, noVoy = e.noVan.indexOf(yo) !== -1;
-    return '<article class="evento-card' + (pasado ? ' pasado' : '') + '" id="ev-' + esc(e.id) + '" data-ev-ver="' + esc(e.id) + '"><h3>' + ICONO_EVENTO + esc(e.nombre) + '</h3>' +
+    return '<article class="evento-card' + (pasado ? ' pasado' : '') + '" id="ev-' + esc(e.id) + '" data-ev-ver="' + esc(e.id) + '"><h3>' + ICONO_EVENTO + esc(e.nombre) +
+      // v5.26: en los pasados, de un vistazo, si fuiste o no
+      (pasado && yo && persona(yo) ? (voy ? '<span class="ev-fui si">' + ICONO_SI + 'Fuiste' + (diasDe(e, yo) ? ' (' + esc(textoDias(diasDe(e, yo))) + ')' : '') + '</span>' : noVoy ? '<span class="ev-fui no">' + ICONO_NO + 'No fuiste</span>' : '<span class="ev-fui nada">No contestaste</span>') : '') + '</h3>' +
       '<p class="evento-cuando">' + esc(fechaEvento(e)) + '</p>' +
       (e.lugar ? '<p class="evento-gente con-icono-txt">' + ICONO_SITIO + esc(e.lugar) + '</p>' : '') +
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
