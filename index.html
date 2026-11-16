@@ -532,9 +532,18 @@
   .evento-dia button.mini { justify-self: start; margin-left: 0; }
   /* v4.35: el modo sencillo de la abuela: solo para mirar */
   .modo-abuela nav.vistas a[data-vista="huecos"], .modo-abuela [data-nueva-persona], .modo-abuela .fp-falta-corto, .modo-abuela .eventos-barra, .modo-abuela #quien-soy, .modo-abuela #mis-proximas, .modo-abuela .nav-herr, .modo-abuela .instalar,
-  .modo-abuela .utilo, .modo-abuela #huerfanos, .modo-abuela .paso { display: none !important; }
+  .modo-abuela .utilo, .modo-abuela #huerfanos, .modo-abuela #per-filtros-btn, .modo-abuela #per-filtros { display: none !important; }  /* v5.17: sin Filtros (solo mirar) */
   .modo-abuela .nadie.suave { border: 0; background: none; padding: 0; min-height: 0; color: var(--color-texto-suave); font-weight: 700; }
   .dia-cab .campana { margin-left: auto; white-space: nowrap; }
+  /* v5.17: la vista sencilla, grande en todas las pestañas (antes, en el ordenador, la letra era la de siempre) */
+  body.modo-abuela .pagina { font-size: 19px; }
+  @media (min-width: 760px) {
+    body.modo-abuela .pagina { zoom: 1.25; }
+    body.modo-abuela dialog.editor { zoom: 1.2; max-height: calc((100dvh - 24px) / 1.2); width: min(560px, calc((100vw - 24px) / 1.2)); }
+    body.modo-abuela #per-arbol-btn { scale: 1.2; transform-origin: right bottom; }
+  }
+  .modo-abuela .dia-cab .campana { white-space: normal; text-align: left; }
+  .modo-abuela .arbol-et text, .modo-abuela .arbol text { font-size: 15px; }
   /* v4.44: rellenar lo que falta: familias, nombres y la ficha de cada uno */
   .rf-intro h2 { margin: 2px 0 4px; }
   .rf-paso { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--color-principal-oscuro); }
@@ -1098,7 +1107,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.16.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.17.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1784,7 +1793,7 @@
     let html = '<article class="dia' + (fecha === h ? ' hoy' : '') + (pasado ? ' pasado' : '') + (abierto ? ' abierto' : '') + (sinTodo ? ' sin' : '') + '">';
     html += '<div class="dia-cab"><span class="dia-hoja" aria-hidden="true"><small>' + DIAS[dow(fecha)].slice(0, 3).toUpperCase() + '</small><b>' + Number(fecha.slice(8, 10)) + '</b></span><h3>' + DIAS[dow(fecha)] + '</h3><span>' + (fecha === h ? 'Hoy' : ddmm(fecha)) + '</span>' +
       (plegable ? '<button type="button" class="mini solo-movil" data-plegar="' + fecha + '" aria-expanded="' + abierto + '">' + (abierto ? 'Ocultar' : 'Ver') + '</button>' : '') +
-      (modoAbuela() && !pasado ? '<button type="button" class="mini campana" data-preguntar="' + fecha + '" aria-label="Copiar quién viene el ' + diaLargo(fecha).toLowerCase() + '">' + ICONO_CAMPANA + '¿Quién viene?</button>' : '') +  // v4.38
+      (modoAbuela() && !pasado && !enEscritorio() ? '<button type="button" class="mini campana" data-preguntar="' + fecha + '" aria-label="Preguntar por WhatsApp quién viene el ' + diaLargo(fecha).toLowerCase() + '">' + ICONO_COMPARTIR + 'Preguntar por WhatsApp</button>' : '') +  // v5.17: en el ordenador, no; y dice lo que hace  // v4.38
       (modoAbuela() ? '' : '<button type="button" class="mini' + (plegable && !abierto ? ' solo-escritorio' : '') + '" data-dia="' + fecha + '" aria-label="Notas del ' + diaLargo(fecha).toLowerCase() + '">Nota</button>') + '</div>';
     const cumples = textoCumples(fecha);
     if (cumples.length) html += '<p class="nota-dia cumple">' + cumples.map(esc).join('<br>') + '</p>';
