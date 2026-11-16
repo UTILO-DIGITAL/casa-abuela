@@ -247,6 +247,8 @@
   .franja-detalle input[type=text] { width: 100%; }
   .franja-detalle > * { grid-column: 1 / -1; }
   .comida.con-detalle { cursor: pointer; }  /* v5.28: al tocar el bloque, todo lo suyo */
+  .accion.con-icono { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }  /* v5.30: «Compartir» del detalle, con su icono pequeño */
+  .accion.con-icono svg { width: 18px; height: 18px; flex: none; }
   .tuyos-resumen { margin: 0; padding: 8px 12px; border-radius: calc(var(--radio) / 2); background: var(--color-principal-claro); font-size: 14px; }  /* v5.29 */
   .se-quita .fd-et { color: var(--color-texto-suave); }
   .fd-fuera-abrir { justify-self: start; text-align: left; font-size: 14px; padding: 4px 0; }
@@ -2078,7 +2080,7 @@
       (VISITA_DE[turno] && idsDe(fecha, VISITA_DE[turno]).length ? '<h3 class="dt-fam">' + esc(etiquetaTurno(VISITA_DE[turno])) + ' <small>' + (idsDe(fecha, VISITA_DE[turno]).length === 1 ? '1 persona' : idsDe(fecha, VISITA_DE[turno]).length + ' personas') + '</small></h3><div class="gente">' + idsDe(fecha, VISITA_DE[turno]).map(function (id) { return chip(id, fecha, VISITA_DE[turno]); }).join('') + '</div>' : '') +  // v5.28
       '<p class="ayuda">' + (servicioYo() ? 'Toca a alguien para ver quién es.' : 'Toca a alguien para cambiar lo suyo.') + '</p></div>' +
       '<div class="dlg-pie"><div class="botones">' + (!modoAbuela() && sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">' + (servicioYo() ? 'Apuntarme' : 'Añadir a alguien') + '</button>' : '') +
-      '<button type="button" class="accion" id="dlg-dt-compartir">' + ICONO_COMPARTIR + 'Compartir</button>' +  // v5.30 (T0588): solo esta comida
+      '<button type="button" class="accion con-icono" id="dlg-dt-compartir">' + ICONO_COMPARTIR + 'Compartir</button>' +  // v5.30 (T0588): solo esta comida
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-dt-compartir').addEventListener('click', function () {
       if (modoAbuela()) { abrirWhatsApp(mensaje('turno:' + fecha + '|' + turno)); return; }  // la abuela, directo a WhatsApp, como «Preguntar por WhatsApp»
