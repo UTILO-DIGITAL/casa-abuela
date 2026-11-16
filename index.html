@@ -6,7 +6,10 @@
 <title>Casa Abuela</title>
 <meta name="apple-mobile-web-app-title" content="Casa Abuela">
 <meta name="theme-color" content="#0B6E61">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B6E61'/%3E%3Ccircle cx='32' cy='32' r='15' fill='none' stroke='%23FFFCF7' stroke-width='6'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%23FF5A3C'/%3E%3C/svg%3E">
+<!-- v5.21: el icono de la app, una abuela (al guardarla en la pantalla de inicio del móvil). iOS lo lee al añadirla: hay que quitarla y volver a añadirla -->
+<link rel="icon" type="image/svg+xml" href="icono.svg?v=1">
+<link rel="apple-touch-icon" href="icono-180.png?v=1">
+<link rel="manifest" href="manifest.webmanifest?v=1">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1114,7 +1117,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.20.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.21.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
