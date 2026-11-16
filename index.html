@@ -212,13 +212,21 @@
   @media (min-width: 760px) { .dia .comida { grid-template-columns: 50px minmax(0, 1fr); } .turno-lado { font-size: 10px; } .dia-hoja { display: none; } }
   .comida + .comida { border-top: 1px solid var(--color-linea); }
   /* v5.28 (T0586): las visitas, arriba dentro del bloque de la comida (la mañana) o de la cena (la tarde), separadas de la mesa */
-  .visita-dentro { display: grid; justify-items: start; gap: 3px; padding-bottom: 8px; border-bottom: 1px dashed var(--color-linea); font-size: 14px; line-height: 1.4; color: var(--color-texto-suave); }
+  .visita-dentro { display: grid; justify-items: start; gap: 0; padding-bottom: 6px; border-bottom: 1px dashed var(--color-linea); font-size: 15px; line-height: 1.35; color: var(--color-texto); }
   .visita-et { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
   .visita-et svg { width: 15px; height: 15px; }
   .turno-comida .visita-et { color: var(--t-comida-tinta); }
   .turno-cena .visita-et { color: var(--t-cena-tinta); }
-  .visita-nombre { background: none; border: 0; padding: 0; min-height: 0; text-align: left; font: inherit; color: var(--color-texto); font-weight: 700; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
-  .visita-nombre small { font-weight: 500; color: var(--color-texto-suave); }
+  .visita-nombre { background: none; border: 0; padding: 6px 0; min-height: 40px; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0 5px; text-align: left; font: inherit; color: var(--color-texto); font-weight: 700; text-decoration: underline dotted; text-underline-offset: 4px; cursor: pointer; }
+  .visita-nombre small { font-size: 14px; font-weight: 500; color: var(--color-texto); }
+  .visita-fila { display: block; }
+  .visita-fila .visita-nombre, .visita-fila .visita-mas-n { display: inline; min-height: 0; padding: 10px 0; }
+  .visita-mas-n { background: none; border: 0; padding: 6px 4px; min-height: 40px; font: inherit; font-weight: 700; color: var(--color-principal-oscuro); cursor: pointer; }
+  .nota-chip.desde { font-weight: 600; }
+  /* v5.28: la novedad de las visitas, una vez (hasta que se cierra) */
+  .novedad { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin: 0 0 14px; padding: 12px 14px; border-radius: var(--radio); background: var(--color-principal-claro); }
+  .novedad p { margin: 0; flex: 1 1 260px; }
+  .novedad button { flex: none; }
   /* v5.28: tu día al apuntarte: las franjas en fila y, debajo, cada una marcada con su nota */
   .franjas-op { display: flex; flex-wrap: wrap; gap: 6px; }
   .franja { position: relative; }
@@ -236,6 +244,8 @@
   .franja-detalle input { font: inherit; font-weight: 400; min-height: 44px; padding: 8px 12px; border-radius: calc(var(--radio) / 2); border: 1px solid var(--color-principal-oscuro); background: #fff; color: var(--color-texto); min-width: 0; }
   .franja-detalle input[type=text] { width: 100%; }
   .franja-detalle:not(:has(.fd-acomp)) input[type=text] { grid-column: 1 / -1; }
+  .comida.con-detalle { cursor: pointer; }  /* v5.28: al tocar el bloque, todo lo suyo */
+  .se-quita .fd-et { color: var(--color-texto-suave); }
   .fd-acomp { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
   .fd-acomp input { width: 56px; }
   .comida-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
@@ -1505,7 +1515,7 @@
     const mas = a && a.acompanantes ? '<span class="mas-n">+' + a.acompanantes + '</span>' : '';  // v4.15: acompañantes
     return '<button type="button" class="p ' + clase(p) + (id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(id) + '"' +
       (fecha ? ' data-fecha="' + fecha + '" data-turno="' + turno + '"' : '') + ' aria-label="Editar a ' + esc(nombre) + '"><b>' + esc(nombre) + mas + marcaMenu(p) + '</b>' +
-      (a && a.nota ? '<span class="nota-chip">' + esc(a.nota) + '</span>' : '') + '</button>';
+      (a && a.nota ? '<span class="nota-chip">' + esc(a.nota) + '</span>' : '') + (fecha && desdeVisita(fecha, turno, id) ? '<span class="nota-chip desde">' + esc(desdeVisita(fecha, turno, id)) + '</span>' : '') + '</button>';  // v5.28
   }
   /* Marca en la tarjeta para medio menú o sin menú (entero no lleva nada) */
   const ICONO_MEDIO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>';
@@ -1957,9 +1967,10 @@
       const faltaAlguien = motivo === null && !comp.length && !paso;
       const etiq = t.id === 'DORMIR' ? 'Noche' : t.nombre;  // v4.99: la etiqueta de color a la izquierda
       const conMas = !modoAbuela();  // v4.99: el «+», en la columna de color; v5.1: siempre (también lo pasado, los eventos y lo que no hace falta), menos en la vista sencilla
-      html += '<div class="comida turno-' + t.id.toLowerCase() + (motivo !== null ? ' no-hace-falta' : '') + (paso ? ' ya-paso' : '') + '"><div class="turno-lado"><span class="turno-et" aria-hidden="true">' + ICONO_TURNO_SVG[t.id] + '<span>' + etiq + '</span></span>' +
+      const conDetalle = ids.length || (VISITA_DE[t.id] && idsDe(fecha, VISITA_DE[t.id]).length);  // v5.28: al tocar el bloque, todo lo suyo
+      html += '<div class="comida turno-' + t.id.toLowerCase() + (motivo !== null ? ' no-hace-falta' : '') + (paso ? ' ya-paso' : '') + (conDetalle ? ' con-detalle" data-detalle-turno="' + fecha + '|' + t.id : '') + '"><div class="turno-lado"><span class="turno-et" aria-hidden="true">' + ICONO_TURNO_SVG[t.id] + '<span>' + etiq + '</span></span>' +
         (conMas ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div><div class="turno-cont">' + (t.id === 'COMIDA' ? lineaVisita(fecha, VISITAS[0]) : t.id === 'CENA' ? lineaVisita(fecha, VISITAS[1]) : '') + '<div class="comida-cab"><h4 class="oculto">' + etiq + '</h4>' +  // v5.28: la mañana, dentro de la comida; la tarde, dentro de la cena
-        (paso && motivo === null && !comp.length ? '<span class="nadie suave">No fue nadie</span>' :
+        (paso && motivo === null && !comp.length ? '<span class="nadie suave">' + (VISITA_DE[t.id] && soloVisita(fecha, VISITA_DE[t.id]).length ? (t.id === 'COMIDA' ? 'Nadie se quedó a comer' : 'Nadie se quedó a cenar') : 'No fue nadie') + '</span>' :  // v5.28: si fue alguien por la mañana o por la tarde
           faltaAlguien && modoAbuela() ? '<span class="nadie suave">Aún sin apuntar</span>' : motivo === null && modoAbuela() ? '' :
           faltaAlguien ? '<button type="button" class="falta-boton' + (diasEntre(hoy(), fecha) <= 1 ? ' pronto' : '') + '"' + datosTurno + ' aria-label="Falta alguien en la ' + nombreTurno(fecha, t.id) + ': apúntate">' + ICONO_MAS + '<span><b>Falta alguien</b><small>' + (servicioYo() ? 'Toca para apuntarte' : '¡Apúntate!') + '</small></span></button>'  /* v5.22: un botón que se ve y apunta (la razón de ser de la web) */  // v5.15: una sola frase; en rojo solo hoy y mañana  // v5.2: aviso, no botón (el «+» de la izquierda añade)
           : '') + '</div>';
@@ -1983,16 +1994,28 @@
   /* v5.28 (T0586): quién va por la mañana o por la tarde sin comer ni cenar: arriba, dentro del bloque de la comida (la mañana)
      o de la cena (la tarde), en pequeño y separado de quién se sienta a la mesa. Solo si hay alguien; sin «+» propio
      (se apunta desde cualquier «+» del día) y nunca «Falta alguien». */
+  // v5.28: quien va por la mañana y se queda a comer sale en la comida («desde la mañana»), no dos veces; lo mismo la tarde y la cena
+  const COMIDA_DE = { MANANA: 'COMIDA', TARDE: 'CENA' }, VISITA_DE = { COMIDA: 'MANANA', CENA: 'TARDE' };
+  function soloVisita(fecha, v) { const come = idsDe(fecha, COMIDA_DE[v]); return idsDe(fecha, v).filter(function (id) { return come.indexOf(id) === -1; }); }
+  function desdeVisita(fecha, turno, id) {  // «desde la mañana: teletrabajo», si además de comer va por la mañana
+    const a = VISITA_DE[turno] ? apunte(fecha, VISITA_DE[turno], id) : null;
+    return a ? 'desde la ' + (turno === 'COMIDA' ? 'mañana' : 'tarde') + (a.nota ? ': ' + a.nota : '') : '';
+  }
+  const visAbiertas = new Set();  // las visitas desplegadas («fecha|turno»), cuando son más de dos
   function lineaVisita(fecha, v) {
-    const ids = idsDe(fecha, v.id);
+    const ids = soloVisita(fecha, v.id);
     if (!ids.length) return '';
-    const nombres = modoAbuela()
-      ? '<span>' + (ids.length === 1 ? 'Viene ' : 'Vienen ') + esc(lista(ids.map(function (id) { return ((persona(id) || deBaja(id) || {}).apodo) || id; }))) + '</span>'
-      : ids.map(function (id) {
-        const a = apunte(fecha, v.id, id), p = persona(id) || deBaja(id) || {};
-        return '<button type="button" class="visita-nombre' + (id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(id) + '" data-fecha="' + fecha + '" data-turno="' + v.id + '" aria-label="Cambiar lo de ' + esc(p.apodo || id) + ' ese día">' + esc(p.apodo || id) + (a && a.nota ? ' <small>(' + esc(a.nota) + ')</small>' : '') + '</button>';
-      }).join('');  // una persona por línea
-    return '<div class="visita-dentro"><span class="visita-et">' + ICONO_TURNO_SVG[v.id] + esc(v.nombre) + '</span>' + nombres + '</div>';
+    const apodo = function (id) { return ((persona(id) || deBaja(id) || {}).apodo) || id; };
+    if (modoAbuela()) return '<div class="visita-dentro"><span class="visita-et">' + ICONO_TURNO_SVG[v.id] + esc(v.nombre) + '</span><span>' + (ids.length === 1 ? 'Viene ' : 'Vienen ') + esc(lista(ids.map(apodo))) + '</span></div>';
+    const boton = function (id, conNota) {
+      const a = apunte(fecha, v.id, id);
+      return '<button type="button" class="visita-nombre' + (id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(id) + '" data-fecha="' + fecha + '" data-turno="' + v.id + '" aria-label="Cambiar lo de ' + esc(apodo(id)) + ' ese día">' + esc(apodo(id)) + (conNota && a && a.nota ? ' <small>(' + esc(a.nota) + ')</small>' : '') + '</button>';
+    };
+    const k = fecha + '|' + v.id, recogida = ids.length > 2 && !visAbiertas.has(k);
+    const cuerpo = recogida
+      ? '<span class="visita-fila">' + boton(ids[0]) + ', ' + boton(ids[1]) + ' <button type="button" class="visita-mas-n" data-vis-mas="' + k + '" aria-expanded="false">y ' + (ids.length - 2) + ' más</button></span>'
+      : ids.map(function (id) { return boton(id, true); }).join('') + (ids.length > 2 ? '<button type="button" class="visita-mas-n" data-vis-mas="' + k + '" aria-expanded="true">Ver menos</button>' : '');
+    return '<div class="visita-dentro"><span class="visita-et">' + ICONO_TURNO_SVG[v.id] + esc(v.nombre) + '</span>' + cuerpo + '</div>';
   }
   /* v4.75: el resumen de una comida, cena o noche: cuántos (a la mesa, con la abuela), por familias y el servicio; al tocarlo, el desglose */
   function porFamilias(ids) {
@@ -2012,12 +2035,13 @@
     const grupos = {}, orden = [];
     fam.forEach(function (id) { const p = persona(id); const f = p && p.familia && p.familia !== 'Otros' ? p.familia : 'Otros'; if (!grupos[f]) { grupos[f] = []; orden.push(f); } grupos[f].push(id); });
     const clave = function (f) { return fecha + '|' + turno + '|' + f; };
-    return (total ? '<button type="button" class="rt-total" data-detalle-turno="' + fecha + '|' + turno + '" aria-label="Ver todos los de la ' + esc(nombreTurno(fecha, turno)) + '"><b>' + total + '</b>' +
+    const verTotal = servicioYo() || modoAbuela();  // v5.28: para la familia no hace falta a simple vista; está al tocar el bloque
+    return (total && verTotal ? '<button type="button" class="rt-total" data-detalle-turno="' + fecha + '|' + turno + '" aria-label="Ver todos los de la ' + esc(nombreTurno(fecha, turno)) + '"><b>' + total + '</b>' +
         (al.length ? '<span class="rt-marca rt-alergias">alergias</span>' : '') + '<span class="rt-flecha" aria-hidden="true">›</span></button>' : '') +
       (orden.length ? '<div class="rt-familias">' + orden.map(function (f) {
         const ab = famAbiertas.has(clave(f)), ids2 = grupos[f];
         const extra = ids2.reduce(function (n, id) { return n + ((apunte(fecha, turno, id) || {}).acompanantes || 0); }, 0);
-        const notas = ids2.filter(conNota).map(function (id) { return '<span class="rt-nota"><b>' + esc((persona(id) || {}).apodo || id) + ':</b> ' + esc(apunte(fecha, turno, id).nota) + '</span>'; }).join('');
+        const notas = ids2.filter(function (id) { return conNota(id) || desdeVisita(fecha, turno, id); }).map(function (id) { return '<span class="rt-nota"><b>' + esc((persona(id) || {}).apodo || id) + ':</b> ' + esc([(apunte(fecha, turno, id) || {}).nota, desdeVisita(fecha, turno, id)].filter(Boolean).join(' · ')) + '</span>'; }).join('');  // v5.28: y «desde la mañana»
         return '<button type="button" class="rt-familia' + (ids2.indexOf(yo) !== -1 ? ' con-yo' : '') + '" data-rt-fam="' + esc(clave(f)) + '" aria-expanded="' + ab + '">' +
             '<span class="rt-cab"><b>' + esc(f) + '</b><span class="rt-n">' + ((ids2.length + extra) === 1 ? 'va 1' : 'van ' + (ids2.length + extra)) + '</span><span class="rt-flecha" aria-hidden="true">' + (ab ? '▴' : '▾') + '</span></span>' + (ab ? '' : notas) + '</button>' +
           (ab ? '<div class="gente rt-abierta">' + ids2.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '');
@@ -2040,6 +2064,7 @@
       (al.length ? '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>' : '') +
       orden.map(function (f) { return '<h3 class="dt-fam">' + esc(f === '?' ? 'Otros' : cortoFamilia(f)) + ' <small>' + (grupos[f].length === 1 ? '1 persona' : grupos[f].length + ' personas') + '</small></h3><div class="gente">' + grupos[f].map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>'; }).join('') +
       (serv.length ? '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '') +
+      (VISITA_DE[turno] && soloVisita(fecha, VISITA_DE[turno]).length ? '<h3 class="dt-fam">' + esc(etiquetaTurno(VISITA_DE[turno])) + ' <small>sin quedarse a ' + (turno === 'COMIDA' ? 'comer' : 'cenar') + '</small></h3><div class="gente">' + soloVisita(fecha, VISITA_DE[turno]).map(function (id) { return chip(id, fecha, VISITA_DE[turno]); }).join('') + '</div>' : '') +  // v5.28
       '<p class="ayuda">' + (servicioYo() ? 'Toca a alguien para ver quién es.' : 'Toca a alguien para cambiar lo suyo.') + '</p></div>' +
       '<div class="dlg-pie"><div class="botones">' + (!modoAbuela() && sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">' + (servicioYo() ? 'Apuntarme' : 'Añadir a alguien') + '</button>' : '') +
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
@@ -2058,6 +2083,8 @@
     if (e.target.closest('[data-volver-hoy]')) { desdeMovil = ''; diasMovil = 7; pintar(); window.scrollTo(0, 0); return; }  // v4.98
     if (e.target.closest('[data-mas-dias]')) { diasMovil += 7; if (cubierto()) pintarSemana(); else cargar(); }  // v4.97: siete días más, debajo
   });
+  const CLAVE_NOVEDAD = 'casa-abuela-novedad-visitas';  // v5.28
+  function novedadVista() { try { return localStorage.getItem(CLAVE_NOVEDAD) === '1'; } catch (e) { return true; } }
   function pintarSemana() {
     let html = '';
     if (hoy() < datos.config.inicio && lunesSel === lunesInicio()) html += '<p class="aviso">El calendario empieza el ' + diaLargo(datos.config.inicio).toLowerCase() + '.</p>';
@@ -2069,6 +2096,7 @@
       else if (!datos || sumar(hoy(), -1) >= datos.config.inicio) pasadosHtml = '<button type="button" class="enlace dias-antes" data-ver-pasados aria-expanded="' + verPasados + '">' + (verPasados ? 'Ocultar ayer y anteayer ▴' : '‹ Días anteriores') + '</button>';
       masHtml = '<button type="button" class="accion ver-mas-dias" data-mas-dias>Ver 7 días más</button>';
     }
+    if (!modoAbuela() && !servicioYo() && !novedadVista()) html += '<div class="novedad" role="status"><p><b>Novedad:</b> ahora puedes apuntarte por la mañana o por la tarde aunque no te quedes a comer o a cenar. Toca cualquier «+» del día y elige «Por la mañana» o «Por la tarde».</p><button type="button" class="accion" data-novedad-ok>Entendido</button></div>';  // v5.28
     html += '<div class="dias-semana">' + pasadosHtml + dias.map(function (f) { return bloqueDia(f, {}); }).join('') + masHtml + '</div>';
     $('semana-grande').innerHTML = html;
   }
@@ -4644,6 +4672,7 @@
   /* ---------- Ventanas ---------- */
   function abrirDialogo(html) {
     dlgCambiado = false;
+    dlgComprobar = null;  // v5.28: una ventana puede decir ella misma si hay algo que perder
     $dlg.innerHTML = html;
     if (!$dlg.open) { if (typeof $dlg.showModal === 'function') $dlg.showModal(); else $dlg.setAttribute('open', ''); }
     // v4.63: el foco, en el título (si no, el móvil abre solo el primer desplegable o la primera fecha)
@@ -4654,6 +4683,8 @@
   function errorDialogo(t) { const e = $('dlg-error'); if (e) { e.textContent = t; e.hidden = false; } }
   // El aviso «close» llega un momento después: si para entonces ya se ha abierto otra ventana, no se vacía (v4.12)
   $dlg.addEventListener('close', function () { if (!$dlg.open) $dlg.innerHTML = ''; });
+  let dlgComprobar = null;
+  const hayQuePerder = function () { if (!dlgComprobar) return dlgCambiado; try { return dlgComprobar(); } catch (e) { return dlgCambiado; } };
   let dlgCambiado = false;  // v4.91: si has escrito algo, tocar fuera pregunta antes de cerrar
   // v5.16: al cambiar algo, el error de antes se va; y donde no se escribe nada que perder, no se pregunta al salir
   const alCambiar = function (e) { const er = $('dlg-error'); if (er) er.hidden = true; if (e.target.closest('[data-no-preguntar]')) return; dlgCambiado = true; };
@@ -4670,10 +4701,10 @@
   }
   $dlg.addEventListener('click', function (e) {
     if (e.target !== $dlg || pidiendoClave) return;
-    if (dlgCambiado) { preguntarSalir(); return; }
+    if (hayQuePerder()) { preguntarSalir(); return; }
     cerrarDialogo();
   });
-  $dlg.addEventListener('cancel', function (e) { if (dlgCambiado && !pidiendoClave) { e.preventDefault(); preguntarSalir(); } });
+  $dlg.addEventListener('cancel', function (e) { if (hayQuePerder() && !pidiendoClave) { e.preventDefault(); preguntarSalir(); } });
   $dlg.addEventListener('cancel', function (e) { if (pidiendoClave) e.preventDefault(); });  // v4.17: la clave no se puede saltar
   function pie(textoGuardar, extra) {
     return '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones">' +
@@ -4886,20 +4917,21 @@
     return Number(v);
   }
   /* v5.28 (T0586): tu día, en una sola ventana. Arriba, quién; debajo, sus franjas (por la mañana, comida, por la tarde, cena, noche):
-     marcadas las que ya tiene, y la que se ha tocado si es nuevo. Cada franja marcada, con su nota (y «viene con» si come, cena o duerme).
-     Desmarcar quita. Todos los «+», «Falta alguien» y los nombres de un día llevan aquí. */
+     marcadas las que ya tiene y, si se entra desde un «+», también la tocada. Cada franja marcada, con su nota (y «con … más» si come,
+     cena o duerme); lo que tenía y se desmarca, tachado («se quitará»). Todos los «+», «Falta alguien» y los nombres de un día llevan aquí. */
   const FRANJAS = [{ id: 'MANANA', corto: 'Por la mañana' }, { id: 'COMIDA', corto: 'Comida' }, { id: 'TARDE', corto: 'Por la tarde' }, { id: 'CENA', corto: 'Cena' }, { id: 'DORMIR', corto: 'Noche' }];
   function abrirAnadir(fecha, turno, quien) {
     const pasado = yaPaso(fecha, turno);  // v5.15: lo que ya pasó, «Apuntar que fue», sin avisos de futuro
+    const cada = { 0: 'domingo', 1: 'lunes', 2: 'martes', 3: 'miércoles', 4: 'jueves', 5: 'viernes', 6: 'sábado' }[dow(fecha)];
     const plural = { 0: 'domingos', 1: 'lunes', 2: 'martes', 3: 'miércoles', 4: 'jueves', 5: 'viernes', 6: 'sábados' }[dow(fecha)];
     const inicial = quien || (persona(yo) && !servicioYo() ? yo : '');
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(diaLargo(fecha)) + '</h2></div>' +
       '<div class="dlg-cuerpo">' + (pasado ? '<p class="ayuda">Ya pasó: así queda apuntado quién fue.</p>' : '') + buscadorHtml('Quién') +
-      '<fieldset class="franjas"><legend>¿A qué va?</legend><div class="franjas-op">' + FRANJAS.map(function (f) {
+      '<fieldset class="franjas" data-no-preguntar><legend>¿A qué va?</legend><div class="franjas-op">' + FRANJAS.map(function (f) {
         return '<label class="franja"><input type="checkbox" value="' + f.id + '"><span>' + ICONO_TURNO_SVG[f.id] + f.corto + '</span></label>';
-      }).join('') + '</div><p class="ayuda">Por la mañana y por la tarde: estar con la abuela sin quedarse a comer o a cenar.</p></fieldset>' +
+      }).join('') + '</div><p class="ayuda" id="dlg-ayuda-visita" hidden></p></fieldset>' +
       '<div id="dlg-detalle" class="franjas-detalle"></div><div id="dlg-aviso-serv"></div>' +
-      (pasado ? '' : '<label class="check"><input type="checkbox" id="dlg-cada-semana"> Todos los ' + plural + ' (lo marcado)</label>') + '</div>' +
+      (pasado ? '' : '<label class="check"><input type="checkbox" id="dlg-cada-semana"> Repetir cada ' + cada + '</label>') + '</div>' +
       pie('Guardar'));
     const borrador = {};  // lo que se va escribiendo en cada franja, para no perderlo al marcar o desmarcar otra
     const marcadas = function () { return Array.from($dlg.querySelectorAll('.franja input:checked')).map(function (c) { return c.value; }); };
@@ -4911,11 +4943,19 @@
       const t = marcadas().filter(function (x) { return (x === 'COMIDA' || x === 'CENA') && !yaPaso(fecha, x) && sinServicio(fecha, x) && !fueraTurno(fecha, x) && !servicioYo(); });
       $('dlg-aviso-serv').innerHTML = t.length ? '<p class="aviso-servicio">' + esc(t.length === 2 ? 'No hay servicio en la comida ni en la cena: llega antes para prepararlas y estar con la abuela.' : avisoSinServicio(fecha, t[0])) + '</p>' : '';
     }
+    function pintarAyuda() {  // qué es «por la mañana» y «por la tarde», solo si se marca
+      const m = marcadas(), man = m.indexOf('MANANA') !== -1, tar = m.indexOf('TARDE') !== -1;
+      const a = $('dlg-ayuda-visita');
+      a.hidden = !(man || tar);
+      a.textContent = man && tar ? 'Por la mañana y por la tarde: estar con la abuela aunque no te quedes a comer o a cenar.' : man ? 'Por la mañana: estar con la abuela aunque no te quedes a comer.' : tar ? 'Por la tarde: estar con la abuela aunque no te quedes a cenar.' : '';
+    }
     function pintarDetalle() {
       pintarAviso();
-      const id = elegidoBuscador;
-      $('dlg-detalle').innerHTML = marcadas().map(function (t) {
-        const f = FRANJAS.find(function (x) { return x.id === t; }), b = borrador[t] || {}, a = id ? apunte(fecha, t, id) : null;
+      pintarAyuda();
+      const id = elegidoBuscador, m = marcadas();
+      $('dlg-detalle').innerHTML = FRANJAS.map(function (f) {
+        const t = f.id, b = borrador[t] || {}, a = id ? apunte(fecha, t, id) : null;
+        if (m.indexOf(t) === -1) return a ? '<div class="franja-detalle se-quita"><span class="fd-et">' + ICONO_TURNO_SVG[t] + '<s>' + esc(f.corto) + '</s> <small>· se quitará</small></span></div>' : '';
         const nota = b.nota !== undefined ? b.nota : (a ? a.nota || '' : '');
         const acomp = b.acomp !== undefined ? b.acomp : String(a && a.acompanantes || 0);
         return '<div class="franja-detalle"><span class="fd-et">' + ICONO_TURNO_SVG[t] + esc(f.corto) + (a && a.fijo ? ' <small>· va siempre</small>' : '') + '</span>' +
@@ -4929,26 +4969,22 @@
       // desde un «+» o «Falta alguien», además, la franja tocada; desde un nombre, solo lo que ya tiene
       $dlg.querySelectorAll('.franja input').forEach(function (c) { c.checked = tiene.indexOf(c.value) !== -1 || ((!quien || !tiene.length) && c.value === turno); });
       pintarDetalle();
+      if (typeof foto === 'function') fotoInicial = foto();
     }
-    montarBuscador({ seleccion: inicial, alta: true, alElegir: cargarPersona });
-    cargarPersona(inicial);
-    $dlg.querySelectorAll('.franja input').forEach(function (c) { c.addEventListener('change', function () { guardarBorrador(); pintarDetalle(); }); });
-    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
-    $('dlg-guardar').addEventListener('click', function () {
+    // Lo que se guardaría: { turnos, fijos } o { error }
+    function calcular() {
       const id = elegidoBuscador;
-      if (!id) { errorDialogo('Busca y toca primero a quién quieres apuntar.'); return; }
+      if (!id) return { turnos: [] };
       guardarBorrador();
-      const sel = marcadas();
-      const semanal = !!($('dlg-cada-semana') && $('dlg-cada-semana').checked);
-      const turnos = [];
+      const sel = marcadas(), turnos = [];
       for (let i = 0; i < FRANJAS.length; i++) {
         const t = FRANJAS[i].id, a = apunte(fecha, t, id), b = borrador[t] || {};
         if (sel.indexOf(t) === -1) { if (a) turnos.push({ fecha: fecha, turno: t, apuntado: false }); continue; }
-        const nota = String(b.nota || '').trim();
+        const nota = String(b.nota !== undefined ? b.nota : (a ? a.nota || '' : '')).trim();
         let acomp = 0;
         if (!esVisita(t)) {
-          const v = String(b.acomp || '0').trim() || '0';
-          if (!/^\d+$/.test(v) || Number(v) > 20) { errorDialogo('En «con … más» de la ' + etiquetaTurno(t).toLowerCase() + ', pon cuántos vienen con él o ella, de 0 a 20.'); return; }
+          const v = String(b.acomp !== undefined ? b.acomp : (a && a.acompanantes || 0)).trim() || '0';
+          if (!/^\d+$/.test(v) || Number(v) > 20) return { error: 'En «con … más» de la ' + etiquetaTurno(t).toLowerCase() + ', pon cuántos vienen con él o ella, de 0 a 20.' };
           acomp = Number(v);
         }
         if (!a || nota !== (a.nota || '') || (!esVisita(t) && acomp !== (a.acompanantes || 0))) {
@@ -4957,17 +4993,35 @@
           turnos.push(c);
         }
       }
-      const cambios = {};
-      if (turnos.length) cambios.turnos = turnos;
-      if (semanal && sel.length) {
+      let fijos = null;
+      if ($('dlg-cada-semana') && $('dlg-cada-semana').checked && sel.length) {
         const fj = fijosDe(id).map(function (f) { return { dow: f.dow, turno: f.turno }; });
         sel.forEach(function (t) { if (!fj.some(function (f) { return f.dow === dow(fecha) && f.turno === t; })) fj.push({ dow: dow(fecha), turno: t }); });
-        if (fj.length !== fijosDe(id).length) cambios.fijos = fj;
+        if (fj.length !== fijosDe(id).length) fijos = fj;
       }
-      if (!Object.keys(cambios).length) { if (sel.length) { cerrarDialogo(); return; } errorDialogo('Marca a qué va: por la mañana, a comer, por la tarde, a cenar o a dormir.'); return; }
+      return { turnos: turnos, fijos: fijos, sel: sel };
+    }
+    // solo pregunta al salir si se ha tocado algo desde que se abrió (o desde que se eligió a la persona); buscar no cuenta
+    const foto = function () { guardarBorrador(); return JSON.stringify([elegidoBuscador, marcadas(), FRANJAS.map(function (f) { const b = borrador[f.id] || {}; return [b.nota || '', b.acomp || '']; }), !!($('dlg-cada-semana') && $('dlg-cada-semana').checked)]); };
+    let fotoInicial = '';
+    dlgComprobar = function () { return foto() !== fotoInicial; };
+    montarBuscador({ seleccion: inicial, alta: true, alElegir: cargarPersona });
+    cargarPersona(inicial);
+    fotoInicial = foto();
+    $dlg.querySelectorAll('.franja input').forEach(function (c) { c.addEventListener('change', function () { guardarBorrador(); pintarDetalle(); }); });
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $('dlg-guardar').addEventListener('click', function () {
+      const id = elegidoBuscador;
+      if (!id) { errorDialogo('Busca y toca primero a quién quieres apuntar.'); return; }
+      const c = calcular();
+      if (c.error) { errorDialogo(c.error); return; }
+      const cambios = {};
+      if (c.turnos.length) cambios.turnos = c.turnos;
+      if (c.fijos) cambios.fijos = c.fijos;
+      if (!Object.keys(cambios).length) { if (c.sel.length) { cerrarDialogo(); return; } errorDialogo('Marca a qué va: por la mañana, a comer, por la tarde, a cenar o a dormir.'); return; }
       const nombre = (quienEs(id) || {}).apodo || '';
-      const que = lista(sel.map(function (t) { return { MANANA: 'por la mañana', COMIDA: 'a comer', TARDE: 'por la tarde', CENA: 'a cenar', DORMIR: 'a dormir' }[t]; }));
-      const mensaje = sel.length ? 'Hecho: ' + nombre + ' va ' + que + (semanal ? ' todos los ' + plural : ' el ' + diaLargo(fecha).toLowerCase()) + '.' : 'Hecho: ' + nombre + ' ya no va el ' + diaLargo(fecha).toLowerCase() + '.';
+      const que = lista(c.sel.map(function (t) { return { MANANA: 'por la mañana', COMIDA: 'a comer', TARDE: 'por la tarde', CENA: 'a cenar', DORMIR: 'a dormir' }[t]; }));
+      const mensaje = c.sel.length ? 'Hecho: ' + nombre + ' va ' + que + (cambios.fijos ? ' todos los ' + plural : ' el ' + diaLargo(fecha).toLowerCase()) + '.' : 'Hecho: ' + nombre + ' ya no va el ' + diaLargo(fecha).toLowerCase() + '.';
       const quitaFijos = (cambios.turnos || []).filter(function (t) { return !t.apuntado && (apunte(t.fecha, t.turno, id) || {}).fijo; });
       const seguir = function () { conQuien(function () { confirmarTarde(cambios.turnos || [], id, function () { guardarCambios(id, cambios, mensaje); }); }); };
       if (quitaFijos.length) elegirAlcance(quienEs(id), quitaFijos, seguir); else seguir();
@@ -5376,8 +5430,10 @@
 
   /* ---------- Clics ---------- */
   document.addEventListener('click', function (e) {
-    const el = e.target.closest('[data-quitarme], [data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-huecos], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
+    const el = e.target.closest('[data-novedad-ok], [data-vis-mas], [data-quitarme], [data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-huecos], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
+    if (el.hasAttribute('data-novedad-ok')) { try { localStorage.setItem(CLAVE_NOVEDAD, '1'); } catch (er) {} pintarSemana(); return; }  // v5.28
+    if (el.hasAttribute('data-vis-mas')) { const k = el.dataset.visMas; if (visAbiertas.has(k)) visAbiertas.delete(k); else visAbiertas.add(k); pintarSemana(); return; }  // v5.28
     if (modoAbuela() && el.hasAttribute('data-persona')) { abrirInfoPersona(el.dataset.persona); return; }  // v4.36: quién es, para mirar
     if (servicioYo() && el.hasAttribute('data-persona') && el.dataset.persona !== yo) { abrirInfoPersona(el.dataset.persona); return; }  // v4.86
     if (servicioYo() && el.hasAttribute('data-anadir')) { apuntarme(el.dataset.fecha, el.dataset.turno); return; }  // v4.86: el «+», a ella misma
