@@ -488,3 +488,41 @@ ver('con PISTA, va en el aviso', /PISTA: Lo que se come en verano…$/.test(R.ap
 ver('y con la clave buena, entra igual', R.api_('getDatos', [V2], 'paella').ok === true);
 const conPista = R.api_('getDatos', [V2], 'paella').r;
 ver('la pista llega con los datos, la clave no', conPista.config.pista === 'Lo que se come en verano…' && !('clave' in conPista.config));
+
+// ---------- v5.28 (T0586): las visitas, por la mañana o por la tarde sin comer ni cenar ----------
+{
+  const VV = { desde: '2026-11-09', hasta: '2026-11-22', yo: N_ };
+  const numAntes = R.misNumeros(N_);
+  const ultimoCambio = () => { const f = hojas.MESA_CAMBIOS.filas; return String((f[f.length - 1] || [])[3] || ''); };
+  let dv = R.guardarPersona(N_, { turnos: [{ fecha: '2026-11-18', turno: 'MANANA', apuntado: true, nota: 'teletrabajo' }] }, N_, VV);
+  const vm1 = dv.apuntes.find(a => a.fecha === '2026-11-18' && a.turno === 'MANANA' && a.persona === N_);
+  ver('visitas: Jan va por la mañana del 18/11, con su nota', !!vm1 && vm1.nota === 'teletrabajo' && !vm1.fijo);
+  ver('visitas: el registro lo dice con palabras', /^Apunta a Jan a la mañana del 18\/11 \(nota: teletrabajo\)$/.test(ultimoCambio()));
+  ver('visitas: no sale en «Tus próximas comidas y cenas»', R.getDatos(VV).misProximas.every(a => a.turno !== 'MANANA' && a.turno !== 'TARDE'));
+  // también la comida del mismo día: son dos cosas distintas
+  dv = R.guardarPersona(N_, { turnos: [{ fecha: '2026-11-18', turno: 'COMIDA', apuntado: true }] }, N_, VV);
+  ver('visitas: la mañana y la comida del mismo día, las dos', ['MANANA', 'COMIDA'].every(t => dv.apuntes.some(a => a.fecha === '2026-11-18' && a.turno === t && a.persona === N_)));
+  // todas las semanas por la tarde, sin perder sus otros días fijos
+  const fijosJan = dv.fijos.filter(f => f.persona === N_).map(f => ({ dow: f.dow, turno: f.turno }));
+  dv = R.guardarPersona(M_, { fijos: [{ dow: 3, turno: 'TARDE' }] }, M_, VV);
+  ver('visitas: Mercedes va todos los miércoles por la tarde', dv.fijos.some(f => f.persona === M_ && f.dow === 3 && f.turno === 'TARDE') &&
+    dv.apuntes.some(a => a.fecha === '2026-11-18' && a.turno === 'TARDE' && a.persona === M_ && a.fijo));
+  ver('visitas: el registro del fijo, con palabras', /^Mercedes va siempre los miércoles \(tarde\)$/.test(ultimoCambio()));
+  dv = R.guardarPersona(N_, { fijos: fijosJan.concat([{ dow: 1, turno: 'MANANA' }]) }, N_, VV);
+  ver('visitas: un fijo de mañana se suma a los de comer y cenar', fijosJan.every(x => dv.fijos.some(f => f.persona === N_ && f.dow === x.dow && f.turno === x.turno)) && dv.fijos.some(f => f.persona === N_ && f.dow === 1 && f.turno === 'MANANA'));
+  // quitarse un día que va siempre por la tarde: solo ese día
+  dv = R.guardarPersona(M_, { turnos: [{ fecha: '2026-11-18', turno: 'TARDE', apuntado: false }] }, M_, VV);
+  ver('visitas: quitar un miércoles por la tarde deja los demás', !dv.apuntes.some(a => a.fecha === '2026-11-18' && a.turno === 'TARDE' && a.persona === M_) && dv.fijos.some(f => f.persona === M_ && f.turno === 'TARDE'));
+  // lo de ayer: una visita pasada no cuenta en sus números (medallas e informe)
+  R.guardarPersona(N_, { turnos: [{ fecha: '2026-11-11', turno: 'MANANA', apuntado: true }, { fecha: '2026-11-12', turno: 'TARDE', apuntado: true }] }, N_, VV);
+  const numDespues = R.misNumeros(N_);
+  ver('visitas: no cuentan en sus números ni en sus puntos', numDespues.total === numAntes.total && numDespues.puntos === numAntes.puntos);
+  // lo raro: un turno que no existe, y una visita en un día no válido
+  err = ''; try { R.guardarPersona(N_, { turnos: [{ fecha: '2026-11-18', turno: 'SIESTA', apuntado: true }] }, N_, VV); } catch (e) { err = e.message; }
+  ver('visitas: un turno que no existe, no', /Turno no válido/.test(err));
+  err = ''; try { R.guardarPersona(N_, { fijos: [{ dow: 9, turno: 'MANANA' }] }, N_, VV); } catch (e) { err = e.message; }
+  ver('visitas: un fijo en un día que no existe, no', /Día fijo no válido/.test(err));
+  // y quitarse del todo
+  dv = R.guardarPersona(N_, { turnos: [{ fecha: '2026-11-18', turno: 'MANANA', apuntado: false }] }, N_, VV);
+  ver('visitas: quitarse de la mañana no toca la comida', !dv.apuntes.some(a => a.fecha === '2026-11-18' && a.turno === 'MANANA' && a.persona === N_) && dv.apuntes.some(a => a.fecha === '2026-11-18' && a.turno === 'COMIDA' && a.persona === N_));
+}

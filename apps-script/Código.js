@@ -32,7 +32,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 4.58.0
+ * Versión 5.28.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -47,6 +47,11 @@ const HOJA_ALIAS = 'MESA_ALIAS';
 const HOJA_EVENTOS = 'MESA_EVENTOS';
 const HOJA_VISITAS = 'MESA_VISITAS';  // v4.58: PERSONA_ID | ULTIMA_VEZ | VECES (la última vez que cada uno abrió la web; como mucho, una vez por hora)  // v4.28: los eventos (castañada, PortAventura…) con quién va
 const TURNOS = ['COMIDA', 'CENA', 'DORMIR'];
+// v5.28 (T0586): las visitas, ir por la mañana o por la tarde sin comer ni cenar. Se apuntan como un turno más
+// (MESA_APUNTES y MESA_FIJOS), pero no cuentan en la mesa, el servicio, los huecos, las medallas ni el informe:
+// leerApuntes_ y leerFijos_ dan solo comida, cena y noche; las visitas, solo con leerApuntesTodos_ y leerFijosTodos_.
+const VISITAS = ['MANANA', 'TARDE'];
+const TODOS_TURNOS = ['MANANA', 'COMIDA', 'TARDE', 'CENA', 'DORMIR'];
 const MENUS_BASE = ['\uD83C\uDF15 Entero', '\uD83C\uDF17 Medio', '\uD83C\uDF7C Nada'];  // luna llena, media luna y biberón, escritos así para que no se estropeen al copiar
 const COL_MENU = 6;      // F en PERSONAS
 const COL_ALERGIAS = 7;  // G en PERSONAS
@@ -187,8 +192,8 @@ function datos_(ss, p) {
   let desde = esFecha_(p.desde) ? p.desde : lunesDe_(hoy);
   let hasta = esFecha_(p.hasta) ? p.hasta : sumarDias_(desde, 11);
   if (hasta < desde || diasEntre_(desde, hasta) > MAX_DIAS_RANGO) hasta = sumarDias_(desde, 11);
-  const crudos = leerApuntes_(ss);
-  const fijos = leerFijos_(ss);
+  const crudos = leerApuntesTodos_(ss);  // v5.28: con las visitas
+  const fijos = leerFijosTodos_(ss);
   let url = config.urlCompartir;
   if (!url) { try { url = ScriptApp.getService().getUrl(); } catch (e) { url = ''; } }
   return {
@@ -199,7 +204,7 @@ function datos_(ss, p) {
     editores: leerEditores_(ss, config.excluir),
     menus: opcionesMenu_(personas),
     listas: listas_(ss, personas),
-    apuntes: efectivos_(crudos, fijos, desde, hasta),
+    apuntes: efectivos_(crudos, fijos, desde, hasta, TODOS_TURNOS),  // v5.28: también las visitas (MANANA y TARDE)
     fijos: fijos.filter(function (f) { return !f.hasta || f.hasta >= hoy; }),
     dias: leerDias_(ss).filter(function (d) { return d.fecha >= desde && d.fecha <= hasta; }),
     admins: config.admins,  // v4.58: quién ve los Ajustes
@@ -626,7 +631,9 @@ function aFilaApunte_(f) {
     String(Number(f[9]) > 0 ? Math.floor(Number(f[9])) : '')];
 }
 
-function leerApuntes_(ss) { return memo_('apuntes', function () { return leerApuntesSin_(ss); }); }
+function leerApuntesTodos_(ss) { return memo_('apuntes', function () { return leerApuntesSin_(ss); }); }
+/** v5.28: solo comida, cena y noche (lo que cuenta en la mesa, las medallas y el informe), sin las visitas */
+function leerApuntes_(ss) { return leerApuntesTodos_(ss).filter(function (a) { return TURNOS.indexOf(a.turno) !== -1; }); }
 function leerApuntesSin_(ss) {
   const alias = resolverAlias_(ss);
   return abrirTabla_(ss.getSheetByName(HOJA_APUNTES), COLS_APUNTES, aFilaApunte_).vivas().map(function (x) {
@@ -645,7 +652,8 @@ function aFilaFijo_(f) {
     f[8] instanceof Date ? Utilities.formatDate(f[8], TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(f[8] || '')];
 }
 
-function leerFijos_(ss) { return memo_('fijos', function () { return leerFijosSin_(ss); }); }
+function leerFijosTodos_(ss) { return memo_('fijos', function () { return leerFijosSin_(ss); }); }
+function leerFijos_(ss) { return leerFijosTodos_(ss).filter(function (f) { return TURNOS.indexOf(f.turno) !== -1; }); }
 function leerFijosSin_(ss) {
   const alias = resolverAlias_(ss);
   return abrirTabla_(hojaFijos_(ss), COLS_FIJOS, aFilaFijo_).vivas().map(function (x) {
@@ -736,7 +744,7 @@ function huerfanos_(crudos, fijos, todos, hoy) {
  * Quién va de verdad cada día: los fijos de ese día de la semana, más los apuntes sueltos,
  * menos los «no voy» (ESTADO = NO). Devuelve { fecha, turno, persona, nota, fijo }.
  */
-function efectivos_(crudos, fijos, desde, hasta) {
+function efectivos_(crudos, fijos, desde, hasta, turnos) {
   const out = [];
   const porDia = {};
   crudos.forEach(function (a) {
@@ -745,7 +753,7 @@ function efectivos_(crudos, fijos, desde, hasta) {
   });
   for (let d = desde; d <= hasta; d = sumarDias_(d, 1)) {
     const dow = diaSemana_(d);
-    TURNOS.forEach(function (t) {
+    (turnos || TURNOS).forEach(function (t) {
       const mapa = {};
       const orden = [];
       fijos.forEach(function (f) {
@@ -850,7 +858,7 @@ function guardarPersona(personaId, cambios, quien, vista) {
 
     const cierres = [];
     if (cambios.turnos && cambios.turnos.length) {
-      const fijos = leerFijos_(ss);
+      const fijos = leerFijosTodos_(ss);
       const alias = resolverAlias_(ss);
       const tabla = abrirTabla_(ss.getSheetByName(HOJA_APUNTES), COLS_APUNTES, aFilaApunte_);
       cambios.turnos.forEach(function (t) {
@@ -945,7 +953,7 @@ function guardarFijos_(ss, p, lista, autor, registro) {
   const quiere = {};
   lista.forEach(function (x) {
     const dow = Number(x.dow);
-    if (!(dow >= 0 && dow <= 6) || TURNOS.indexOf(x.turno) === -1) throw new Error('Día fijo no válido.');
+    if (!(dow >= 0 && dow <= 6) || TODOS_TURNOS.indexOf(x.turno) === -1) throw new Error('Día fijo no válido.');
     quiere[dow + '|' + x.turno] = true;
   });
   const alias = resolverAlias_(ss);
@@ -1479,7 +1487,7 @@ function validarDia_(config, fecha) {
 }
 
 function validarTurno_(config, fecha, turno) {
-  if (TURNOS.indexOf(turno) === -1) throw new Error('Turno no válido.');
+  if (TODOS_TURNOS.indexOf(turno) === -1) throw new Error('Turno no válido.');
   validarDia_(config, fecha);
 }
 
@@ -1889,7 +1897,7 @@ function aHora_(v, porDefecto) {
   return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : porDefecto;
 }
 
-function nombreTurno_(t) { return t === 'CENA' ? 'cena' : (t === 'DORMIR' ? 'noche' : 'comida'); }
+function nombreTurno_(t) { return { CENA: 'cena', DORMIR: 'noche', MANANA: 'mañana', TARDE: 'tarde' }[t] || 'comida'; }
 function texto_(v) { return v instanceof Date ? Utilities.formatDate(v, TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(v || ''); }
 function esSi_(v) { return v === true || String(v).toUpperCase() === 'TRUE'; }
 function esFecha_(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')); }

@@ -211,6 +211,48 @@
   .dias-semana .dia:not(.hoy):not(.pasado) .dia-cab { background: #FFE2C2; border-bottom: 1px solid #D49A5E; }
   @media (min-width: 760px) { .dia .comida { grid-template-columns: 50px minmax(0, 1fr); } .turno-lado { font-size: 10px; } .dia-hoja { display: none; } }
   .comida + .comida { border-top: 1px solid var(--color-linea); }
+  /* v5.28 (T0586): las visitas, arriba dentro del bloque de la comida (la mañana) o de la cena (la tarde), separadas de la mesa */
+  .visita-dentro { display: grid; justify-items: start; gap: 0; padding-bottom: 6px; border-bottom: 1px dashed var(--color-linea); font-size: 15px; line-height: 1.35; color: var(--color-texto); }
+  .visita-et { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+  .visita-et svg { width: 15px; height: 15px; }
+  .visita-n { font-weight: 700; }
+  .turno-comida .visita-et { color: var(--t-comida-tinta); }
+  .turno-cena .visita-et { color: var(--t-cena-tinta); }
+  .visita-nombre { background: none; border: 0; padding: 6px 0; min-height: 40px; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0 5px; text-align: left; font: inherit; color: var(--color-texto); font-weight: 700; cursor: pointer; }
+  .visita-nombre .vn { text-decoration: underline dotted; text-underline-offset: 4px; }
+  .visita-nombre small { font-size: 14px; font-weight: 500; color: var(--color-texto); text-decoration: none; }
+  .visita-fila { display: block; }
+  .visita-fila .visita-nombre, .visita-fila .visita-mas-n { display: inline; min-height: 0; padding: 10px 0; }
+  .visita-mas-n { background: none; border: 0; padding: 6px 4px; min-height: 40px; font: inherit; font-weight: 700; color: var(--color-principal-oscuro); cursor: pointer; }
+  .nota-chip.desde { font-weight: 600; }
+  /* v5.28: la novedad de las visitas, una vez (hasta que se cierra) */
+  .novedad { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin: 0 0 14px; padding: 12px 14px; border-radius: var(--radio); background: var(--color-principal-claro); }
+  .novedad p { margin: 0; flex: 1 1 260px; }
+  .novedad button { flex: none; }
+  /* v5.28: tu día al apuntarte: las franjas en fila y, debajo, cada una marcada con su nota */
+  .franjas-op { display: flex; flex-wrap: wrap; gap: 6px; }
+  .franja { position: relative; }
+  .franja input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .franja span { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 0 12px; border: 1.5px solid var(--color-linea); border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--color-texto-suave); cursor: pointer; background: #fff; }
+  .franja span svg { width: 16px; height: 16px; }
+  .franja input:checked + span { border-color: var(--color-principal); background: var(--color-principal-claro); color: var(--color-principal-oscuro); }
+  .franja input:focus-visible + span { outline: 2px solid var(--color-principal); outline-offset: 2px; }
+  .franjas-detalle { display: grid; gap: 8px; }
+  .franjas-detalle:empty { display: none; }
+  .franja-detalle { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; }
+  .fd-et { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 800; color: var(--color-principal-oscuro); }
+  .fd-et svg { width: 15px; height: 15px; }
+  .fd-et small { font-weight: 600; color: var(--color-texto-suave); }
+  .franja-detalle input { font: inherit; font-weight: 400; min-height: 44px; padding: 8px 12px; border-radius: calc(var(--radio) / 2); border: 1px solid var(--color-principal-oscuro); background: #fff; color: var(--color-texto); min-width: 0; }
+  .franja-detalle input[type=text] { width: 100%; }
+  .franja-detalle > * { grid-column: 1 / -1; }
+  .comida.con-detalle { cursor: pointer; }  /* v5.28: al tocar el bloque, todo lo suyo */
+  .se-quita .fd-et { color: var(--color-texto-suave); }
+  .fd-fuera-abrir { justify-self: start; font-size: 14px; padding: 4px 0; }
+  .fd-fuera { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 700; }
+  .fd-contador { display: inline-flex; align-items: center; gap: 6px; }
+  .franja-detalle .fd-contador input { width: 52px; flex: none; text-align: center; font-weight: 800; padding: 8px 4px; }
+  .franja-detalle .fd-contador button { width: 44px; height: 44px; min-width: 44px; flex: none; padding: 0; font-size: 22px; line-height: 1; border-radius: 50%; }
   .comida-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .comida-cab h4 { margin: 0; font-size: 15px; font-weight: 800; color: var(--color-principal-oscuro); }
   button.mas {
@@ -1177,7 +1219,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.27.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.28.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1198,6 +1240,10 @@
   const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   const TURNOS = [{ id: 'COMIDA', nombre: 'Comida' }, { id: 'CENA', nombre: 'Cena' }, { id: 'DORMIR', nombre: 'Noche' }];  // v5.19: «Noche» en todas partes
+  /* v5.28 (T0586): las visitas, ir por la mañana o por la tarde sin comer ni cenar. Se apuntan como un turno más, pero no cuentan
+     en la mesa, el servicio, los huecos, «Falta alguien», las medallas ni el informe. «Por la mañana», nunca «Mañana» (sería el día de mañana) */
+  const VISITAS = [{ id: 'MANANA', nombre: 'Por la mañana' }, { id: 'TARDE', nombre: 'Por la tarde' }];
+  function esVisita(turno) { return turno === 'MANANA' || turno === 'TARDE'; }
   const CLAVE_YO = 'mesa-abuela-yo';  // se mantiene del nombre antiguo para que nadie tenga que volver a elegir
   const GENERACIONES = [
     { clave: 'Tios', clase: 'g-hijos', nombre: 'hijos' },
@@ -1224,7 +1270,9 @@
   const ICONO_TURNO_SVG = {
     COMIDA: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M7 3v8M5 3v4a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 2-2 6 0 8v10"/></svg>',
     CENA: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
-    DORMIR: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5M7 11.5a1.5 1.5 0 1 0 0-.01"/></svg>' };
+    DORMIR: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5M7 11.5a1.5 1.5 0 1 0 0-.01"/></svg>',
+    MANANA: SVG('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>'),  // v5.28: sol
+    TARDE: SVG('<path d="M5 17a7 7 0 0 1 14 0"/><path d="M2.5 17h19M12 6v2.5M4.6 9.6l1.8 1.8M19.4 9.6l-1.8 1.8M8 21h8"/>') };  // v5.28: sol que baja
   const ICONO_IMPRIMIR = SVG('<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="1"/><path d="M7 14h10v7H7z"/>');
 
   const hayServidor = typeof google !== 'undefined' && google.script && google.script.run;
@@ -1416,9 +1464,9 @@
     return { desde: ini < lunesSel ? ini : lunesSel, hasta: fin };
   }
   function cubierto() { const n = necesita(); return !!rangoCargado && rangoCargado.desde <= n.desde && rangoCargado.hasta >= n.hasta; }
-  function etiquetaTurno(turno) { return turno === 'CENA' ? 'Cena' : (turno === 'DORMIR' ? 'Noche' : 'Comida'); }
+  function etiquetaTurno(turno) { return { CENA: 'Cena', DORMIR: 'Noche', MANANA: 'Por la mañana', TARDE: 'Por la tarde' }[turno] || 'Comida'; }
   function horaDe(turno) { return turno === 'CENA' ? datos.config.horaCena : (turno === 'DORMIR' ? (datos.config.horaDormir || '22:30') : datos.config.horaComida); }
-  function nombreTurno(fecha, turno) { return (turno === 'CENA' ? 'cena' : (turno === 'DORMIR' ? 'noche' : 'comida')) + ' del ' + DIAS[dow(fecha)].toLowerCase() + ' ' + ddmm(fecha); }
+  function nombreTurno(fecha, turno) { return ({ CENA: 'cena', DORMIR: 'noche', MANANA: 'mañana', TARDE: 'tarde' }[turno] || 'comida') + ' del ' + DIAS[dow(fecha)].toLowerCase() + ' ' + ddmm(fecha); }
   function minutosHasta(fecha, turno) {
     const h = horaDe(turno).split(':').map(Number);
     const p = fecha.split('-').map(Number);
@@ -1426,7 +1474,7 @@
     const ahora = window.MESA_AHORA ? new Date(window.MESA_AHORA) : new Date();
     return Math.round((objetivo - ahora) / 60000);
   }
-  function esTarde(fecha, turno) { const m = minutosHasta(fecha, turno); return m > 0 && m < datos.config.avisoHoras * 60; }
+  function esTarde(fecha, turno) { if (esVisita(turno)) return false;  /* v5.28: una visita no es de última hora */ const m = minutosHasta(fecha, turno); return m > 0 && m < datos.config.avisoHoras * 60; }
 
   /* ---------- Personas ---------- */
   function persona(id) { return datos.personas.find(function (p) { return p.id === id; }); }
@@ -1460,7 +1508,7 @@
   function compania(ids, turno) { return turno === 'DORMIR' || turno === 'CENA' ? ids : ids.filter(function (id) { return !esServicio(persona(id)); }); }
   function servicioDe(ids, turno) { return turno === 'DORMIR' || turno === 'CENA' ? [] : ids.filter(function (id) { return esServicio(persona(id)); }); }
   /* v4.74: en esa comida o cena no hay servicio: quien vaya, que llegue antes a prepararla y a estar con la abuela */
-  function sinServicio(fecha, turno) { return turno !== 'DORMIR' && !idsDe(fecha, turno).some(function (id) { return esServicio(persona(id)); }); }
+  function sinServicio(fecha, turno) { return turno !== 'DORMIR' && !esVisita(turno) && !idsDe(fecha, turno).some(function (id) { return esServicio(persona(id)); }); }
   function avisoSinServicio(fecha, turno) { return 'No hay servicio: llega antes para preparar la ' + (turno === 'CENA' ? 'cena' : 'comida') + ' y estar con la abuela.'; }
   function notaDia(fecha) { return datos.dias.find(function (d) { return d.fecha === fecha; }); }
   function fijosDe(id) { return (datos.fijos || []).filter(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy()); }); }
@@ -1472,7 +1520,7 @@
     const mas = a && a.acompanantes ? '<span class="mas-n">+' + a.acompanantes + '</span>' : '';  // v4.15: acompañantes
     return '<button type="button" class="p ' + clase(p) + (id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(id) + '"' +
       (fecha ? ' data-fecha="' + fecha + '" data-turno="' + turno + '"' : '') + ' aria-label="Editar a ' + esc(nombre) + '"><b>' + esc(nombre) + mas + marcaMenu(p) + '</b>' +
-      (a && a.nota ? '<span class="nota-chip">' + esc(a.nota) + '</span>' : '') + '</button>';
+      (a && a.nota ? '<span class="nota-chip">' + esc(a.nota) + '</span>' : '') + (fecha && desdeVisita(fecha, turno, id) ? '<span class="nota-chip desde">' + esc(desdeVisita(fecha, turno, id)) + '</span>' : '') + '</button>';  // v5.28
   }
   /* Marca en la tarjeta para medio menú o sin menú (entero no lleva nada) */
   const ICONO_MEDIO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>';
@@ -1516,7 +1564,7 @@
     const h = hoy();
     if (fecha !== h) return fecha < h;
     if (turno === 'DORMIR') return false;
-    const hora = turno === 'CENA' ? datos.config.horaCena : datos.config.horaComida;
+    const hora = turno === 'CENA' || turno === 'TARDE' ? datos.config.horaCena : datos.config.horaComida;  // v5.28: la mañana pasa con la comida; la tarde, con la cena
     const m = function (t) { return Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)); };
     return m(ahoraLocal().slice(11, 16)) >= m(hora || '14:00') + 120;
   }
@@ -1924,9 +1972,10 @@
       const faltaAlguien = motivo === null && !comp.length && !paso;
       const etiq = t.id === 'DORMIR' ? 'Noche' : t.nombre;  // v4.99: la etiqueta de color a la izquierda
       const conMas = !modoAbuela();  // v4.99: el «+», en la columna de color; v5.1: siempre (también lo pasado, los eventos y lo que no hace falta), menos en la vista sencilla
-      html += '<div class="comida turno-' + t.id.toLowerCase() + (motivo !== null ? ' no-hace-falta' : '') + (paso ? ' ya-paso' : '') + '"><div class="turno-lado"><span class="turno-et" aria-hidden="true">' + ICONO_TURNO_SVG[t.id] + '<span>' + etiq + '</span></span>' +
-        (conMas ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div><div class="turno-cont"><div class="comida-cab"><h4 class="oculto">' + etiq + '</h4>' +
-        (paso && motivo === null && !comp.length ? '<span class="nadie suave">No fue nadie</span>' :
+      const conDetalle = ids.length || (VISITA_DE[t.id] && idsDe(fecha, VISITA_DE[t.id]).length);  // v5.28: al tocar el bloque, todo lo suyo
+      html += '<div class="comida turno-' + t.id.toLowerCase() + (motivo !== null ? ' no-hace-falta' : '') + (paso ? ' ya-paso' : '') + (conDetalle ? ' con-detalle" data-detalle-turno="' + fecha + '|' + t.id : '') + '"><div class="turno-lado"><span class="turno-et" aria-hidden="true">' + ICONO_TURNO_SVG[t.id] + '<span>' + etiq + '</span></span>' +
+        (conMas ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div><div class="turno-cont">' + (t.id === 'COMIDA' ? lineaVisita(fecha, VISITAS[0]) : t.id === 'CENA' ? lineaVisita(fecha, VISITAS[1]) : '') + '<div class="comida-cab"><h4 class="oculto">' + etiq + '</h4>' +  // v5.28: la mañana, dentro de la comida; la tarde, dentro de la cena
+        (paso && motivo === null && !comp.length ? '<span class="nadie suave">' + (VISITA_DE[t.id] && soloVisita(fecha, VISITA_DE[t.id]).length ? (t.id === 'COMIDA' ? 'Nadie se quedó a comer' : 'Nadie se quedó a cenar') : 'No fue nadie') + '</span>' :  // v5.28: si fue alguien por la mañana o por la tarde
           faltaAlguien && modoAbuela() ? '<span class="nadie suave">Aún sin apuntar</span>' : motivo === null && modoAbuela() ? '' :
           faltaAlguien ? '<button type="button" class="falta-boton' + (diasEntre(hoy(), fecha) <= 1 ? ' pronto' : '') + '"' + datosTurno + ' aria-label="Falta alguien en la ' + nombreTurno(fecha, t.id) + ': apúntate">' + ICONO_MAS + '<span><b>Falta alguien</b><small>' + (servicioYo() ? 'Toca para apuntarte' : '¡Apúntate!') + '</small></span></button>'  /* v5.22: un botón que se ve y apunta (la razón de ser de la web) */  // v5.15: una sola frase; en rojo solo hoy y mañana  // v5.2: aviso, no botón (el «+» de la izquierda añade)
           : '') + '</div>';
@@ -1947,6 +1996,37 @@
     return html + '</article>';
   }
 
+  /* v5.28 (T0586): quién va por la mañana o por la tarde sin comer ni cenar: arriba, dentro del bloque de la comida (la mañana)
+     o de la cena (la tarde), en pequeño y separado de quién se sienta a la mesa. Solo si hay alguien; sin «+» propio
+     (se apunta desde cualquier «+» del día) y nunca «Falta alguien». */
+  // v5.28: en la mañana salen todos los que van (cuántos y quién), y quien además se queda a comer lleva «se queda a comer»;
+  // en la comida, solo «desde la mañana», sin repetir su nota. Lo mismo la tarde y la cena
+  const COMIDA_DE = { MANANA: 'COMIDA', TARDE: 'CENA' }, VISITA_DE = { COMIDA: 'MANANA', CENA: 'TARDE' };
+  function soloVisita(fecha, v) { const come = idsDe(fecha, COMIDA_DE[v]); return idsDe(fecha, v).filter(function (id) { return come.indexOf(id) === -1; }); }
+  function desdeVisita(fecha, turno, id) {  // «desde la mañana: teletrabajo», si además de comer va por la mañana
+    const a = VISITA_DE[turno] ? apunte(fecha, VISITA_DE[turno], id) : null;
+    return a ? 'desde la ' + (turno === 'COMIDA' ? 'mañana' : 'tarde') : '';  // la nota de la mañana va en la mañana, no se repite
+  }
+  const visAbiertas = new Set();  // las visitas desplegadas («fecha|turno»), cuando son más de dos
+  function lineaVisita(fecha, v) {
+    const ids = idsDe(fecha, v.id);
+    if (!ids.length) return '';
+    const come = idsDe(fecha, COMIDA_DE[v.id]);
+    const queda = v.id === 'MANANA' ? 'se queda a comer' : 'se queda a cenar';
+    const apodo = function (id) { return ((persona(id) || deBaja(id) || {}).apodo) || id; };
+    const et = '<span class="visita-et">' + ICONO_TURNO_SVG[v.id] + esc(v.nombre) + ' <span class="visita-n">· ' + ids.length + '</span></span>';
+    if (modoAbuela()) return '<div class="visita-dentro">' + et + '<span>' + (ids.length === 1 ? 'Viene ' : 'Vienen ') + esc(lista(ids.map(apodo))) + '</span></div>';
+    const boton = function (id, conNota) {
+      const a = apunte(fecha, v.id, id);
+      const extra = [conNota && a && a.nota ? a.nota : '', conNota && come.indexOf(id) !== -1 ? queda : ''].filter(Boolean).join(' · ');
+      return '<button type="button" class="visita-nombre' + (id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(id) + '" data-fecha="' + fecha + '" data-turno="' + v.id + '" aria-label="Cambiar lo de ' + esc(apodo(id)) + ' ese día"><span class="vn">' + esc(apodo(id)) + '</span>' + (extra ? ' <small>(' + esc(extra) + ')</small>' : '') + '</button>';
+    };
+    const k = fecha + '|' + v.id, recogida = ids.length > 2 && !visAbiertas.has(k);
+    const cuerpo = recogida
+      ? '<span class="visita-fila">' + boton(ids[0]) + ', ' + boton(ids[1]) + ' <button type="button" class="visita-mas-n" data-vis-mas="' + k + '" aria-expanded="false">y ' + (ids.length - 2) + ' más</button></span>'
+      : ids.map(function (id) { return boton(id, true); }).join('') + (ids.length > 2 ? '<button type="button" class="visita-mas-n" data-vis-mas="' + k + '" aria-expanded="true">Ver menos</button>' : '');
+    return '<div class="visita-dentro">' + et + cuerpo + '</div>';
+  }
   /* v4.75: el resumen de una comida, cena o noche: cuántos (a la mesa, con la abuela), por familias y el servicio; al tocarlo, el desglose */
   function porFamilias(ids) {
     const n = {}, orden = [];
@@ -1965,12 +2045,13 @@
     const grupos = {}, orden = [];
     fam.forEach(function (id) { const p = persona(id); const f = p && p.familia && p.familia !== 'Otros' ? p.familia : 'Otros'; if (!grupos[f]) { grupos[f] = []; orden.push(f); } grupos[f].push(id); });
     const clave = function (f) { return fecha + '|' + turno + '|' + f; };
-    return (total ? '<button type="button" class="rt-total" data-detalle-turno="' + fecha + '|' + turno + '" aria-label="Ver todos los de la ' + esc(nombreTurno(fecha, turno)) + '"><b>' + total + '</b>' +
+    const verTotal = servicioYo() || modoAbuela();  // v5.28: para la familia no hace falta a simple vista; está al tocar el bloque
+    return (total && verTotal ? '<button type="button" class="rt-total" data-detalle-turno="' + fecha + '|' + turno + '" aria-label="Ver todos los de la ' + esc(nombreTurno(fecha, turno)) + '"><b>' + total + '</b>' +
         (al.length ? '<span class="rt-marca rt-alergias">alergias</span>' : '') + '<span class="rt-flecha" aria-hidden="true">›</span></button>' : '') +
       (orden.length ? '<div class="rt-familias">' + orden.map(function (f) {
         const ab = famAbiertas.has(clave(f)), ids2 = grupos[f];
         const extra = ids2.reduce(function (n, id) { return n + ((apunte(fecha, turno, id) || {}).acompanantes || 0); }, 0);
-        const notas = ids2.filter(conNota).map(function (id) { return '<span class="rt-nota"><b>' + esc((persona(id) || {}).apodo || id) + ':</b> ' + esc(apunte(fecha, turno, id).nota) + '</span>'; }).join('');
+        const notas = ids2.filter(function (id) { return conNota(id) || desdeVisita(fecha, turno, id); }).map(function (id) { return '<span class="rt-nota"><b>' + esc((persona(id) || {}).apodo || id) + ':</b> ' + esc([(apunte(fecha, turno, id) || {}).nota, desdeVisita(fecha, turno, id)].filter(Boolean).join(' · ')) + '</span>'; }).join('');  // v5.28: y «desde la mañana»
         return '<button type="button" class="rt-familia' + (ids2.indexOf(yo) !== -1 ? ' con-yo' : '') + '" data-rt-fam="' + esc(clave(f)) + '" aria-expanded="' + ab + '">' +
             '<span class="rt-cab"><b>' + esc(f) + '</b><span class="rt-n">' + ((ids2.length + extra) === 1 ? 'va 1' : 'van ' + (ids2.length + extra)) + '</span><span class="rt-flecha" aria-hidden="true">' + (ab ? '▴' : '▾') + '</span></span>' + (ab ? '' : notas) + '</button>' +
           (ab ? '<div class="gente rt-abierta">' + ids2.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '');
@@ -1993,6 +2074,7 @@
       (al.length ? '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>' : '') +
       orden.map(function (f) { return '<h3 class="dt-fam">' + esc(f === '?' ? 'Otros' : cortoFamilia(f)) + ' <small>' + (grupos[f].length === 1 ? '1 persona' : grupos[f].length + ' personas') + '</small></h3><div class="gente">' + grupos[f].map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>'; }).join('') +
       (serv.length ? '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '') +
+      (VISITA_DE[turno] && idsDe(fecha, VISITA_DE[turno]).length ? '<h3 class="dt-fam">' + esc(etiquetaTurno(VISITA_DE[turno])) + ' <small>' + (idsDe(fecha, VISITA_DE[turno]).length === 1 ? '1 persona' : idsDe(fecha, VISITA_DE[turno]).length + ' personas') + '</small></h3><div class="gente">' + idsDe(fecha, VISITA_DE[turno]).map(function (id) { return chip(id, fecha, VISITA_DE[turno]); }).join('') + '</div>' : '') +  // v5.28
       '<p class="ayuda">' + (servicioYo() ? 'Toca a alguien para ver quién es.' : 'Toca a alguien para cambiar lo suyo.') + '</p></div>' +
       '<div class="dlg-pie"><div class="botones">' + (!modoAbuela() && sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">' + (servicioYo() ? 'Apuntarme' : 'Añadir a alguien') + '</button>' : '') +
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
@@ -2002,7 +2084,7 @@
       const b = e.target.closest('[data-persona]');
       if (!b) return;
       cerrarDialogo();
-      if (servicioYo() && b.dataset.persona !== yo) abrirInfoPersona(b.dataset.persona); else abrirPersona(b.dataset.persona, fecha, turno);  // v4.86
+      if (servicioYo() && b.dataset.persona !== yo) abrirInfoPersona(b.dataset.persona); else abrirAnadir(fecha, turno, b.dataset.persona);  // v4.86; v5.28: su día entero
     });
   }
   let verPasados = false;  // v4.90
@@ -2011,6 +2093,8 @@
     if (e.target.closest('[data-volver-hoy]')) { desdeMovil = ''; diasMovil = 7; pintar(); window.scrollTo(0, 0); return; }  // v4.98
     if (e.target.closest('[data-mas-dias]')) { diasMovil += 7; if (cubierto()) pintarSemana(); else cargar(); }  // v4.97: siete días más, debajo
   });
+  const CLAVE_NOVEDAD = 'casa-abuela-novedad-visitas';  // v5.28
+  function novedadVista() { try { return localStorage.getItem(CLAVE_NOVEDAD) === '1'; } catch (e) { return true; } }
   function pintarSemana() {
     let html = '';
     if (hoy() < datos.config.inicio && lunesSel === lunesInicio()) html += '<p class="aviso">El calendario empieza el ' + diaLargo(datos.config.inicio).toLowerCase() + '.</p>';
@@ -2022,6 +2106,7 @@
       else if (!datos || sumar(hoy(), -1) >= datos.config.inicio) pasadosHtml = '<button type="button" class="enlace dias-antes" data-ver-pasados aria-expanded="' + verPasados + '">' + (verPasados ? 'Ocultar ayer y anteayer ▴' : '‹ Días anteriores') + '</button>';
       masHtml = '<button type="button" class="accion ver-mas-dias" data-mas-dias>Ver 7 días más</button>';
     }
+    if (!modoAbuela() && !servicioYo() && !novedadVista()) html += '<div class="novedad" role="status"><p><b>Novedad:</b> ahora puedes apuntarte por la mañana o por la tarde aunque no te quedes a comer o a cenar. Toca cualquier «+» del día y elige «Por la mañana» o «Por la tarde».</p><button type="button" class="accion" data-novedad-ok>Entendido</button></div>';  // v5.28
     html += '<div class="dias-semana">' + pasadosHtml + dias.map(function (f) { return bloqueDia(f, {}); }).join('') + masHtml + '</div>';
     $('semana-grande').innerHTML = html;
   }
@@ -4281,7 +4366,7 @@
   /* v4.7: quitar a alguien de la lista. En el Excel su fila se queda, con la fecha en Baja */
   function confirmarBaja(p) {
     const h = hoy();
-    const futuras = datos.apuntes.filter(function (a) { return a.persona === p.id && a.fecha >= h; }).length;
+    const futuras = datos.apuntes.filter(function (a) { return a.persona === p.id && a.fecha >= h && !esVisita(a.turno); }).length;
     const siempre = fijosDe(p.id).length;
     const quita = [futuras ? (futuras === 1 ? 'la comida que tiene apuntada' : 'las ' + futuras + ' comidas que tiene apuntadas') + ' de hoy en adelante' : '', siempre ? 'los días que va siempre' : ''].filter(Boolean);
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Quitar a ' + esc(p.apodo) + ' de la lista?</h2></div>' +
@@ -4326,7 +4411,7 @@
         $('bus-titulo').textContent = '';
       } else {
         res = candidatos.filter(function (p) { return sinAcentos(p.apodo + ' ' + (p.nombre || '') + ' ' + (p.apellido || '') + ' ' + p.familia + ' ' + deQuien(p)).indexOf(q) !== -1; }).slice(0, 15);
-        $('bus-titulo').textContent = res.length ? '' : 'No hay nadie con ese nombre en la lista.';
+        $('bus-titulo').textContent = res.length ? '' : (opciones.sinResultado || 'No hay nadie con ese nombre en la lista.');
       }
       $('bus-res').innerHTML = res.map(function (p) {
         return '<button type="button" class="p ' + (editor(p.id) ? 'g-otros' : clase(p)) + '" data-elegir="' + esc(p.id) + '" aria-pressed="' + (p.id === elegidoBuscador) + '"><b>' + esc(p.apodo) + (editor(p.id) ? '' : marcaMenu(p)) + '</b><small>' + esc(editor(p.id) ? '' : deQuien(p)) + '</small></button>';
@@ -4348,6 +4433,7 @@
       if (!b) return;
       elegidoBuscador = b.dataset.elegir;
       pintarRes();
+      if (opciones.alElegir) opciones.alElegir(elegidoBuscador);  // v5.28
     });
     pintarRes();
   }
@@ -4503,7 +4589,7 @@
   function recalcularMisProximas() {
     if (!yo) return;
     const h = hoy();
-    const mias = datos.apuntes.filter(function (a) { return a.persona === yo && a.fecha >= h; });
+    const mias = datos.apuntes.filter(function (a) { return a.persona === yo && a.fecha >= h && !esVisita(a.turno); });  // v5.28: «Tus próximas comidas y cenas», sin las visitas
     const fuera = (datos.misProximas || []).filter(function (a) { return a.fecha > rango().hasta; });
     datos.misProximas = mias.concat(fuera).sort(function (a, b) { return (a.fecha + a.turno).localeCompare(b.fecha + b.turno); }).slice(0, 12);
   }
@@ -4596,6 +4682,7 @@
   /* ---------- Ventanas ---------- */
   function abrirDialogo(html) {
     dlgCambiado = false;
+    dlgComprobar = null;  // v5.28: una ventana puede decir ella misma si hay algo que perder
     $dlg.innerHTML = html;
     if (!$dlg.open) { if (typeof $dlg.showModal === 'function') $dlg.showModal(); else $dlg.setAttribute('open', ''); }
     // v4.63: el foco, en el título (si no, el móvil abre solo el primer desplegable o la primera fecha)
@@ -4606,6 +4693,8 @@
   function errorDialogo(t) { const e = $('dlg-error'); if (e) { e.textContent = t; e.hidden = false; } }
   // El aviso «close» llega un momento después: si para entonces ya se ha abierto otra ventana, no se vacía (v4.12)
   $dlg.addEventListener('close', function () { if (!$dlg.open) $dlg.innerHTML = ''; });
+  let dlgComprobar = null;
+  const hayQuePerder = function () { if (!dlgComprobar) return dlgCambiado; try { return dlgComprobar(); } catch (e) { return dlgCambiado; } };
   let dlgCambiado = false;  // v4.91: si has escrito algo, tocar fuera pregunta antes de cerrar
   // v5.16: al cambiar algo, el error de antes se va; y donde no se escribe nada que perder, no se pregunta al salir
   const alCambiar = function (e) { const er = $('dlg-error'); if (er) er.hidden = true; if (e.target.closest('[data-no-preguntar]')) return; dlgCambiado = true; };
@@ -4622,10 +4711,10 @@
   }
   $dlg.addEventListener('click', function (e) {
     if (e.target !== $dlg || pidiendoClave) return;
-    if (dlgCambiado) { preguntarSalir(); return; }
+    if (hayQuePerder()) { preguntarSalir(); return; }
     cerrarDialogo();
   });
-  $dlg.addEventListener('cancel', function (e) { if (dlgCambiado && !pidiendoClave) { e.preventDefault(); preguntarSalir(); } });
+  $dlg.addEventListener('cancel', function (e) { if (hayQuePerder() && !pidiendoClave) { e.preventDefault(); preguntarSalir(); } });
   $dlg.addEventListener('cancel', function (e) { if (pidiendoClave) e.preventDefault(); });  // v4.17: la clave no se puede saltar
   function pie(textoGuardar, extra) {
     return '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones">' +
@@ -4659,7 +4748,7 @@
       const pa0 = parejaDe(p), hijos = datos.personas.filter(function (x) { return x.hijoDe && (x.hijoDe === p.id || (pa0 && x.hijoDe === pa0.id)); });
       if (hijos.length) extra.push([hijos.length === 1 ? 'Hijo' : 'Hijos', porNacimiento(hijos).map(function (x) { return x.apodo; }).join(', ')]);
       const fj = fijosDe(p.id);
-      if (fj.length) extra.push(['Va siempre', fj.map(function (f) { return DIAS[f.dow].toLowerCase() + (f.turno === 'COMIDA' ? ' a comer' : f.turno === 'CENA' ? ' a cenar' : ' a dormir'); }).join(', ')]);
+      if (fj.length) extra.push(['Va siempre', fj.map(function (f) { return DIAS[f.dow].toLowerCase() + ({ COMIDA: ' a comer', CENA: ' a cenar', MANANA: ' por la mañana', TARDE: ' por la tarde' }[f.turno] || ' a dormir'); }).join(', ')]);
       l.splice.apply(l, [sitio, 0].concat(extra));
     }
     // v4.38: con quién está casado y cuándo, y sus otras fechas (bautizo, santo…)
@@ -4694,15 +4783,16 @@
     if (!p) { const b = deBaja(id); if (b) aviso(b.apodo + ' ya no está en la lista.'); return; }
     if (esAbuelo) { fecha = null; turno = null; }
     const a = fecha ? apunte(fecha, turno, id) : null;
-    const fijosAntes = fijosDe(id).map(function (f) { return f.dow + '|' + f.turno; });
+    const fijosAntes = fijosDe(id).filter(function (f) { return !esVisita(f.turno); }).map(function (f) { return f.dow + '|' + f.turno; });
+    const fijosVisita = fijosDe(id).filter(function (f) { return esVisita(f.turno); }).map(function (f) { return { dow: f.dow, turno: f.turno }; });  // v5.28: la tabla no las enseña, pero no se pierden al guardar
     let html = '<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(p.apodo) + '</h2><div><span class="p ' + clase(p) + '"><small>' + esc(deQuien(p)) + '</small></span></div></div><div class="dlg-cuerpo">';
     /* v4.12: desde Semana y Hoy y mañana, solo ese turno; sus datos se cambian en Personas */
     if (fecha) {
       html += datosBasicos(p);  // v4.36: quién es (solo se lee; se cambia en su ficha)
       html += '<fieldset><legend>' + esc(nombreTurno(fecha, turno).replace(/^./, function (c) { return c.toUpperCase(); })) + '</legend>' +
-        '<label class="check"><input type="checkbox" data-k="' + fecha + '|' + turno + '"' + (a ? ' checked' : '') + '> Viene' + (a && a.fijo ? ' (va siempre este día)' : '') + '</label>' +
+        '<label class="check"><input type="checkbox" data-k="' + fecha + '|' + turno + '"' + (a ? ' checked' : '') + '> ' + (esVisita(turno) ? 'Va' : 'Viene') + (a && a.fijo ? ' (va siempre este día)' : '') + '</label>' +
         '<label class="campo" for="dlg-nota">Nota para ese día<input id="dlg-nota" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: llega tarde" value="' + esc(a ? a.nota : '') + '"></label>' +
-        campoAcompanantes(a ? a.acompanantes : 0) + '</fieldset>' +
+        (esVisita(turno) ? '' : campoAcompanantes(a ? a.acompanantes : 0)) + '</fieldset>' +
         '<button type="button" class="enlace ver-ficha" id="dlg-ver-ficha">Ir a su ficha para cambiar sus datos</button></div>' + pie('Guardar');
       abrirDialogo(html);
       $('dlg-ver-ficha').addEventListener('click', function () { irAPersona(id); });  // la ficha se abre en la misma ventana
@@ -4791,7 +4881,7 @@
       if (lo.valor !== undefined && JSON.stringify(lo.valor) !== JSON.stringify(p.fechas || [])) cambios.fechas = lo.valor;
       const fijosAhora = Array.from($dlg.querySelectorAll('input[data-fijo]:checked')).map(function (c) { return c.dataset.fijo; });
       if (fijosAhora.sort().join(',') !== fijosAntes.slice().sort().join(',')) {
-        cambios.fijos = fijosAhora.map(function (k) { return { dow: Number(k.split('|')[0]), turno: k.split('|')[1] }; });
+        cambios.fijos = fijosAhora.map(function (k) { return { dow: Number(k.split('|')[0]), turno: k.split('|')[1] }; }).concat(fijosVisita);
       }
       }
       if (!cambios.turnos.length) delete cambios.turnos;
@@ -4836,26 +4926,127 @@
     if (!/^\d+$/.test(v) || Number(v) > 20) { errorDialogo('En «Viene con», pon cuántos acompañantes, de 0 a 20.'); return null; }
     return Number(v);
   }
-  function abrirAnadir(fecha, turno) {
-    const ya = idsDe(fecha, turno), pasado = yaPaso(fecha, turno);  // v5.15: lo que ya pasó, «Apuntar que fue», sin avisos de futuro
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + (pasado ? 'Apuntar quién fue a la ' : 'Añadir a la ') + esc(nombreTurno(fecha, turno)) + '</h2></div>' +
-      '<div class="dlg-cuerpo">' + (pasado ? '<p class="ayuda">Ya pasó: así queda apuntado quién fue.</p>' : '') + (!pasado && sinServicio(fecha, turno) && !fueraTurno(fecha, turno) ? '<p class="aviso-servicio">' + esc(avisoSinServicio(fecha, turno)) + '</p>' : '') + buscadorHtml('Quién viene') +
-      '<label class="campo" for="dlg-nota">Nota para ese día (si hace falta)<input id="dlg-nota" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: llega a las 21:30"></label>' +
-      campoAcompanantes(0) + '</div>' +
-      pie(pasado ? 'Apuntar que fue' : 'Apuntar'));
-    montarBuscador({ excluir: ya, seleccion: ya.indexOf(yo) === -1 && persona(yo) ? yo : '', alta: true });
+  /* v5.28 (T0586): tu día, en una sola ventana. Arriba, quién; debajo, sus franjas (por la mañana, comida, por la tarde, cena, noche):
+     marcadas las que ya tiene y, si se entra desde un «+», también la tocada. Cada franja marcada, con su nota (y quien venga de fuera de la familia, si come,
+     cena o duerme); lo que tenía y se desmarca, tachado («se quitará»). Todos los «+», «Falta alguien» y los nombres de un día llevan aquí. */
+  const FRANJAS = [{ id: 'MANANA', corto: 'Por la mañana' }, { id: 'COMIDA', corto: 'Comida' }, { id: 'TARDE', corto: 'Por la tarde' }, { id: 'CENA', corto: 'Cena' }, { id: 'DORMIR', corto: 'Noche' }];
+  function abrirAnadir(fecha, turno, quien) {
+    const pasado = yaPaso(fecha, turno);  // v5.15: lo que ya pasó, «Apuntar que fue», sin avisos de futuro
+    const cada = { 0: 'domingo', 1: 'lunes', 2: 'martes', 3: 'miércoles', 4: 'jueves', 5: 'viernes', 6: 'sábado' }[dow(fecha)];
+    const plural = { 0: 'domingos', 1: 'lunes', 2: 'martes', 3: 'miércoles', 4: 'jueves', 5: 'viernes', 6: 'sábados' }[dow(fecha)];
+    const inicial = quien || (persona(yo) && !servicioYo() ? yo : '');
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(diaLargo(fecha)) + '</h2></div>' +
+      '<div class="dlg-cuerpo">' + (pasado ? '<p class="ayuda">Ya pasó: así queda apuntado quién fue.</p>' : '') + buscadorHtml('Quién') +
+      '<fieldset class="franjas" data-no-preguntar><legend>¿A qué va?</legend><div class="franjas-op">' + FRANJAS.map(function (f) {
+        return '<label class="franja"><input type="checkbox" value="' + f.id + '"><span>' + ICONO_TURNO_SVG[f.id] + f.corto + '</span></label>';
+      }).join('') + '</div><p class="ayuda" id="dlg-ayuda-visita" hidden></p></fieldset>' +
+      '<div id="dlg-detalle" class="franjas-detalle"></div><div id="dlg-aviso-serv"></div>' +
+      (pasado ? '' : '<label class="check"><input type="checkbox" id="dlg-cada-semana"> Repetir cada ' + cada + '</label>') + '</div>' +
+      pie('Guardar'));
+    const borrador = {};  // lo que se va escribiendo en cada franja, para no perderlo al marcar o desmarcar otra
+    const marcadas = function () { return Array.from($dlg.querySelectorAll('.franja input:checked')).map(function (c) { return c.value; }); };
+    function guardarBorrador() {
+      $dlg.querySelectorAll('[data-nota]').forEach(function (i) { (borrador[i.dataset.nota] = borrador[i.dataset.nota] || {}).nota = i.value; });
+      $dlg.querySelectorAll('[data-acomp]').forEach(function (i) { (borrador[i.dataset.acomp] = borrador[i.dataset.acomp] || {}).acomp = i.value; });
+    }
+    function pintarAviso() {  // «No hay servicio», solo si se marca una comida o una cena que no lo tiene (y aún no ha pasado)
+      const t = marcadas().filter(function (x) { return (x === 'COMIDA' || x === 'CENA') && !yaPaso(fecha, x) && sinServicio(fecha, x) && !fueraTurno(fecha, x) && !servicioYo(); });
+      $('dlg-aviso-serv').innerHTML = t.length ? '<p class="aviso-servicio">' + esc(t.length === 2 ? 'No hay servicio en la comida ni en la cena: llega antes para prepararlas y estar con la abuela.' : avisoSinServicio(fecha, t[0])) + '</p>' : '';
+    }
+    function pintarAyuda() {  // qué es «por la mañana» y «por la tarde», solo si se marca
+      const m = marcadas(), man = m.indexOf('MANANA') !== -1, tar = m.indexOf('TARDE') !== -1;
+      const a = $('dlg-ayuda-visita');
+      a.hidden = !(man || tar);
+      a.textContent = man && tar ? 'Por la mañana y por la tarde: estar con la abuela aunque no te quedes a comer o a cenar.' : man ? 'Por la mañana: estar con la abuela aunque no te quedes a comer.' : tar ? 'Por la tarde: estar con la abuela aunque no te quedes a cenar.' : '';
+    }
+    function pintarDetalle() {
+      pintarAviso();
+      pintarAyuda();
+      const id = elegidoBuscador, m = marcadas();
+      $('dlg-detalle').innerHTML = FRANJAS.map(function (f) {
+        const t = f.id, b = borrador[t] || {}, a = id ? apunte(fecha, t, id) : null;
+        if (m.indexOf(t) === -1) return a ? '<div class="franja-detalle se-quita"><span class="fd-et">' + ICONO_TURNO_SVG[t] + '<s>' + esc(f.corto) + '</s> <small>· se quitará</small></span></div>' : '';
+        const nota = b.nota !== undefined ? b.nota : (a ? a.nota || '' : '');
+        const acomp = b.acomp !== undefined ? b.acomp : String(a && a.acompanantes || 0);
+        return '<div class="franja-detalle"><span class="fd-et">' + ICONO_TURNO_SVG[t] + esc(f.corto) + (a && a.fijo ? ' <small>· va siempre</small>' : '') + '</span>' +
+          '<input type="text" data-nota="' + t + '" maxlength="140" autocomplete="off" aria-label="Nota de ' + esc(f.corto.toLowerCase()) + '" placeholder="Nota (si hace falta)" value="' + esc(nota) + '">' +
+          (esVisita(t) ? '' : Number(acomp) > 0
+            ? '<div class="fd-fuera"><span>De fuera de la familia</span><span class="fd-contador"><button type="button" class="mini" data-fuera-menos="' + t + '" aria-label="Uno menos">−</button><input type="text" readonly data-acomp="' + t + '" value="' + esc(acomp) + '" aria-label="Cuántos vienen de fuera de la familia"><button type="button" class="mini" data-fuera-mas="' + t + '" aria-label="Uno más">+</button></span></div>'
+            : '<button type="button" class="enlace fd-fuera-abrir" data-fuera-mas="' + t + '">+ Viene alguien de fuera (un amigo, una invitada…)</button>') + '</div>';
+      }).join('');
+    }
+    function cargarPersona(id) {  // lo que esa persona ya tiene ese día
+      Object.keys(borrador).forEach(function (k) { delete borrador[k]; });
+      const tiene = FRANJAS.filter(function (f) { return id && apunte(fecha, f.id, id); }).map(function (f) { return f.id; });
+      // desde un «+» o «Falta alguien», además, la franja tocada; desde un nombre, solo lo que ya tiene
+      $dlg.querySelectorAll('.franja input').forEach(function (c) { c.checked = tiene.indexOf(c.value) !== -1 || ((!quien || !tiene.length) && c.value === turno); });
+      pintarDetalle();
+      if (typeof foto === 'function') fotoInicial = foto();
+    }
+    // Lo que se guardaría: { turnos, fijos } o { error }
+    function calcular() {
+      const id = elegidoBuscador;
+      if (!id) return { turnos: [] };
+      guardarBorrador();
+      const sel = marcadas(), turnos = [];
+      for (let i = 0; i < FRANJAS.length; i++) {
+        const t = FRANJAS[i].id, a = apunte(fecha, t, id), b = borrador[t] || {};
+        if (sel.indexOf(t) === -1) { if (a) turnos.push({ fecha: fecha, turno: t, apuntado: false }); continue; }
+        const nota = String(b.nota !== undefined ? b.nota : (a ? a.nota || '' : '')).trim();
+        let acomp = 0;
+        if (!esVisita(t)) {
+          const v = String(b.acomp !== undefined ? b.acomp : (a && a.acompanantes || 0)).trim() || '0';
+          if (!/^\d+$/.test(v) || Number(v) > 20) return { error: 'De fuera de la familia pueden venir de 0 a 20 en la ' + etiquetaTurno(t).toLowerCase() + '.' };
+          acomp = Number(v);
+        }
+        if (!a || nota !== (a.nota || '') || (!esVisita(t) && acomp !== (a.acompanantes || 0))) {
+          const c = { fecha: fecha, turno: t, apuntado: true, nota: nota };
+          if (!esVisita(t)) c.acompanantes = acomp;
+          turnos.push(c);
+        }
+      }
+      let fijos = null;
+      if ($('dlg-cada-semana') && $('dlg-cada-semana').checked && sel.length) {
+        const fj = fijosDe(id).map(function (f) { return { dow: f.dow, turno: f.turno }; });
+        sel.forEach(function (t) { if (!fj.some(function (f) { return f.dow === dow(fecha) && f.turno === t; })) fj.push({ dow: dow(fecha), turno: t }); });
+        if (fj.length !== fijosDe(id).length) fijos = fj;
+      }
+      return { turnos: turnos, fijos: fijos, sel: sel };
+    }
+    // solo pregunta al salir si se ha tocado algo desde que se abrió (o desde que se eligió a la persona); buscar no cuenta
+    const foto = function () { guardarBorrador(); return JSON.stringify([elegidoBuscador, marcadas(), FRANJAS.map(function (f) { const b = borrador[f.id] || {}; return [b.nota || '', b.acomp || '']; }), !!($('dlg-cada-semana') && $('dlg-cada-semana').checked)]); };
+    let fotoInicial = '';
+    dlgComprobar = function () { return foto() !== fotoInicial; };
+    montarBuscador({ seleccion: inicial, alElegir: cargarPersona, sinResultado: 'No está en la lista. Si viene alguien de fuera de la familia, apúntate tú y súmalo en «Viene alguien de fuera».' });  // v5.28: sin «añadir a la lista»: la familia ya está; quien viene de fuera, en «Viene alguien de fuera»
+    cargarPersona(inicial);
+    fotoInicial = foto();
+    $dlg.querySelectorAll('.franja input').forEach(function (c) { c.addEventListener('change', function () { guardarBorrador(); pintarDetalle(); }); });
+    $('dlg-detalle').addEventListener('click', function (e) {  // los de fuera de la familia: solo cuántos, sin darlos de alta
+      const b = e.target.closest('[data-fuera-mas], [data-fuera-menos]');
+      if (!b) return;
+      guardarBorrador();
+      const t = b.dataset.fueraMas || b.dataset.fueraMenos, x = borrador[t] = borrador[t] || {};
+      const a = apunte(fecha, t, elegidoBuscador);
+      const n = Number(x.acomp !== undefined ? x.acomp : (a && a.acompanantes || 0)) || 0;
+      x.acomp = String(Math.max(0, Math.min(20, n + (b.dataset.fueraMas ? 1 : -1))));
+      pintarDetalle();
+    });
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
       const id = elegidoBuscador;
       if (!id) { errorDialogo('Busca y toca primero a quién quieres apuntar.'); return; }
-      const acomp = leerAcompanantes();
-      if (acomp === null) return;
-      const cambio = { fecha: fecha, turno: turno, apuntado: true, nota: $('dlg-nota').value, acompanantes: acomp };
-      conQuien(function () {
-        confirmarTarde([cambio], id, function () {
-          guardarCambios(id, { turnos: [cambio] }, 'Hecho: ' + persona(id).apodo + ' va a la ' + nombreTurno(fecha, turno) + '.');
-        });
-      });
+      const c = calcular();
+      if (c.error) { errorDialogo(c.error); return; }
+      const cambios = {};
+      if (c.turnos.length) cambios.turnos = c.turnos;
+      if (c.fijos) cambios.fijos = c.fijos;
+      if (!Object.keys(cambios).length) { if (c.sel.length) { cerrarDialogo(); return; } errorDialogo('Marca a qué va: por la mañana, a comer, por la tarde, a cenar o a dormir.'); return; }
+      const nombre = (quienEs(id) || {}).apodo || '';
+      const que = lista(c.sel.map(function (t) { return { MANANA: 'por la mañana', COMIDA: 'a comer', TARDE: 'por la tarde', CENA: 'a cenar', DORMIR: 'a dormir' }[t]; }));
+      const mensaje = c.sel.length ? 'Hecho: ' + nombre + ' va ' + que + (cambios.fijos ? ' todos los ' + plural : ' el ' + diaLargo(fecha).toLowerCase()) + '.' : 'Hecho: ' + nombre + ' ya no va el ' + diaLargo(fecha).toLowerCase() + '.';
+      const quitaFijos = (cambios.turnos || []).filter(function (t) { return !t.apuntado && (apunte(t.fecha, t.turno, id) || {}).fijo; });
+      const seguir = function () { conQuien(function () { confirmarTarde(cambios.turnos || [], id, function () { guardarCambios(id, cambios, mensaje); }); }); };
+      if (quitaFijos.length) elegirAlcance(quienEs(id), quitaFijos, seguir); else seguir();
     });
   }
 
@@ -5261,8 +5452,10 @@
 
   /* ---------- Clics ---------- */
   document.addEventListener('click', function (e) {
-    const el = e.target.closest('[data-quitarme], [data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-huecos], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
+    const el = e.target.closest('[data-novedad-ok], [data-vis-mas], [data-quitarme], [data-detalle-turno], [data-rt-fam], [data-persona], [data-preguntar], [data-anadir], [data-plegar], [data-dia], [data-semana], [data-paso-dia], [data-cambiar-yo], [data-no-soy], [data-mis-datos], [data-mis-comidas], [data-ir], [data-compartir], [data-compartir-huecos], [data-compartir-evento], [data-imprimir], [data-comida-abuela], [data-nueva-persona]');
     if (!el || !datos || $dlg.contains(el) || cargando) return;
+    if (el.hasAttribute('data-novedad-ok')) { try { localStorage.setItem(CLAVE_NOVEDAD, '1'); } catch (er) {} pintarSemana(); return; }  // v5.28
+    if (el.hasAttribute('data-vis-mas')) { const k = el.dataset.visMas; if (visAbiertas.has(k)) visAbiertas.delete(k); else visAbiertas.add(k); pintarSemana(); return; }  // v5.28
     if (modoAbuela() && el.hasAttribute('data-persona')) { abrirInfoPersona(el.dataset.persona); return; }  // v4.36: quién es, para mirar
     if (servicioYo() && el.hasAttribute('data-persona') && el.dataset.persona !== yo) { abrirInfoPersona(el.dataset.persona); return; }  // v4.86
     if (servicioYo() && el.hasAttribute('data-anadir')) { apuntarme(el.dataset.fecha, el.dataset.turno); return; }  // v4.86: el «+», a ella misma
@@ -5307,7 +5500,8 @@
       else { irADia(fecha); if (cubierto()) { pintar(); ir(); } else cargar().then(ir); }
     } else if (el.hasAttribute('data-anadir')) { abrirAnadir(el.dataset.fecha, el.dataset.turno);
     } else if (!el.dataset.fecha && vista === 'personas') { abrirInfoPersona(el.dataset.persona, true);  // v4.93: primero, para leer
-    } else { abrirPersona(el.dataset.persona, el.dataset.fecha, el.dataset.turno); }
+    } else if (el.dataset.fecha) { abrirAnadir(el.dataset.fecha, el.dataset.turno, el.dataset.persona);  // v5.28: su día entero, en una ventana
+    } else { abrirPersona(el.dataset.persona); }
   });
 
   /* v4.2: un día a izquierda o derecha; si entra un día que no está cargado (otra semana), se carga como con las flechas de semana */
