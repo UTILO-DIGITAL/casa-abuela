@@ -713,8 +713,6 @@
   .ev-fab { position: fixed; z-index: 40; right: calc(16px + var(--lado-der, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); border-radius: 999px; min-height: 48px; padding: 12px 20px; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); }
   .ev-fab span { font-size: 22px; line-height: 0; margin-right: 2px; }
   #vista-eventos { padding-bottom: 110px; }
-  .ev-fab { transition: transform .2s; }
-  .ev-fab.escondido { transform: translateY(140%); }
   .ev-fab[hidden], #per-arbol-btn[hidden] { display: none; }
   .ev-secciones { display: grid; grid-template-columns: 1fr 1fr; margin: 0 0 12px; border-bottom: 2px solid var(--color-linea); }
   .ev-secciones button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 0; background: none; font: inherit; font-weight: 800; font-size: 17px; color: var(--color-texto-suave); cursor: pointer; margin-bottom: -2px; border-bottom: 3px solid transparent; }
@@ -1167,7 +1165,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.24.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.25.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -3278,8 +3276,7 @@
     return out;
   }
   let evFiltro = '';  // v4.80
-  let ultimoY = 0;  // v4.92: el botón flotante se esconde al bajar y vuelve al subir
-  window.addEventListener('scroll', function () { const b = $('ev-anadir'); if (!b) return; const y = window.scrollY; b.classList.toggle('escondido', y > ultimoY + 4 && y > 120); if (y < ultimoY - 4) b.classList.remove('escondido'); ultimoY = y; }, { passive: true });
+  // v5.25: «+ Añadir evento» se queda fijo (antes se escondía al bajar y volvía al subir)
   /* v4.86: quien entra es del servicio: ve lo suyo y solo cambia lo suyo */
   function servicioYo() { const p = yo && datos && persona(yo); return !!(p && esServicio(p)); }
   function apuntarme(fecha, turno) {
