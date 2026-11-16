@@ -1056,7 +1056,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.13.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.14.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1640,9 +1640,11 @@
 
   /* v4.14: Huecos: de hoy al final de la semana que viene, las comidas, cenas y noches sin nadie o solo con el servicio.
      No cuentan las que no hace falta ni en las que la abuela no está. */
+  let huecosDias = 7;
   function pintarHuecos() {
     if (vista !== 'huecos') return;
     const h = hoy(), fin = sumar(lunesDe(h), 13 + semanasExtra * 7);
+    huecosDias = diasEntre(h, fin) + 1;  // v5.14: el WhatsApp de aquí, los mismos días que la pantalla
     const dias = [];
     let sinNadie = 0, soloServicio = 0;
     for (let f = h < datos.config.inicio ? datos.config.inicio : h; f <= fin; f = sumar(f, 1)) {
@@ -1827,7 +1829,7 @@
         const extra = ids2.reduce(function (n, id) { return n + ((apunte(fecha, turno, id) || {}).acompanantes || 0); }, 0);
         const notas = ids2.filter(conNota).map(function (id) { return '<span class="rt-nota"><b>' + esc((persona(id) || {}).apodo || id) + ':</b> ' + esc(apunte(fecha, turno, id).nota) + '</span>'; }).join('');
         return '<button type="button" class="rt-familia' + (ids2.indexOf(yo) !== -1 ? ' con-yo' : '') + '" data-rt-fam="' + esc(clave(f)) + '" aria-expanded="' + ab + '">' +
-            '<span class="rt-cab"><b>' + esc(f) + '</b><span class="rt-n">' + (ids2.length + extra) + '</span><span class="rt-flecha" aria-hidden="true">' + (ab ? '▴' : '▾') + '</span></span>' + (ab ? '' : notas) + '</button>' +
+            '<span class="rt-cab"><b>' + esc(f) + '</b><span class="rt-n">' + ((ids2.length + extra) === 1 ? 'va 1' : 'van ' + (ids2.length + extra)) + '</span><span class="rt-flecha" aria-hidden="true">' + (ab ? '▴' : '▾') + '</span></span>' + (ab ? '' : notas) + '</button>' +
           (ab ? '<div class="gente rt-abierta">' + ids2.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '');
       }).join('') + '</div>' : '') +
       (serv.length ? '<div class="servicio-linea servicio-texto">Servicio: ' + serv.map(function (id) { return chip(id, fecha, turno); }).join('<span class="y">y</span>') + '</div>' : '');
@@ -1846,7 +1848,7 @@
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(titulo.charAt(0).toUpperCase() + titulo.slice(1)) + '</h2></div><div class="dlg-cuerpo">' +
       (turno !== 'DORMIR' && cuenta ? '<p class="dt-total"><b>' + r.total + ' a la mesa</b>, contando a la abuela' + (serv.length ? ' y al servicio' : '') + '.<br>Para cocinar: ' + esc(r.detalle.charAt(0).toLowerCase() + r.detalle.slice(1)) + '.</p>' : '') +
       (al.length ? '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>' : '') +
-      orden.map(function (f) { return '<h3 class="dt-fam">' + esc(f === '?' ? 'Otros' : cortoFamilia(f)) + ' <small>' + grupos[f].length + '</small></h3><div class="gente">' + grupos[f].map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>'; }).join('') +
+      orden.map(function (f) { return '<h3 class="dt-fam">' + esc(f === '?' ? 'Otros' : cortoFamilia(f)) + ' <small>' + (grupos[f].length === 1 ? '1 persona' : grupos[f].length + ' personas') + '</small></h3><div class="gente">' + grupos[f].map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>'; }).join('') +
       (serv.length ? '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '') +
       '<p class="ayuda">' + (servicioYo() ? 'Toca a alguien para ver quién es.' : 'Toca a alguien para cambiar lo suyo.') + '</p></div>' +
       '<div class="dlg-pie"><div class="botones">' + (sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">' + (servicioYo() ? 'Apuntarme' : 'Añadir a alguien') + '</button>' : '') +
@@ -2293,7 +2295,7 @@
       '<div class="pr-grid">' +
         '<article class="pr-card pr-oro"><h3>Top 10 general</h3><ol>' + (top.length ? top.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + g.puntos + ' puntos</b></li>'; }).join('') : '<li>Aún nadie.</li>') + '</ol>' +
           (pr.general.length > top.length ? '<p class="pr-mas">Y ' + (pr.general.length - top.length) + ' más con puntos.</p>' : '') + '</article>' +
-        (pr.familias.length ? '<article class="pr-card"><h3>Familias del mes</h3><ol>' + pr.familias.map(function (f) { return '<li><span>' + esc(cortoFamilia(f.familia)) + '</span><b>' + f.visitas + '</b></li>'; }).join('') + '</ol></article>' : '') +
+        (pr.familias.length ? '<article class="pr-card"><h3>Familias del mes</h3><ol>' + pr.familias.map(function (f) { return '<li><span>' + esc(cortoFamilia(f.familia)) + '</span><b>' + f.visitas + (f.visitas === 1 ? ' visita' : ' visitas') + '</b></li>'; }).join('') + '</ol></article>' : '') +
         pr.categorias.map(function (c) {
           return '<article class="pr-card"><h3>' + esc(c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^./, function (x) { return x.toUpperCase(); })) + '</h3><p class="pr-texto">' + esc(c.texto) + '</p><ol>' +
             (c.gente.length ? c.gente.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + esc(valorCat(c.id, g.valor)) + '</b><small>+' + g.puntos + '</small></li>'; }).join('') : '<li class="pr-nadie">Aún nadie.</li>') + '</ol></article>';
@@ -2359,13 +2361,6 @@
     finde: function (v) { return v + (v === 1 ? ' visita' : ' visitas'); }, semana: function (v) { return v + (v === 1 ? ' visita' : ' visitas'); },
     compania: function (v) { return v + (v === 1 ? ' invitado' : ' invitados'); }, secretaria: function (v) { return v + (v === 1 ? ' vez' : ' veces'); }
   };
-  // v5.11: las medallas, dichas de todos y en llano
-  const INF_MED = { planes: 'Fueron a los eventos familiares', contesta: 'Contestaron a todos los eventos', semanas: 'Fueron todas las semanas del mes', fijo: 'Tienen su día fijo con la abuela',
-    bienvenida: 'Primera vez en la mesa', memoria: 'Completaron datos de la familia', noche: 'Se quedaron a dormir', 'finde-uno': 'Fueron en fin de semana', doble: 'Comieron y cenaron el mismo día',
-    'en-familia': 'Fueron con su familia', trae: 'Trajeron invitados', notas: 'Dejaron notas para organizarse', previsor: 'Se apuntaron con una semana de margen', mano: 'Apuntaron a otros de la familia', 'ni-uno': 'Fueron a todos los eventos',
-    comidas: 'Muchas comidas con la abuela', cenas: 'Muchas cenas con la abuela', noches: 'Muchas noches con la abuela' };
-  // v5.11: las de quienes la cuidan, sin cifras ni comparaciones
-  const INF_MED_CUIDA = { 'nunca-falla': 'Siempre está', 'mas-noches': 'Compañía de noche', noches: 'Compañía de noche', comidas: 'Comidas con la abuela', cenas: 'Cenas con la abuela', dias: 'Cariño de cada día', semanas: 'Todas las semanas', gracias: 'Gracias por cuidarla' };
   const INF_ICONO_MED = { 'ni-uno': 'diana', contesta: 'check', semanas: 'repetir', fijo: 'chincheta', bienvenida: 'globo', memoria: 'camara', noche: 'luna', 'finde-uno': 'sol', doble: 'cubiertos', 'en-familia': 'gente', trae: 'gente', notas: 'carta', previsor: 'calendario', planes: 'brillo', mano: 'ayuda',
     'nunca-falla': 'estrella', 'mas-noches': 'luna', noches: 'cama', comidas: 'cubiertos', cenas: 'luna', dias: 'corazon', 'tu-dia': 'calendario', gracias: 'corazon' };
   const INF_GRUPO = { 'Previsor': 'Previsores', 'Guardián de la memoria': 'Guardianes de la memoria', 'Compañía de noche': 'Compañía de noche', 'Comida y cena': 'Comida y cena el mismo día' };
@@ -2458,7 +2453,7 @@
   function infServicioMedallas(pr) {
     return (pr.servicio || []).map(function (x) {
       const m = x.medallas.length ? x.medallas.slice() : [];
-      m.push({ id: 'gracias', titulo: 'Gracias por cuidar de la abuela' });  // v5.7: el servicio, siempre con su medalla
+      m.push({ id: 'gracias', titulo: 'Gracias por cuidarla' });  // v5.7: el servicio, siempre con su medalla
       return { apodo: x.apodo, medallas: m };
     });
   }
@@ -2490,7 +2485,7 @@
     const partes = [[t.comidas, 'comida', 'comidas'], [t.cenas, 'cena', 'cenas'], [t.noches, 'noche durmiendo allí', 'noches durmiendo allí']].filter(function (x) { return x[0]; }).map(function (x) { return x[0] + ' ' + (x[0] === 1 ? x[1] : x[2]); });
     if (vt) filas.push(['cubiertos', String(vt), vt === 1 ? 'visita a la abuela' : 'visitas a la abuela', lista(partes)]);
     if (conDias) filas.push(['calendario', String(cu.dias), 'días con alguien de la familia en casa', 'de los ' + nDias + ' días del mes']);
-    if (cu.mesaLlena && cu.mesaLlena.n > 2) filas.push(['estrella', String(cu.mesaLlena.n), 'personas en la mesa más llena', 'el ' + INF_DIA1[new Date(cu.mesaLlena.fecha + 'T12:00:00').getDay()] + ' ' + infFecha(cu.mesaLlena.fecha) + (cu.mesaLlena.turno === 'CENA' ? ', a cenar' : ', a comer')]);
+    if (cu.mesaLlena && cu.mesaLlena.n > 2) filas.push(['estrella', String(cu.mesaLlena.n), 'personas en la mesa más llena (con invitados)', 'el ' + INF_DIA1[new Date(cu.mesaLlena.fecha + 'T12:00:00').getDay()] + ' ' + infFecha(cu.mesaLlena.fecha) + (cu.mesaLlena.turno === 'CENA' ? ', a cenar' : ', a comer')]);
     if (t.personas) filas.push(['gente', String(t.personas), t.personas === 1 ? 'persona de la familia ha ido a verla' : 'personas de la familia han ido a verla', cu.familias > 1 ? 'de ' + cu.familias + ' ramas de la familia (cada hijo de la abuela, con los suyos)' : 'cada una cuenta una vez']);
     if (cu.vanEventos && cu.eventos) filas.push(['brillo', String(cu.vanEventos), 'personas en los eventos familiares', cu.eventos === 1 ? 'en el evento del mes' : 'en los ' + cu.eventos + ' eventos del mes']);
     if (filas.length) {
@@ -2658,8 +2653,8 @@
     const fr = [];
     if (cu.antelacionH >= 1) { const ant = cu.antelacionH >= 36 ? Math.round(cu.antelacionH / 24) + ' días' : cu.antelacionH + ' horas'; fr.push([ant, 'de margen al apuntarse', 'Lo normal es apuntarse con ' + ant + ' de antelación. Así la casa se organiza mejor.']); }
     if (cu.anterior) { const a = cu.anterior.comidas + cu.anterior.cenas + cu.anterior.noches, n = t.comidas + t.cenas + t.noches; if (a && n > a) fr.push(['+' + (n - a), 'visitas más que el mes pasado', 'Este mes, ' + n + '; el anterior, ' + a + '.']); }
-    const nMed = (pr.medallas || []).reduce(function (s2, m) { return s2 + m.gente.length; }, 0) + infServicioMedallas(pr).reduce(function (s2, x) { return s2 + x.medallas.length; }, 0);
-    if (nMed) fr.push([String(nMed), 'medallas repartidas', 'Entre la familia y quienes cuidan de la abuela. Cada uno ve las suyas en la web, tocando su nombre.']);
+    const nMed = (pr.medallas || []).reduce(function (s2, m) { return s2 + m.gente.length; }, 0);  // v5.14: las de la familia, las de la página de medallas
+    if (nMed) fr.push([String(nMed), 'medallas para la familia', 'Las de la página de medallas, sumando las de cada uno. Cada uno ve las suyas en la web, tocando su nombre.']);
     if (cu.acompanantes) fr.push([String(cu.acompanantes), cu.acompanantes === 1 ? 'invitado a la mesa' : 'invitados a la mesa', 'Amigos y gente de fuera que alguien de la familia trajo.']);
     const nuevos = ((pr.medallas || []).filter(function (m) { return m.id === 'bienvenida'; })[0] || { gente: [] }).gente;
     if (nuevos.length) fr.push([String(nuevos.length), nuevos.length === 1 ? 'cara nueva en la mesa' : 'caras nuevas en la mesa', (nuevos.length === 1 ? '¡Bienvenido, ' : '¡Bienvenidos, ') + lista(nuevos.slice(0, 3)) + (nuevos.length > 3 ? ' y los demás' : '') + '!']);
@@ -2691,7 +2686,7 @@
             const hh = this.alto(c, k);
             infCaja(c, 70, y, INF_W - 140, hh, 24 * k, INF_C.oroClaro);
             infIcono(c, INF_ICONO_MED[m.id], 70 + 50 * k, y + 44 * k, 30 * k, INF_C.tinta, INF_C.oro);
-            infTexto(c, INF_MED[m.id] || PARA_GRUPO[m.titulo] || INF_GRUPO[m.titulo] || m.titulo, 70 + 100 * k, y + 56 * k, 36 * k, 600, INF_C.tinta, 't', 'left', INF_W - 400);
+            infTexto(c, m.titulo,  /* v5.14: el mismo nombre que en el menú de cada uno */ 70 + 100 * k, y + 56 * k, 36 * k, 600, INF_C.tinta, 't', 'left', INF_W - 400);
             infTexto(c, m.gente.length === 1 ? '1 persona' : m.gente.length + ' personas', INF_W - 100, y + 54 * k, 24 * k, 800, INF_C.suave, 'n', 'right');
             const t = texto(c, k);
             infParrafo(c, t, 100, y + 100 * k, ancho, 26 * k, 700, INF_C.suave, 33 * k, 'n');
@@ -2707,9 +2702,9 @@
           infLetra(c, 800, 25 * k, 'n');
           let px = 100, py = 0;
           return x.medallas.map(function (m) {
-            const w = Math.min(c.measureText(INF_MED_CUIDA[m.id] || m.titulo.replace(/, contigo$/, ', con ella')).width + 80 * k, INF_W - 200);
+            const w = Math.min(c.measureText(m.titulo).width + 80 * k, INF_W - 200);
             if (px + w > INF_W - 100) { px = 100; py += 56 * k; }
-            const r = { tx: INF_MED_CUIDA[m.id] || m.titulo.replace(/, contigo$/, ', con ella'), id: m.id, x: px, y: py, w: w }; px += w + 14 * k; return r;
+            const r = { tx: m.titulo, id: m.id, x: px, y: py, w: w }; px += w + 14 * k; return r;
           });
         };
         return {
@@ -2945,7 +2940,7 @@
         const pm = pasado || modoAbuela() ? [] : pendientesMios(e);
         return pm.length ? '<p class="ev-pend-mios">Falta que contesten los tuyos: <b>' + esc(lista(pm.map(function (id) { return (persona(id) || {}).apodo || id; }))) + '</b> <button type="button" class="enlace" data-ev-ver="' + esc(e.id) + '">Contestar por ' + (pm.length === 1 ? 'él o ella' : 'ellos') + ' ›</button></p>' : '';
       })() +
-      (function () { const l = porFamiliaEvento(e).filter(function (x) { return x.van; }); return l.length ? '<p class="evento-gente"><span>' + esc(l.map(function (x) { return cortoFamilia(x.f) + ' ' + x.van; }).join(' · ')) + '</span></p>' : ''; })() +
+      (function () { const l = porFamiliaEvento(e).filter(function (x) { return x.van; }); return l.length ? '<p class="evento-gente"><span>' + esc(l.map(function (x) { return cortoFamilia(x.f) + ': ' + (x.van === 1 ? 'va 1' : 'van ' + x.van); }).join(' · ')) + '</span></p>' : ''; })() +
       listaNotas(e, 3, false) +  // v4.68
       '<div class="evento-botones">' + (pasado || modoAbuela() ? '' :
         '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? ICONO_SI + 'Voy' : 'Voy') + '</button>' +
@@ -3000,7 +2995,7 @@
       // v4.30: una sola lista: cada familia con sus números y, al tocar «Ver», quién es justo debajo
       '<div class="ev-resumen">' + porFamiliaEvento(e).map(function (x) {
         return '<details class="ev-familia" data-fam="' + esc(x.f) + '"' + (abiertasEv[x.f] ? ' open' : '') + '><summary>' +
-          '<b class="ev-fam-nombre">' + esc(cortoFamilia(x.f)) + '</b><span class="ev-van">' + (x.van && x.van === x.gente.length ? 'van todos' : x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : '—') + '</span>' +
+          '<b class="ev-fam-nombre">' + esc(cortoFamilia(x.f)) + '</b><span class="ev-van">' + (x.van && x.van === x.gente.length ? 'van todos' : x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : 'nadie aún') + '</span>' +
           '<span class="ev-barra" aria-hidden="true"><i class="si" style="width:' + (x.van / x.gente.length * 100) + '%"></i><i class="no" style="width:' + (x.no / x.gente.length * 100) + '%"></i></span>' +
           '<span class="ev-resto">' + [x.no ? (x.no === 1 ? '1 no puede' : x.no + ' no pueden') : '', x.pend ? x.pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</span>' +
           '<span class="mini ev-ver" aria-hidden="true"></span></summary>' +
@@ -4952,7 +4947,8 @@
         { v: 'prox:3', t: 'Los próximos 3 días' }, { v: 'prox:5', t: 'Los próximos 5 días' }, { v: 'prox:7', t: 'Los próximos 7 días' }])
       .concat([2, 3, 4, 5, 6].map(function (n) { const f = sumar(hoy(), n); return { v: f, t: 'Quién viene el ' + diaLargo(f).toLowerCase() }; }))
       .concat(lunesSel > lunesDe(hoy()) ? [{ v: 'semana', t: 'Quién viene la semana del ' + ddmm(dias[0]) }] : [])
-      .concat([{ v: 'huecos:3', t: 'Lo que falta los próximos 3 días' }, { v: 'huecos:7', t: 'Lo que falta los próximos 7 días' }]);
+      .concat([{ v: 'huecos:3', t: 'Lo que falta los próximos 3 días' }, { v: 'huecos:7', t: 'Lo que falta los próximos 7 días' }])
+      .concat(inicialPedido && /^huecos:\d+$/.test(inicialPedido) && ['huecos:3', 'huecos:7'].indexOf(inicialPedido) === -1 ? [{ v: inicialPedido, t: 'Lo que falta hasta el ' + ddmm(sumar(hoy(), Number(inicialPedido.slice(7)) - 1)) + ' (lo de Huecos)' }] : []);
     const inicial = inicialPedido || (lunesSel > lunesDe(hoy()) ? 'semana' : hoy());
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Compartir por WhatsApp</h2></div>' +
       '<div class="dlg-cuerpo"><label class="campo" for="dlg-que">Qué quieres compartir<select id="dlg-que">' +
@@ -5071,7 +5067,7 @@
     } else if (el.hasAttribute('data-no-soy')) { olvidarYo();
     } else if (el.hasAttribute('data-mis-datos')) { conQuien(function () { abrirPersona(yo); });
     } else if (el.hasAttribute('data-mis-comidas')) { abrirMisComidas();
-    } else if (el.hasAttribute('data-compartir-huecos')) { abrirCompartir('huecos:7');  // v5.9
+    } else if (el.hasAttribute('data-compartir-huecos')) { abrirCompartir('huecos:' + huecosDias);  // v5.9; v5.14: los días que se ven
     } else if (el.hasAttribute('data-compartir-evento')) { abrirCompartir('evento:' + el.dataset.compartirEvento);
     } else if (el.hasAttribute('data-compartir')) { abrirCompartir();
     } else if (el.hasAttribute('data-imprimir')) { imprimir();

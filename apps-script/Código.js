@@ -331,15 +331,15 @@ function logros_(ss, v, id) {
     const dif = function (a, b, c) { out.push([a, b, c, PUNTOS_MEDALLA]); }, facil = function (a, b, c) { out.push([a, b, c, PUNTOS_PARTICIPAR]); };
     const eventos = leerEventos_(ss).filter(function (e) { return e.desde >= v.inicio; });
     const pasados = eventos.filter(function (e) { return e.hasta < hoy; });
-    if (pasados.length >= 2 && pasados.every(function (e) { return e.van.indexOf(id) !== -1; })) dif('ni-uno', 'No te pierdes ni uno', 'Has ido a todos los eventos que ha habido.');
-    if (eventos.length >= 2 && eventos.every(function (e) { return e.van.indexOf(id) !== -1 || e.noVan.indexOf(id) !== -1; })) dif('contesta', 'Siempre contestas', 'Has dicho si vas o no a todos los eventos. ¡Gracias!');
+    if (pasados.length >= 2 && pasados.every(function (e) { return e.van.indexOf(id) !== -1; })) dif('ni-uno', 'A todos los eventos', 'Has ido a todos los eventos que ha habido.');
+    if (eventos.length >= 2 && eventos.every(function (e) { return e.van.indexOf(id) !== -1 || e.noVan.indexOf(id) !== -1; })) dif('contesta', 'Contesta a todos los eventos', 'Has dicho si vas o no a todos los eventos. ¡Gracias!');
     const todas = v.ef.filter(function (a) { return a.persona === id; });
     const mias = todas.map(function (a) { return a.fecha; });
     if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) dif('semanas', 'Cuatro semanas seguidas', 'Has ido al menos una vez cada semana del último mes.');
-    if (leerFijos_(ss).some(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy); })) dif('fijo', 'Tienes tu día', 'Tienes un día fijo con la abuela cada semana.');
+    if (leerFijos_(ss).some(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hoy); })) dif('fijo', 'Día fijo con la abuela', 'Tienes un día fijo con la abuela cada semana.');
     // v4.88: bienvenida (la primera vez, este mes) y guardián de la memoria (ha rellenado datos de la familia)
     const mes = todas.filter(function (a) { return a.fecha >= hace30; });
-    if (mes.length && v.inicio < hace30 && v.ef.some(function (a) { return a.fecha < hace30; }) && !todas.some(function (a) { return a.fecha < hace30; })) dif('bienvenida', '¡Bienvenido a la mesa!', 'Este mes has ido por primera vez. ¡Qué alegría!');
+    if (mes.length && v.inicio < hace30 && leerApuntes_(ss).some(function (a) { return a.fecha < hace30; }) && !todas.some(function (a) { return a.fecha < hace30; })) dif('bienvenida', 'Primera vez en la mesa', 'Este mes has ido por primera vez. ¡Qué alegría!');
     const cambios = cambios30_(ss).filter(function (x) { return x.quien === id; });
     if (cambios.some(esDatos_)) dif('memoria', 'Guardián de la memoria', 'Has ayudado a completar los datos de la familia.');
     // v4.88: las de participar (casi cualquiera las puede tener)
@@ -353,13 +353,13 @@ function logros_(ss, v, id) {
     const mismos = {};
     personas.forEach(function (x) { if (yoP && x.id !== id && x.familia === yoP.familia) mismos[x.id] = true; });
     if (mes.some(function (a) { return v.ef.some(function (b) { return b.fecha === a.fecha && b.turno === a.turno && mismos[b.persona]; }); })) facil('en-familia', 'En familia', 'Has ido con alguien de tu familia.');
-    if (mes.some(function (a) { return a.acompanantes; })) facil('trae', 'Traes compañía', 'Has traído a alguien más a la mesa.');
+    if (mes.some(function (a) { return a.acompanantes; })) facil('trae', 'Con invitados', 'Has traído a alguien más a la mesa.');
     const crudos = leerApuntes_(ss).filter(function (a) { return a.persona === id && !a.no && a.fecha >= hace30; });
     if (crudos.some(function (a) { return a.nota; })) facil('notas', 'Notas con cariño', 'Dejas notas para que la casa se organice mejor.');
     const horaDe = horasDe_(config);
-    if (crudos.some(function (a) { const x = antelacion_(a, horaDe); return x !== null && x >= 7 * 24; })) facil('previsor', 'Previsor', 'Te has apuntado con más de una semana de antelación.');
-    if (eventos.some(function (e) { return e.hasta >= hace30 && e.van.indexOf(id) !== -1; })) facil('planes', 'Te apuntas a los planes', 'Vas a los eventos de la familia.');
-    if (cambios.some(porOtro_)) facil('mano', 'Echas una mano', 'Apuntas o contestas por los demás.');
+    if (crudos.some(function (a) { const x = antelacion_(a, horaDe); return x !== null && x >= 7 * 24; })) facil('previsor', 'Con una semana de margen', 'Te has apuntado con más de una semana de antelación.');
+    if (eventos.some(function (e) { return e.hasta >= hace30 && e.van.indexOf(id) !== -1; })) facil('planes', 'Planes en familia', 'Vas a los eventos de la familia.');
+    if (cambios.some(porOtro_)) facil('mano', 'Echa una mano', 'Apuntas o contestas por los demás.');
     return out;
   });
 }
@@ -374,21 +374,21 @@ function medallasServicio_(ss, personas, v, id, pon) {
   // no falla nunca: tiene días fijos y en el último mes no ha dicho «no voy» a ninguno
   const fijos = leerFijos_(ss).filter(function (f) { return f.persona === id && (!f.hasta || f.hasta >= hace30); });
   const faltas = leerApuntes_(ss).filter(function (a) { return a.persona === id && a.no && a.fecha >= hace30 && a.fecha <= ayer; }).length;
-  if (fijos.length && !faltas && (mio.COMIDA + mio.CENA + mio.DORMIR) > 0) pon('nunca-falla', 'No fallas nunca', 'Este último mes no has faltado ni un día de los tuyos.');
+  if (fijos.length && !faltas && (mio.COMIDA + mio.CENA + mio.DORMIR) > 0) pon('nunca-falla', 'Siempre está', 'Este último mes no has faltado ni un día de los tuyos.');
   const masNoches = serv.every(function (o) { return o === id || (n[o] || { DORMIR: 0 }).DORMIR <= mio.DORMIR; });
-  if (mio.DORMIR > 0 && masNoches) pon('mas-noches', 'La que más noches le hace compañía', mio.DORMIR + (mio.DORMIR === 1 ? ' noche' : ' noches') + ' este último mes. Gracias.');
-  else if (mio.DORMIR >= 8) pon('noches', 'Noches con la abuela', mio.DORMIR + ' noches este último mes.');
+  if (mio.DORMIR > 0 && masNoches) pon('mas-noches', 'Compañía de noche', mio.DORMIR + (mio.DORMIR === 1 ? ' noche' : ' noches') + ' este último mes. Gracias.');
+  else if (mio.DORMIR >= 8) pon('noches', 'Compañía de noche', mio.DORMIR + ' noches este último mes.');
   if (mio.COMIDA >= 8) pon('comidas', 'Comidas con la abuela', mio.COMIDA + ' comidas este último mes.');
   if (mio.CENA >= 8) pon('cenas', 'Cenas con la abuela', mio.CENA + ' cenas este último mes.');
   // v4.86: siempre un gracias (si ha estado) y su día de la semana
   const dias30 = {};
   v.ef.forEach(function (a) { if (a.persona === id && a.fecha >= hace30) dias30[a.fecha] = true; });
   const nd = Object.keys(dias30).length;
-  if (nd) pon('dias', nd === 1 ? '1 día con la abuela' : nd + ' días con la abuela', 'Este último mes. Gracias por tu cariño y tu paciencia.');
+  if (nd) pon('dias', 'Cariño de cada día', (nd === 1 ? '1 día' : nd + ' días') + ' con la abuela este último mes. Gracias por tu cariño y tu paciencia.');
   const porDow = [0, 0, 0, 0, 0, 0, 0];
   Object.keys(dias30).forEach(function (f) { porDow[diaSemana_(f)]++; });
   const maxD = Math.max.apply(null, porDow);
-  if (maxD >= 3) { const DIAS_ = ['domingos', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados']; pon('tu-dia', 'Los ' + DIAS_[porDow.indexOf(maxD)] + ', contigo', 'La abuela sabe que ese día estás tú.'); }
+  if (maxD >= 3) { const DIAS_ = ['domingos', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados']; pon('tu-dia', 'Los ' + DIAS_[porDow.indexOf(maxD)] + ', con la abuela', 'La abuela sabe que ese día estás tú.'); }
   const mias = v.ef.filter(function (a) { return a.persona === id; }).map(function (a) { return a.fecha; });
   if ([0, 1, 2, 3].every(function (k) { const fin = sumarDias_(ayer, -7 * k), ini = sumarDias_(fin, -6); return ini >= v.inicio && mias.some(function (f) { return f >= ini && f <= fin; }); })) pon('semanas', 'Cuatro semanas seguidas', 'Has estado con ella todas las semanas del último mes.');
 }
