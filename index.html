@@ -201,7 +201,7 @@
   button.mas svg { width: 20px; height: 20px; }
   button.mas:hover { background: var(--color-principal-claro); }
   .comida-cab { align-items: center !important; }
-  /* v4.6: «Falta alguien» con el icono, en la línea del turno */
+  /* v4.6: «Aún no viene nadie», en la línea del turno */
   .comida-cab { flex-wrap: wrap; }  /* en columnas estrechas, el botón baja debajo del título */
   .comida-cab .nadie.con-icono { margin-left: auto; gap: 6px; min-height: 36px; padding: 4px 10px; white-space: nowrap; }
   .comida-cab .nadie.con-icono svg { width: 18px; height: 18px; flex: none; }
@@ -236,7 +236,8 @@
   .falta-suave .enlace { color: #7A4B00; font-weight: 800; }
   .rt-desglose { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
   /* v5.2: menos ruido en la Semana */
-  .falta-aviso { font-weight: 800; color: var(--color-error); font-size: 15px; }
+  .falta-aviso { font-weight: 800; color: #8A5A00; font-size: 15px; }
+  .falta-aviso.pronto { color: var(--color-error); }
   /* v5.2: el «+» se ve como botón (círculo blanco con borde y sombra); la etiqueta de la comida, plana */
   .turno-lado button.mas { width: 40px; height: 40px; margin-top: 8px; border-radius: 50%; border: 2px solid currentColor; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
   .turno-lado button.mas svg { width: 20px; height: 20px; }
@@ -418,6 +419,7 @@
     .dias-semana .comida-cab .nadie.con-icono { font-size: 14px; padding: 3px 7px; gap: 4px; }
     .dias-semana .comida-cab .nadie.con-icono svg { width: 16px; height: 16px; }
   }
+  @media (min-width: 1000px) { body.vista-agil:not(.modo-abuela) .dias-semana { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; } }
   @media (min-width: 1200px) {
     .dias-semana { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
     .dias-semana .dia-cab { padding: 10px 12px; gap: 6px; flex-wrap: nowrap; }
@@ -442,8 +444,15 @@
     .cabecera p#subtitulo { display: inline; margin-left: 12px; font-size: 15px; opacity: .85; }
     nav.vistas { margin-top: 6px; }
     nav.vistas a { min-height: 38px; padding-top: 4px; padding-bottom: 4px; }
-    .pagina { padding-top: 14px; }
+    .pagina { padding-top: 8px; }
     dialog.editor { max-height: calc(100dvh - 12px); }
+    /* v5.15: en horizontal, menos cabecera y más días */
+    .cabecera h1 { font-size: 20px; }
+    .cabecera p#subtitulo { display: none; }
+    nav.vistas a { min-height: 34px; }
+    .navegador { margin-bottom: 8px; gap: 6px; }
+    .navegador .titulo-nav h2 { font-size: 17px; }
+    .navegador .accion.paso { min-height: 36px; padding-top: 4px; padding-bottom: 4px; }
   }
   @media (prefers-reduced-motion: no-preference) {
     button.accion, .p { transition: background-color .18s, color .18s; }
@@ -838,7 +847,8 @@
   .huecos-dia li:first-child { border-top: 0; }
   .hueco-turno { min-width: 64px; font-weight: 800; color: var(--color-principal-oscuro); }
   .hueco-estado { flex: 1; min-width: 0; font-weight: 700; }
-  .hueco-estado.sin-nadie { color: var(--color-error); }
+  .hueco-estado.sin-nadie { color: #8A5A00; }
+  .hueco-estado.sin-nadie.pronto { color: var(--color-error); }
   .hueco-estado.solo-servicio { color: #8A5A00; }
   /* Pestaña Personas */
   /* v4.12.7: buscar, Filtros y Añadir en una línea; el panel de filtros, con su contador en cada opción */
@@ -1056,7 +1066,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.14.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.15.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1119,6 +1129,7 @@
   let semanasExtra = 0;  // v4.15: Huecos, «Ver dos semanas más»  // las fechas que cubren los datos que hay en memoria
   const ESCRITORIO = window.matchMedia('(min-width: 760px)');
   const CINCO = window.matchMedia('(min-width: 1200px)');  // v4.5: en ordenador, cinco días
+  const CINCO_AGIL = window.matchMedia('(min-width: 1000px)');  // v5.15: en la vista ágil, desde 1000 px
   let cargando = false;
   const abiertos = new Set();
 
@@ -1210,7 +1221,7 @@
   function lunesInicio() { return datos ? lunesDe(datos.config.inicio) : null; }
   /* v4.2: la ventana de días (tablet: tres; ordenador, v4.5: cinco) y la semana van juntas */
   function enEscritorio() { return ESCRITORIO.matches; }
-  function cuantosDias() { return CINCO.matches ? 5 : 3; }
+  function cuantosDias() { return CINCO.matches || (CINCO_AGIL.matches && vistaElegida() === 'agil' && !modoAbuela()) ? 5 : 3; }
   /* v4.8: hoy (o el día elegido) en el centro: en ordenador, dos días a cada lado; en tablet, uno; en el móvil, la semana */
   function lado() { return enEscritorio() ? (cuantosDias() - 1) / 2 : 0; }
   function primerDia() { return sumar(diaFoco, -lado()); }
@@ -1322,8 +1333,11 @@
   function deQuien(p) {
     if (!p) return '';
     if (esServicio(p)) return 'servicio';
-    const g = generacion(p);
-    return p.familia && p.familia !== 'Otros' ? g.nombre + ' · ' + p.familia : g.nombre;
+    // v5.15: en singular y desde la abuela (hija, nieto, bisnieta…), no «nietos»
+    const j = String(p.jerarquia || ''), m = p.sexo === 'Mujer';
+    const rol = j === 'Tios' ? (m ? 'hija' : 'hijo') : j === 'Tios +1' ? (m ? 'nuera' : 'yerno') : j === 'Nietos' ? (m ? 'nieta' : 'nieto')
+      : j === 'Nietos +1' ? 'pareja de ' + (m ? 'un nieto' : 'una nieta') : /^Biznietos/.test(j) ? (j === 'Biznietos' ? (m ? 'bisnieta' : 'bisnieto') : 'pareja de bisnieto') : generacion(p).nombre;
+    return p.familia && p.familia !== 'Otros' ? rol + ' · ' + p.familia : rol;
   }
   function etiquetaMenu(v) { return String(v || '').replace(/^[^A-Za-zÁÉÍÓÚáéíóúÑñ]+/, '').trim() || 'Entero'; }
   function apunte(fecha, turno, id) { return datos.apuntes.find(function (a) { return a.fecha === fecha && a.turno === turno && a.persona === id; }); }
@@ -1346,8 +1360,8 @@
     const a = fecha ? apunte(fecha, turno, id) : null;  // v4.14.1: su nota, dentro de su fila
     const mas = a && a.acompanantes ? '<span class="mas-n">+' + a.acompanantes + '</span>' : '';  // v4.15: acompañantes
     return '<button type="button" class="p ' + clase(p) + (id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(id) + '"' +
-      (fecha ? ' data-fecha="' + fecha + '" data-turno="' + turno + '"' : '') + ' aria-label="Editar a ' + esc(nombre) + '"><b>' + esc(nombre) + mas + marcaMenu(p) + '</b><small>' +
-      esc(deQuien(p)) + '</small>' + (a && a.nota ? '<span class="nota-chip">' + esc(a.nota) + '</span>' : '') + '</button>';
+      (fecha ? ' data-fecha="' + fecha + '" data-turno="' + turno + '"' : '') + ' aria-label="Editar a ' + esc(nombre) + '"><b>' + esc(nombre) + mas + marcaMenu(p) + '</b>' +
+      (a && a.nota ? '<span class="nota-chip">' + esc(a.nota) + '</span>' : '') + '</button>';
   }
   /* Marca en la tarjeta para medio menú o sin menú (entero no lleva nada) */
   const ICONO_MEDIO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>';
@@ -1662,7 +1676,7 @@
     const vez = function (n, uno, varios) { return n === 1 ? uno : varios.replace('%', n); };
     let html = '<p class="huecos-resumen">' + (!sinNadie && !soloServicio
       ? 'No hay huecos de aquí al ' + diaLargo(fin).toLowerCase() + ': todo tiene a alguien.'
-      : 'De aquí al ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, '1 hueco sin nadie', '% huecos sin nadie') : '', soloServicio ? vez(soloServicio, '1 solo con el servicio', '% solo con el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>';
+      : 'De aquí al ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, '1 comida, cena o noche a la que aún no viene nadie', '% comidas, cenas o noches a las que aún no viene nadie') : '', soloServicio ? vez(soloServicio, '1 solo con el servicio', '% solo con el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>';
     // v5.9: el mismo mensaje de «Lo que falta» que en Semana, a mano desde aquí
     if ((sinNadie || soloServicio) && !modoAbuela()) html += '<div class="huecos-compartir"><button type="button" class="principal con-icono" data-compartir-huecos>' + ICONO_COMPARTIR + '<span>Avisar al grupo por WhatsApp</span></button></div>';
     html += dias.map(function (d) {
@@ -1670,7 +1684,7 @@
         d.huecos.map(function (x) {
           const datosTurno = ' data-anadir data-fecha="' + d.fecha + '" data-turno="' + x.turno.id + '"';
           return '<li><span class="hueco-turno">' + x.turno.nombre + '</span>' +
-            (x.serv.length ? '<span class="hueco-estado solo-servicio">Solo el servicio: ' + esc(lista(x.serv)) + '</span>' : '<span class="hueco-estado sin-nadie">Sin nadie</span>') +
+            (x.serv.length ? '<span class="hueco-estado solo-servicio">Solo el servicio: ' + esc(lista(x.serv)) + '</span>' : '<span class="hueco-estado sin-nadie' + (diasEntre(hoy(), d.fecha) <= 1 ? ' pronto' : '') + '">Aún no viene nadie</span>') +
             '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(d.fecha, x.turno.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button></li>';
         }).join('') + '</ul></section>';
     }).join('');
@@ -1706,17 +1720,20 @@
       return;
     }
     $n.classList.toggle('con-pasos', tres);
+    // v5.15: el título, los días que se ven (no la semana entera); se avanza día a día y la semana se elige en el calendario
+    const v = ventana(), MES3 = function (f) { return MESES[Number(f.slice(5, 7)) - 1].slice(0, 3); };
+    const corto = function (f) { return DIAS[dow(f)].slice(0, 3) + ' ' + Number(f.slice(8)); };
+    const titulo = corto(v[0]) + (v[0].slice(5, 7) !== v[v.length - 1].slice(5, 7) ? ' ' + MES3(v[0]) : '') + ' – ' + corto(v[v.length - 1]) + ' ' + MES3(v[v.length - 1]);
+    const enHoy = v.indexOf(hoy()) !== -1;
     $n.innerHTML =
-      (tres ? '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaFoco <= minFoco() ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Día anterior</button>' : '') +
+      '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaFoco <= minFoco() ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Antes</button>' +
       '<div class="nav-centro">' +
-      '<button type="button" class="flecha" data-semana="-1" aria-label="' + (tres ? 'Semana anterior' : '7 días antes') + '"' + ((tres ? lunesSel <= lunesInicio() : dias[0] <= datos.config.inicio) ? ' disabled' : '') + '>' + FLECHA_IZQ + '</button>' +
-      '<div class="titulo-nav"><h2>Del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '</h2>' +
-      (actual ? '' : '<button type="button" class="enlace" data-semana="0">' + (tres ? 'Volver a esta semana' : 'Volver a hoy') + '</button>') + '</div>' +
-      '<button type="button" class="flecha" data-semana="1" aria-label="' + (tres ? 'Semana siguiente' : '7 días después') + '">' + FLECHA_DER + '</button>' +
-      '<span class="nav-herr"><button type="button" class="icono" data-calendario aria-label="Elegir la semana en el calendario" title="Calendario">' + ICONO_CALENDARIO + '</button>' +  // v5.9: también en el ordenador
+      '<div class="titulo-nav"><h2>' + esc(titulo) + '</h2>' +
+      (enHoy ? '' : '<button type="button" class="enlace" data-semana="0">Volver a hoy</button>') + '</div>' +
+      '<span class="nav-herr"><button type="button" class="icono" data-calendario aria-label="Elegir la semana en el calendario" title="Elegir la semana">' + ICONO_CALENDARIO + '</button>' +
       '<button type="button" class="icono" data-compartir aria-label="Compartir" title="Compartir">' + ICONO_COMPARTIR + '</button>' +
       '<button type="button" class="icono" data-imprimir aria-label="Imprimir" title="Imprimir">' + ICONO_IMPRIMIR + '</button></span></div>' +
-      (tres ? '<button type="button" class="accion paso" data-paso-dia="1">Día siguiente' + FLECHA_DER + '</button>' : '');
+      '<button type="button" class="accion paso" data-paso-dia="1">Después' + FLECHA_DER + '</button>';
   }
 
   function bloqueDia(fecha, opciones) {
@@ -1755,7 +1772,7 @@
               const varios = diasDelEvento(e).length > 1, d = diasDe(e, yo), voy = e.van.indexOf(yo) !== -1;
               const si = voy && (!varios || !d || d.indexOf(fecha) !== -1);
               const no = e.noVan.indexOf(yo) !== -1 || (voy && varios && d && d.indexOf(fecha) === -1);
-              return '<p class="evento-vas"><b>' + (varios ? '¿Vas este día?' : '¿Vas?') + '</b><span>' +
+              return '<p class="evento-vas"><b>' + (si ? 'Has dicho que vas' : no ? 'Has dicho que no vas' : varios ? '¿Vas este día?' : '¿Vas?') + '</b><span>' +  // v5.15: contestado, se dice igual que en Eventos
                 '<button type="button" class="accion" data-ev-dia-yo="' + esc(e.id) + '|' + fecha + '|si" aria-pressed="' + si + '">' + ICONO_SI + 'Voy</button>' +
                 '<button type="button" class="accion" data-ev-dia-yo="' + esc(e.id) + '|' + fecha + '|no" aria-pressed="' + no + '">' + ICONO_NO + 'No voy</button></span></p>';
             })() : '');
@@ -1779,9 +1796,9 @@
       const conMas = !modoAbuela();  // v4.99: el «+», en la columna de color; v5.1: siempre (también lo pasado, los eventos y lo que no hace falta), menos en la vista sencilla
       html += '<div class="comida turno-' + t.id.toLowerCase() + (motivo !== null ? ' no-hace-falta' : '') + (paso ? ' ya-paso' : '') + '"><div class="turno-lado"><span class="turno-et" aria-hidden="true">' + ICONO_TURNO_SVG[t.id] + '<span>' + etiq + '</span></span>' +
         (conMas ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div><div class="turno-cont"><div class="comida-cab"><h4 class="oculto">' + etiq + '</h4>' +
-        (paso && motivo === null && !comp.length ? '<span class="nadie suave">Ya pasó · no fue nadie</span>' :
-          faltaAlguien && modoAbuela() ? '<span class="nadie suave">Nadie apuntado</span>' : motivo === null && modoAbuela() ? '' :
-          faltaAlguien ? '<span class="falta-aviso">Falta alguien</span>'  // v5.2: aviso, no botón (el «+» de la izquierda añade)
+        (paso && motivo === null && !comp.length ? '<span class="nadie suave">No fue nadie</span>' :
+          faltaAlguien && modoAbuela() ? '<span class="nadie suave">Aún sin apuntar</span>' : motivo === null && modoAbuela() ? '' :
+          faltaAlguien ? '<span class="falta-aviso' + (diasEntre(hoy(), fecha) <= 1 ? ' pronto' : '') + '">Aún no viene nadie</span>'  // v5.15: una sola frase; en rojo solo hoy y mañana  // v5.2: aviso, no botón (el «+» de la izquierda añade)
           : '') + '</div>';
       const evT = ft && eventoEn(fecha, t.id);  // v4.31
       if (evT) html += '<p class="turno-evento">' + ICONO_EVENTO + esc(evT.nombre) + '</p>';  // v4.32: en el hueco, el evento tal cual
@@ -2980,7 +2997,7 @@
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
       (!pasado ? (function () {  // v4.51: lo primero, si vas tú
         const yoP = yo && persona(yo), st = yoP ? estado(yoP) : '';
-        return '<div class="ev-yo"><b>' + (yoP ? '¿Vas, ' + esc(yoP.apodo) + '?' : '¿Vas tú?') + '</b><span class="ev-bots">' +
+        return '<div class="ev-yo"><b>' + (yoP && st === 'si' ? 'Has dicho que vas' : yoP && st === 'no' ? 'Has dicho que no vas' : yoP ? '¿Vas, ' + esc(yoP.apodo) + '?' : '¿Vas tú?') + '</b><span class="ev-bots">' +
           '<button type="button" class="ev-si grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|si" aria-pressed="' + (st === 'si') + '">' + ICONO_SI + 'Voy</button>' +
           '<button type="button" class="ev-no grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|no" aria-pressed="' + (st === 'no') + '">' + ICONO_NO + 'No voy</button></span>' +
           (st === 'si' && varios ? botonesDias(e, yoP.id, 'Qué días vas:') : '') + (st ? lineaNota(e, yoP.id) : '') + '</div>';
@@ -4247,7 +4264,7 @@
   function guardarCambios(id, cambios, mensaje) {
     // v4.74: si se apunta a una comida o cena sin servicio, se le avisa de que tiene que ir antes
     const sinS = (cambios.turnos || []).filter(function (t) { return t.apuntado && t.fecha >= hoy() && !fueraTurno(t.fecha, t.turno) && sinServicio(t.fecha, t.turno); })[0];
-    if (sinS) mensaje = mensaje + ' ' + avisoSinServicio(sinS.fecha, sinS.turno);
+    if (sinS && !yaPaso(sinS.fecha, sinS.turno)) mensaje = mensaje + ' ' + avisoSinServicio(sinS.fecha, sinS.turno);
     return enSegundoPlano('guardarPersona', [id, cambios, yo, rango()], mensaje, function () { aplicarPersonaLocal(id, cambios); });
   }
 
@@ -4616,12 +4633,12 @@
     return Number(v);
   }
   function abrirAnadir(fecha, turno) {
-    const ya = idsDe(fecha, turno);
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Añadir a la ' + esc(nombreTurno(fecha, turno)) + '</h2></div>' +
-      '<div class="dlg-cuerpo">' + (sinServicio(fecha, turno) && !fueraTurno(fecha, turno) ? '<p class="aviso-servicio">' + esc(avisoSinServicio(fecha, turno)) + '</p>' : '') + buscadorHtml('Quién viene') +
+    const ya = idsDe(fecha, turno), pasado = yaPaso(fecha, turno);  // v5.15: lo que ya pasó, «Apuntar que fue», sin avisos de futuro
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + (pasado ? 'Apuntar quién fue a la ' : 'Añadir a la ') + esc(nombreTurno(fecha, turno)) + '</h2></div>' +
+      '<div class="dlg-cuerpo">' + (pasado ? '<p class="ayuda">Ya pasó: así queda apuntado quién fue.</p>' : '') + (!pasado && sinServicio(fecha, turno) && !fueraTurno(fecha, turno) ? '<p class="aviso-servicio">' + esc(avisoSinServicio(fecha, turno)) + '</p>' : '') + buscadorHtml('Quién viene') +
       '<label class="campo" for="dlg-nota">Nota para ese día (si hace falta)<input id="dlg-nota" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: llega a las 21:30"></label>' +
       campoAcompanantes(0) + '</div>' +
-      pie('Apuntar'));
+      pie(pasado ? 'Apuntar que fue' : 'Apuntar'));
     montarBuscador({ excluir: ya, seleccion: ya.indexOf(yo) === -1 && persona(yo) ? yo : '', alta: true });
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
@@ -4894,7 +4911,7 @@
         if (faltan.length) lineas.push('• *' + diaLargo(f) + '*: ' + lista(faltan));
       });
       return '🏡 *Casa Abuela*\n_Lo que falta los próximos ' + n + ' días: del ' + ddmm(diasH[0]) + ' al ' + ddmm(diasH[n - 1]) + '_\n\n' +
-        (lineas.length ? '⚠️ *Falta alguien para:*\n' + lineas.join('\n') : '✅ Están todas las comidas, cenas y noches cubiertas. ¡Gracias a todos!') + enlace;
+        (lineas.length ? '*Aún no viene nadie a:*\n' + lineas.join('\n') : '✅ Están todas las comidas, cenas y noches cubiertas. ¡Gracias a todos!') + enlace;
     }
     // v4.73: los próximos N días, desde hoy (de hoy, solo lo que aún no ha pasado)
     const prox = tipo.indexOf('prox:') === 0 ? Number(tipo.slice(5)) : 0;
@@ -4917,7 +4934,7 @@
         b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (mesa ? ' (' + mesa + ' a la mesa, con la abuela)' : total > 1 ? ' (' + total + ')' : '');
         if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? ' 🎉 ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
         else if (motivo !== null && !comp.length) { b += '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.'; return; }
-        else if (!comp.length) b += yaPaso(f, t.id) ? '\nNo fue nadie.' : '\n⚠️ Falta alguien';  // v4.63
+        else if (!comp.length) b += yaPaso(f, t.id) ? '\nNo fue nadie.' : '\nAún no viene nadie.';  // v4.63
         comp.concat(serv).forEach(function (id) {
           const a = apunte(f, t.id, id);
           b += '\n• ' + apodo(id) + (a && a.acompanantes ? ' +' + a.acompanantes : '') + (serv.indexOf(id) !== -1 ? ' (servicio)' : '') + (a && a.nota ? ' _(' + a.nota + ')_' : '');
@@ -5106,7 +5123,7 @@
     pasoDia(e.key === 'ArrowLeft' ? -1 : 1);
   });
   /* Al pasar de móvil a ordenador (o al girar la tablet), se repinta con su forma */
-  [ESCRITORIO, CINCO].forEach(function (m) {
+  [ESCRITORIO, CINCO, CINCO_AGIL].forEach(function (m) {
     const repintar = function () { if (!datos) return; irADia(diaFoco); if (cubierto()) pintar(); else cargar(true); };
     if (m.addEventListener) m.addEventListener('change', repintar); else if (m.addListener) m.addListener(repintar);
   });
