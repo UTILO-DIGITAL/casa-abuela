@@ -628,17 +628,15 @@
   /* v4.58: Ajustes */
   .aj-sec { margin: 0 0 22px; padding: 14px 16px; border-radius: var(--radio); background: #fff; border: 1px solid var(--color-linea); display: grid; gap: 10px; }
   .aj-sec h2 { margin: 0; font-size: 18px; }
-  /* v5.32 (T0591): Control, en pestañas; y Actividad */
-  .aj-pestanas { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
-  .aj-pestanas button { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--color-linea); background: #fff; font: inherit; font-size: 15px; font-weight: 700; color: var(--color-texto-suave); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-  .aj-pestanas button[aria-selected="true"] { border-color: var(--color-principal); background: var(--color-principal-claro); color: var(--color-principal-oscuro); }
-  .act-resumen { margin: 0; padding: 10px 12px; border-radius: calc(var(--radio) / 2); background: var(--color-principal-claro); font-size: 15px; }
-  .act-filtros { display: flex; flex-wrap: wrap; gap: 6px; }
-  .act-filtro { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--color-linea); background: #fff; font: inherit; font-size: 14px; font-weight: 700; color: var(--color-texto-suave); cursor: pointer; }
-  .act-filtro small { font-weight: 600; }
-  .act-filtro[aria-pressed="true"] { border-color: var(--color-principal); background: var(--color-principal-claro); color: var(--color-principal-oscuro); }
-  .act-filtro.con-error { border-color: var(--color-accion); color: var(--color-accion); }
-  .act-buscar { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 12px; }
+  /* v5.32 (T0591): Control, con las pestañas de Eventos (subrayado) y los filtros de Eventos (píldoras) */
+  .ev-secciones.aj-secciones { grid-template-columns: repeat(4, minmax(0, 1fr)); }  /* las cuatro en una fila, también en el móvil */
+  @media (max-width: 480px) { .ev-secciones.aj-secciones button { font-size: 15px; } }
+  .aj-kpis.act-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }  /* en una fila: que no ocupe media pantalla */
+  .act-kpis .aj-kpi { padding: 8px 8px; }
+  .act-kpis .aj-kpi b { font-size: 22px; }
+  .act-kpis .aj-kpi span { font-size: 12px; }
+  button.enlace.act-quien, button.enlace.pr-nombre { display: inline; margin: 0; padding: 2px 0; font-weight: 800; color: var(--color-texto); text-decoration: underline dotted; text-underline-offset: 3px; text-align: left; }  /* nombres que se tocan, sin el margen de los enlaces */
+  .act-buscar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }  /* uno al lado del otro, también en el móvil */
   .act-buscar .campo { min-width: 0; }
   .act-buscar .campo select, .act-buscar .campo input { width: 100%; min-width: 0; box-sizing: border-box; }
   .act-dia { margin: 10px 0 4px; font-size: 15px; }
@@ -648,7 +646,8 @@
   .act-hora { color: var(--color-texto-suave); font-variant-numeric: tabular-nums; }
   .act-texto { overflow-wrap: anywhere; }
   .act-item.deshecho .act-texto { color: var(--color-texto-suave); }
-  .act-marca { display: inline-block; padding: 0 6px; border-radius: 999px; background: var(--color-destacado-claro); color: var(--color-texto); font-size: 12px; font-weight: 700; }
+  .act-marca { display: inline-block; font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 999px; background: var(--color-destacado-claro); color: var(--color-texto); }  /* como .rt-marca */
+  .act-top { margin: 0 0 6px; }
   .act-item.error { background: var(--color-destacado-claro); }
   .act-err { font-weight: 700; }
   .aj-config fieldset { margin: 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--color-linea); display: grid; gap: 10px; min-width: 0; }
@@ -672,6 +671,8 @@
   .pr-texto { margin: 0; font-size: 12px; color: var(--color-texto-suave); }
   .pr-card ol { margin: 4px 0 0; padding-left: 22px; display: grid; gap: 2px; font-size: 14px; }
   .pr-card ol li span { font-weight: 700; }
+  .pr-toca { margin: 4px 0 0; font-size: 12px; }
+  .pr-desglose td small { color: var(--color-texto-suave); }
   .pr-card ol li b { float: right; font-size: 13px; }
   .pr-card ol li small { float: right; margin-right: 6px; margin-left: 6px; font-size: 11px; color: #8A5A00; font-weight: 800; }
   .pr-nadie { list-style: none; margin-left: -22px; color: var(--color-texto-suave); }
@@ -1239,7 +1240,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.32.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.33.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -2498,7 +2499,7 @@
       '<h3 class="rf-sec">Última vez que entró cada uno</h3>' +
       (usan.length ? '<table class="aj-tabla"><thead><tr><th>Persona</th><th>Última vez</th><th class="n">Cambios</th></tr></thead><tbody>' + usan.map(function (p) {
         const v = visita[p.id];
-        return '<tr><td><b>' + esc(p.apodo) + '</b></td><td>' + esc(v ? haceCuanto(v.ultima) : '—') + '</td><td class="n">' + (cambiosDe[p.id] || 0) + '</td></tr>';
+        return '<tr><td>' + (cambiosDe[p.id] ? '<button type="button" class="enlace act-quien" data-uso-quien="' + esc(p.id) + '" title="Ver su actividad">' + esc(p.apodo) + '</button>' : '<b>' + esc(p.apodo) + '</b>') + '</td><td>' + esc(v ? haceCuanto(v.ultima) : '—') + '</td><td class="n">' + (cambiosDe[p.id] || 0) + '</td></tr>';  // v5.32: a su actividad
       }).join('') + '</tbody></table>' : '<p class="vacio">Aún nadie.</p>') +
       (nunca.length ? '<h3 class="rf-sec aj-aun">Aún no han entrado (' + nunca.length + ')</h3>' + porFam.filter(function (x) { return x.nunca.length; }).map(function (x) {
         return '<div class="aj-grupo"><p class="aj-grupo-t">' + esc(famNom(x.f)) + ' <span>' + x.nunca.length + '</span></p><ul class="aj-filas">' + x.nunca.map(function (p) {
@@ -2547,18 +2548,40 @@
     const u = UNIDAD_CAT[k] || ['', ''];
     return v + ' ' + (v === 1 ? u[0] : u[1]);
   }
+  /* v5.32 (T0591): en Premios, cada nombre se toca y abre de dónde salen sus puntos */
+  function prNombre(id, apodo) { return '<button type="button" class="enlace pr-nombre" data-pr-persona="' + esc(id) + '">' + esc(apodo) + '</button>'; }
+  function abrirDesglose(pr, id) {
+    const g = pr.general.find(function (x) { return x.id === id; }), apodo = g ? g.apodo : apodoDeId(id);
+    const puesto = g ? 1 + pr.general.filter(function (x) { return x.puntos > g.puntos; }).length : 0;
+    const filas = [];
+    pr.categorias.forEach(function (c) {
+      const x = c.gente.find(function (y) { return y.id === id; });
+      if (x) filas.push({ que: c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^./, function (k) { return k.toUpperCase(); }), detalle: valorCat(c.id, x.valor) + ' · ' + (11 - x.puntos) + '.º', puntos: x.puntos });
+    });
+    pr.medallas.forEach(function (m) { if (m.gente.indexOf(apodo) !== -1) filas.push({ que: 'Medalla: ' + m.titulo, detalle: '', puntos: m.puntos || pr.puntosMedalla }); });
+    filas.sort(function (a, b) { return b.puntos - a.puntos; });
+    const suma = filas.reduce(function (t, f) { return t + f.puntos; }, 0);
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(apodo) + '</h2><div><small>' + (g ? g.puntos + ' puntos · ' + puesto + '.º de ' + pr.general.length : 'Sin puntos este mes') + '</small></div></div>' +
+      '<div class="dlg-cuerpo">' + (filas.length ? '<table class="aj-tabla pr-desglose"><thead><tr><th>De dónde</th><th class="n">Puntos</th></tr></thead><tbody>' + filas.map(function (f) {
+        return '<tr><td><b>' + esc(f.que) + '</b>' + (f.detalle ? '<br><small>' + esc(f.detalle) + '</small>' : '') + '</td><td class="n">+' + f.puntos + '</td></tr>';
+      }).join('') + '</tbody><tfoot><tr><td><b>Total</b></td><td class="n"><b>' + suma + '</b></td></tr></tfoot></table>' : '<p class="ayuda">Este mes aún no tiene puntos.</p>') +
+      '<p class="ayuda">Del último mes. Cada categoría da 10 puntos al 1.º, 9 al 2.º… y 1 al 10.º; cada medalla, ' + pr.puntosMedalla + ' si es de las difíciles y 1 si es de las fáciles.</p></div>' +
+      '<div class="dlg-pie"><div class="botones"><button type="button" class="accion" id="dlg-pr-act">Ver su actividad</button><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $('dlg-pr-act').addEventListener('click', function () { cerrarDialogo(); verActividadDe(id); });
+  }
   function htmlPremios(pr) {
     const t = pr.totales, top = pr.general.filter(function (g) { return g.top; });
     return '<h2>Premios <small class="aj-sub">del último mes (desde el ' + esc(ddmm(pr.desde)) + ')</small></h2>' +
       '<p class="pr-totales">Entre todos: <b>' + t.comidas + '</b> comidas, <b>' + t.cenas + '</b> cenas y <b>' + t.noches + '</b> noches con la abuela · <b>' + t.personas + '</b> personas distintas.</p>' +
       '<div><button type="button" class="principal" id="pr-compartir">Informe del mes para el grupo</button></div>' +
       '<div class="pr-grid">' +
-        '<article class="pr-card pr-oro"><h3>Top 10 general</h3><ol>' + (top.length ? top.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + g.puntos + ' puntos</b></li>'; }).join('') : '<li>Aún nadie.</li>') + '</ol>' +
-          (pr.general.length > top.length ? '<p class="pr-mas">Y ' + (pr.general.length - top.length) + ' más con puntos.</p>' : '') + '</article>' +
+        '<article class="pr-card pr-oro"><h3>Top 10 general</h3><ol>' + (top.length ? top.map(function (g) { return '<li><span>' + prNombre(g.id, g.apodo) + '</span><b>' + g.puntos + ' puntos</b></li>'; }).join('') : '<li>Aún nadie.</li>') + '</ol>' +
+          (pr.general.length > top.length ? '<p class="pr-mas">Y ' + (pr.general.length - top.length) + ' más con puntos.</p>' : '') + '<p class="ayuda pr-toca">Toca a alguien para ver de dónde salen sus puntos.</p></article>' +
         (pr.familias.length ? '<article class="pr-card"><h3>Familias del mes</h3><ol>' + pr.familias.map(function (f) { return '<li><span>' + esc(cortoFamilia(f.familia)) + '</span><b>' + f.visitas + (f.visitas === 1 ? ' visita' : ' visitas') + '</b></li>'; }).join('') + '</ol></article>' : '') +
         pr.categorias.map(function (c) {
           return '<article class="pr-card"><h3>' + esc(c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^./, function (x) { return x.toUpperCase(); })) + '</h3><p class="pr-texto">' + esc(c.texto) + '</p><ol>' +
-            (c.gente.length ? c.gente.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + esc(valorCat(c.id, g.valor)) + '</b><small>+' + g.puntos + '</small></li>'; }).join('') : '<li class="pr-nadie">Aún nadie.</li>') + '</ol></article>';
+            (c.gente.length ? c.gente.map(function (g) { return '<li><span>' + prNombre(g.id, g.apodo) + '</span><b>' + esc(valorCat(c.id, g.valor)) + '</b><small>+' + g.puntos + '</small></li>'; }).join('') : '<li class="pr-nadie">Aún nadie.</li>') + '</ol></article>';
         }).join('') +
         (pr.medallas.length ? '<article class="pr-card pr-ancha"><h3>Medallas</h3><ul class="pr-medallas">' + pr.medallas.map(function (m) { return '<li><b>' + esc(m.titulo) + '</b> <small class="pr-pts">' + (m.puntos || pr.puntosMedalla) + ((m.puntos || pr.puntosMedalla) === 1 ? ' punto' : ' puntos') + '</small> <span>' + esc(m.gente.join(', ')) + '</span></li>'; }).join('') + '</ul></article>' : '') +
         (pr.servicio.length ? '<article class="pr-card pr-ancha"><h3>Quienes la cuidan</h3><ul class="pr-medallas">' + pr.servicio.map(function (x) { return '<li><b>' + esc(x.apodo) + '</b> <span>' + esc(x.medallas.map(function (m) { return m.titulo; }).concat(['Gracias por cuidarla']).join(' · '))  /* v5.19: nunca «sin medallas» */ + '</span></li>'; }).join('') + '</ul></article>' : '') +
@@ -2583,6 +2606,8 @@
       '\n\nEn la web, tocando tu nombre, ves tus medallas.' + enlace;
   }
   function montarPremios(pr) {
+    const $p = $('aj-premios');
+    if ($p) $p.addEventListener('click', function (e) { const n = e.target.closest('[data-pr-persona]'); if (n) abrirDesglose(pr, n.dataset.prPersona); });  // v5.32
     const b = $('pr-compartir');
     if (b) b.addEventListener('click', function () { abrirInforme(pr); });  // v5.7: el informe visual
   }
@@ -3070,13 +3095,20 @@
   }
   /* ---------- v5.32 (T0591): Control › Actividad: el historial por días, con filtros, «deshecho» y los errores ---------- */
   const CLAVE_CONTROL = 'casa-abuela-control';
-  const PESTANAS_CONTROL = [['actividad', 'Actividad'], ['uso', 'Quién la usa'], ['premios', 'Premios'], ['config', 'Configuración']];
+  const PESTANAS_CONTROL = [['actividad', 'Actividad'], ['uso', 'Uso'], ['premios', 'Premios'], ['config', 'Ajustes']];  // cortas: caben las cuatro en el móvil
   function controlPestana() { let v = ''; try { v = localStorage.getItem(CLAVE_CONTROL) || ''; } catch (e) {} return PESTANAS_CONTROL.some(function (x) { return x[0] === v; }) ? v : 'actividad'; }
   let actFiltro = 'todo', actPersona = '';
   const FILTROS_ACT = [['todo', 'Todo'], ['comidas', 'Comidas y visitas'], ['eventos', 'Eventos'], ['dias', 'Notas del día'], ['personas', 'Personas'], ['deshechos', 'Corregidos'], ['errores', 'Errores']];
   const ACCION_ERROR = { guardarPersona: 'al apuntarse o cambiar a alguien', guardarPersonas: 'al apuntar a varios', guardarDia: 'al guardar el día', guardarEvento: 'al guardar un evento',
     apuntarEvento: 'al contestar un evento', notaEvento: 'al poner una nota en un evento', borrarEvento: 'al quitar un evento', guardarAusencia: 'al marcar que la abuela no está',
-    crearPersona: 'al añadir a alguien', darDeBaja: 'al quitar a alguien', guardarAjustes: 'al guardar los ajustes', getDatos: 'al abrir la web', getAjustes: 'al abrir Control', getPremios: 'al ver los premios' };
+    crearPersona: 'al añadir a alguien', darDeBaja: 'al quitar a alguien', guardarAjustes: 'al guardar los ajustes', getDatos: 'al abrir la web', getAjustes: 'al abrir Control', getPremios: 'al ver los premios', web: 'en la web' };
+  /* Ir a Actividad con solo lo de una persona (desde Uso y desde Premios) */
+  function verActividadDe(id) {
+    actPersona = id; actFiltro = 'todo';
+    try { localStorage.setItem(CLAVE_CONTROL, 'actividad'); } catch (e) {}
+    if (vista !== 'ajustes') { ponerVista('ajustes'); history.replaceState(null, '', '#ajustes'); } else pintarAjustes();
+    window.scrollTo(0, 0);
+  }
   function tipoCambio(t) {
     if (/^(Apunta a|Quita a) .+ (a|de) la (comida|cena|noche|mañana|tarde) del /.test(t) || / (va siempre|deja de ir siempre) los /.test(t) ||
       /^Nota de .+ en la (comida|cena|noche|mañana|tarde) del /.test(t) || / va a la (comida|cena|noche|mañana|tarde) del /.test(t)) return 'comidas';
@@ -3108,10 +3140,10 @@
   }
   function apodoDeId(id) { return ((quienEs(id) || deBaja(id) || {}).apodo) || String(id || '').replace(/^\([^)]*\) - /, '') || 'Alguien'; }
   function htmlActividad() {
-    return '<h2>Actividad</h2><p class="act-resumen" id="act-resumen"></p>' +
-      '<div class="act-filtros" id="act-filtros" role="group" aria-label="Qué ver"></div>' +
+    return '<h2>Actividad <small class="aj-sub">los últimos 7 días</small></h2><div class="aj-kpis act-kpis" id="act-resumen"></div>' +
+      '<div class="ev-filtros" id="act-filtros" role="tablist" aria-label="Qué ver"></div><div id="act-grupos"></div>' +
       '<div class="act-buscar"><label class="campo" for="act-persona">Persona<select id="act-persona"></select></label>' +
-      '<label class="campo" for="act-q">Buscar<input id="act-q" type="search" autocomplete="off" placeholder="Por ejemplo: PortAventura"></label></div>' +
+      '<label class="campo" for="act-q">Buscar<input id="act-q" type="search" autocomplete="off" placeholder="Palabra…"></label></div>' +
       '<div id="act-lista"></div>';
   }
   function montarActividad() {
@@ -3121,10 +3153,14 @@
     const h7 = haceDias(6);
     const c7 = cambios.filter(function (x) { return x.cuando.slice(0, 10) >= h7; });
     const gente7 = {}; c7.forEach(function (x) { gente7[x.quien] = true; });
-    const desh7 = cambios.filter(function (x, i) { return desh[i] && x.cuando.slice(0, 10) >= h7; }).length;
+    // cuántas veces, no cuántas líneas: un «deshecho» son dos líneas (apunta y quita); cada nota «corregida», una
+    const veces = function (indices) { const d = indices.filter(function (i) { return desh[i] === 'deshecho'; }).length; return indices.length - d + Math.ceil(d / 2); };
+    const desh7 = veces(cambios.map(function (x, i) { return i; }).filter(function (i) { return desh[i] && cambios[i].cuando.slice(0, 10) >= h7; }));
+    const deshTodos = veces(Object.keys(desh).map(Number));
     const err7 = erroresRecientes();
-    $('act-resumen').innerHTML = '<b>Últimos 7 días:</b> ' + c7.length + (c7.length === 1 ? ' cambio' : ' cambios') + ' de ' + Object.keys(gente7).length + (Object.keys(gente7).length === 1 ? ' persona' : ' personas') +
-      ' · ' + desh7 + (desh7 === 1 ? ' corregido' : ' corregidos') + ' · ' + err7 + (err7 === 1 ? ' error' : ' errores');
+    const kpi = function (n, et) { return '<div class="aj-kpi"><b>' + n + '</b><span>' + et + '</span></div>'; };  // las mismas cifras que «Uso»
+    $('act-resumen').innerHTML = kpi(c7.length, c7.length === 1 ? 'cambio' : 'cambios') + kpi(Object.keys(gente7).length, Object.keys(gente7).length === 1 ? 'persona' : 'personas') +
+      kpi(desh7, desh7 === 1 ? 'corregido' : 'corregidos') + kpi(err7, err7 === 1 ? 'error' : 'errores');
     const nombres = {};
     cambios.forEach(function (x) { nombres[x.quien] = x.apodo; });
     errores.forEach(function (x) { if (x.quien) nombres[x.quien] = nombres[x.quien] || apodoDeId(x.quien); });
@@ -3132,23 +3168,38 @@
       .map(function (id) { return '<option value="' + esc(id) + '"' + (id === actPersona ? ' selected' : '') + '>' + esc(nombres[id]) + '</option>'; }).join('');
     const pintarFiltros = function () {
       $('act-filtros').innerHTML = FILTROS_ACT.map(function (f) {
-        const n = f[0] === 'errores' ? errores.length : f[0] === 'deshechos' ? Object.keys(desh).length : 0;
-        return '<button type="button" class="act-filtro' + (f[0] === 'errores' && err7 ? ' con-error' : '') + '" data-act-filtro="' + f[0] + '" aria-pressed="' + (actFiltro === f[0]) + '">' + f[1] + (n ? ' <small>' + n + '</small>' : '') + '</button>';
+        const n = f[0] === 'errores' ? errores.length : f[0] === 'deshechos' ? deshTodos : 0;
+        return '<button type="button" role="tab" data-act-filtro="' + f[0] + '" aria-selected="' + (actFiltro === f[0]) + '">' + f[1] + (n ? ' <span class="ev-filtro-n' + (f[0] === 'errores' && err7 ? ' alerta' : '') + '">' + n + '</span>' : '') + '</button>';
       }).join('');
+    };
+    // v5.32: arriba de Errores y de Corregidos, lo que más se repite (que es lo que hay que arreglar)
+    const pintarGrupos = function () {
+      const g = {}, orden = [];
+      const suma = function (k, quien, cuando) { if (!g[k]) { g[k] = { n: 0, gente: {}, ultima: '' }; orden.push(k); } g[k].n++; if (quien) g[k].gente[quien] = true; if (cuando > g[k].ultima) g[k].ultima = cuando; };
+      if (actFiltro === 'errores') errores.forEach(function (x) { if (!actPersona || x.quien === actPersona) suma(x.error, x.quien ? apodoDeId(x.quien) : '', x.cuando); });
+      else if (actFiltro === 'deshechos') cambios.forEach(function (x, i) { if (desh[i] && (!actPersona || x.quien === actPersona)) suma(desh[i] === 'corregido' ? 'Reescribe la nota del día' : 'Se apunta y se quita (o al revés)', x.apodo, x.cuando); });
+      else { $('act-grupos').innerHTML = ''; return; }
+      if (actFiltro === 'deshechos' && g['Se apunta y se quita (o al revés)']) g['Se apunta y se quita (o al revés)'].n = Math.ceil(g['Se apunta y se quita (o al revés)'].n / 2);  // dos líneas, una vez
+      orden.sort(function (a, b) { return g[b].n - g[a].n; });
+      $('act-grupos').innerHTML = orden.length ? '<h3 class="rf-sec">' + (actFiltro === 'errores' ? 'Lo que más falla' : 'Lo que más se corrige') + '</h3><ol class="aj-top act-top">' + orden.slice(0, 6).map(function (k) {
+        const gente = Object.keys(g[k].gente);
+        return '<li><b>' + esc(k) + '</b> <span>' + (g[k].n === 1 ? '1 vez' : g[k].n + ' veces') + (gente.length ? ' · ' + esc(lista(gente.slice(0, 3)) + (gente.length > 3 ? ' y ' + (gente.length - 3) + ' más' : '')) : '') + ' · ' + esc(haceCuanto(g[k].ultima)) + '</span></li>';
+      }).join('') + '</ol>' : '';
     };
     const pintarLista = function () {
       const q = sinAcentos($('act-q').value.trim());
       let filas;
       if (actFiltro === 'errores') {
         filas = errores.filter(function (x) { return (!actPersona || x.quien === actPersona) && (!q || sinAcentos(apodoDeId(x.quien) + ' ' + x.error + ' ' + x.accion).indexOf(q) !== -1); })
-          .map(function (x) { return { cuando: x.cuando, error: true, html: '<b>' + esc(x.quien ? apodoDeId(x.quien) : 'Alguien') + '</b>, ' + esc(ACCION_ERROR[x.accion] || x.accion) + ': <span class="act-err">' + esc(x.error) + '</span>' }; });
+          .map(function (x) { return { cuando: x.cuando, error: true, html: botonPersona(x.quien, x.quien ? apodoDeId(x.quien) : 'Alguien') + ', ' + esc(x.accion === 'web' ? 'en «' + (x.detalle || 'la web') + '»' : ACCION_ERROR[x.accion] || x.accion) + ': <span class="act-err">' + esc(x.error) + '</span>' }; });
       } else {
         filas = cambios.map(function (x, i) { return { x: x, i: i }; }).filter(function (o) {
           if (actPersona && o.x.quien !== actPersona) return false;
           if (actFiltro === 'deshechos' ? !desh[o.i] : actFiltro !== 'todo' && tipoCambio(o.x.cambio) !== actFiltro) return false;
           return !q || sinAcentos(o.x.apodo + ' ' + o.x.cambio).indexOf(q) !== -1;
-        }).map(function (o) { return { cuando: o.x.cuando, desh: desh[o.i] || '', html: '<b>' + esc(o.x.apodo) + '</b> ' + esc(o.x.cambio) }; });
+        }).map(function (o) { return { cuando: o.x.cuando, desh: desh[o.i] || '', html: botonPersona(o.x.quien, o.x.apodo) + ' ' + esc(o.x.cambio) }; });
       }
+      pintarGrupos();
       const total = filas.length;
       filas = filas.slice(0, 300);
       let html = '', dia = '';
@@ -3167,9 +3218,15 @@
       $('act-lista').innerHTML = html ? html + (total > 300 ? '<p class="ayuda">Se ven los 300 últimos de ' + total + '. Filtra para ver otros.</p>' : '') :
         '<p class="ayuda">' + (actFiltro === 'errores' ? 'Ningún error. Bien.' : 'Nada con eso.') + '</p>';
     };
+    const botonPersona = function (id, nombre) { return id ? '<button type="button" class="enlace act-quien" data-act-quien="' + esc(id) + '" title="Ver solo lo de ' + esc(nombre) + '">' + esc(nombre) + '</button>' : '<b>' + esc(nombre) + '</b>'; };
     pintarFiltros();
     pintarLista();
     $('act-filtros').addEventListener('click', function (e) { const b = e.target.closest('[data-act-filtro]'); if (!b) return; actFiltro = b.dataset.actFiltro; pintarFiltros(); pintarLista(); });
+    $('act-lista').addEventListener('click', function (e) {  // tocar un nombre: solo lo suyo
+      const b = e.target.closest('[data-act-quien]'); if (!b) return;
+      actPersona = b.dataset.actQuien; $('act-persona').value = actPersona; pintarLista();
+      $('act-persona').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
     $('act-persona').addEventListener('change', function () { actPersona = this.value; pintarLista(); });
     $('act-q').addEventListener('input', pintarLista);
   }
@@ -3193,8 +3250,8 @@
     const pest = controlPestana();
     const caja = function (id, html) { return '<div data-aj-sec="' + id + '"' + (pest === id ? '' : ' hidden') + '>' + html + '</div>'; };
     $a.innerHTML =
-      '<div class="aj-pestanas" role="tablist">' + PESTANAS_CONTROL.map(function (x) {  // v5.32 (T0591): cada cosa en su pestaña
-        return '<button type="button" role="tab" data-aj-pest="' + x[0] + '" aria-selected="' + (pest === x[0]) + '">' + x[1] + (x[0] === 'actividad' && erroresRecientes() ? ' <span class="nav-badge">' + erroresRecientes() + '</span>' : '') + '</button>';
+      '<div class="ev-secciones aj-secciones" role="tablist">' + PESTANAS_CONTROL.map(function (x) {  // v5.32 (T0591): cada cosa en su pestaña, como Eventos | Fechas señaladas
+        return '<button type="button" role="tab" data-aj-pest="' + x[0] + '" aria-selected="' + (pest === x[0]) + '">' + x[1] + (x[0] === 'actividad' && erroresRecientes() ? ' <span class="ev-filtro-n alerta">' + erroresRecientes() + '</span>' : '') + '</button>';
       }).join('') + '</div>' +
       caja('actividad', '<section class="aj-sec">' + htmlActividad() + '</section>') +
       caja('config', '<section class="aj-sec aj-config"><h2>Configuración</h2>' +  // v4.62: en bloques de una columna (en el móvil se descuadraba)
@@ -3213,6 +3270,7 @@
       $a.querySelectorAll('[data-aj-sec]').forEach(function (sec) { sec.hidden = sec.dataset.ajSec !== b.dataset.ajPest; });
     }); });
     montarActividad();
+    if (!$a.dataset.usoMontado) { $a.dataset.usoMontado = '1'; $a.addEventListener('click', function (e) { const b = e.target.closest('[data-uso-quien]'); if (b) verActividadDe(b.dataset.usoQuien); }); }  // v5.32: una sola vez
     $('aj-ver-clave').addEventListener('change', function () { $('aj-clave').type = this.checked ? 'text' : 'password'; });  // v4.91
     llamar('getPremios', [yo, claveAdmin()]).then(function (pr) { const $p = $('aj-premios'); if ($p) { $p.innerHTML = htmlPremios(pr); montarPremios(pr); } })
       .catch(function (err) { const $p = $('aj-premios'); if ($p) $p.innerHTML = '<h2>Premios</h2><p class="ayuda">' + esc(mensajeError(err)) + '</p>'; });
@@ -4822,7 +4880,20 @@
     if (t) { t.setAttribute('tabindex', '-1'); try { t.focus({ preventScroll: true }); } catch (e) { t.focus(); } }
   }
   function cerrarDialogo() { if ($dlg.open) { if (typeof $dlg.close === 'function') $dlg.close(); else { $dlg.removeAttribute('open'); $dlg.innerHTML = ''; } } }
-  function errorDialogo(t) { const e = $('dlg-error'); if (e) { e.textContent = t; e.hidden = false; } }
+  function errorDialogo(t) { const e = $('dlg-error'); if (e) { e.textContent = t; e.hidden = false; } avisarUso(t); }
+  /* v5.32 (T0591): lo que alguien hace mal en una ventana (y no llega a guardarse), a MESA_ERRORES, para Control › Actividad.
+     Sin esperar respuesta ni avisar de nada; el mismo aviso, como mucho una vez por minuto. */
+  const avisosEnviados = {};
+  function avisarUso(texto) {
+    try {
+      if (!window.CASA_API || !texto) return;
+      const ahora = Date.now();
+      if (avisosEnviados[texto] && ahora - avisosEnviados[texto] < 60000) return;
+      avisosEnviados[texto] = ahora;
+      const t = $('dlg-titulo'), donde = t ? t.textContent.trim().slice(0, 60) : '';
+      fetch(window.CASA_API, { method: 'POST', credentials: 'omit', redirect: 'follow', body: JSON.stringify({ fn: 'avisoWeb', args: [yo || '', String(texto).slice(0, 300), donde], clave: leerClave() }) }).catch(function () {});
+    } catch (e) { /* nunca molesta */ }
+  }
   // El aviso «close» llega un momento después: si para entonces ya se ha abierto otra ventana, no se vacía (v4.12)
   $dlg.addEventListener('close', function () { if (!$dlg.open) $dlg.innerHTML = ''; });
   let dlgComprobar = null;

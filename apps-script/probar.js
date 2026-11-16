@@ -552,3 +552,15 @@ ver('la pista llega con los datos, la clave no', conPista.config.pista === 'Lo q
   ver('errores: si no se puede apuntar, la respuesta llega igual', r3.ok === false && /Turno no válido/.test(r3.error));
   ss.insertSheet = ins; hojas.MESA_ERRORES = viejo;
 }
+// v5.32: los avisos de la web (lo que alguien hace mal en una ventana)
+{
+  const n0 = hojas.MESA_ERRORES.filas.length;
+  const r = R.api_('avisoWeb', [N_, 'Busca y toca primero a quién quieres apuntar.', 'Jueves 19/11'], 'paella');
+  const f = hojas.MESA_ERRORES.filas[n0] || [];
+  ver('avisos de la web: se apuntan con quién, el aviso y la ventana', r.ok === true && f[1] === N_ && f[2] === 'web' && /Busca y toca/.test(f[3]) && f[4] === 'Jueves 19/11');
+  const r2 = R.api_('avisoWeb', [N_, '   ', 'x'], 'paella');
+  ver('avisos de la web: sin texto, no (y ese fallo tampoco se apunta como aviso vacío)', r2.ok === false && !hojas.MESA_ERRORES.filas.some(x => x[2] === 'web' && !String(x[3]).trim()));
+  ver('avisos de la web: sin la clave, no se apuntan', R.api_('avisoWeb', [N_, 'algo', 'x'], 'otra').ok === false && hojas.MESA_ERRORES.filas.filter(x => x[3] === 'algo').length === 0);
+  const ajW = R.getAjustes(M_, 'higuera');
+  ver('avisos de la web: Control los recibe', ajW.errores.some(x => x.accion === 'web' && x.detalle === 'Jueves 19/11'));
+}

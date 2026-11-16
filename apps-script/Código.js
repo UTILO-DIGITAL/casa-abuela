@@ -21,7 +21,8 @@
  *   MESA_CAMBIOS  CUANDO | QUIEN_ID | QUIEN | CAMBIO   (registro de quién cambia qué)
  *   MESA_ALIAS    ID_ANTIGUO | ID_NUEVO | NOTA   (si a alguien se le cambia el apodo o la jerarquía en PERSONAS)
  *   MESA_VISITAS  PERSONA_ID | ULTIMA_VEZ | VECES (v4.58; se crea sola: quién abre la web, como mucho una vez por hora)
- *   MESA_ERRORES  CUANDO | QUIEN_ID | ACCION | ERROR | DETALLE (v5.32, T0591; se crea sola: lo que alguien intentó y no se guardó, para Control › Actividad)
+ *   MESA_ERRORES  CUANDO | QUIEN_ID | ACCION | ERROR | DETALLE (v5.32, T0591; se crea sola: lo que alguien intentó y no se guardó, para Control › Actividad;
+ *                 ACCION «web»: un aviso de una ventana de la web, con la ventana en DETALLE)
  *   MESA_EVENTOS  ID | NOMBRE | DESDE | HASTA | CUANDO (DIA, COMIDA, CENA o DORMIR) | TEXTO | VAN | NO_VAN (Ids con «;») | CREADO_EN | BORRADO | LUGAR | HORA | TURNOS (v4.33: de cada día, los que se salta) (v4.28; se crea sola)
  *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), PISTA (v4.18: se enseña al pedir la clave), ADMIN_IDS (v4.58: quién ve los Ajustes, Ids con «;»), NO_CUENTAN (v4.61: quién no cuenta en «Quién la usa»), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
  *                 (EXCLUIR_IDS: no salen para apuntarse, pero pueden hacer cambios, como la abuela)
@@ -33,7 +34,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 5.32.0
+ * Versión 5.33.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -50,7 +51,7 @@ const HOJA_ERRORES = 'MESA_ERRORES';  // v5.32 (T0591): CUANDO | QUIEN_ID | ACCI
 const MAX_ERRORES = 200, MAX_CAMBIOS_CONTROL = 1000;
 // Dónde va «quién lo hace» en los argumentos de cada acción (getDatos lo lleva dentro, en .yo)
 const QUIEN_EN_ = { guardarPersona: 2, guardarPersonas: 1, guardarDia: 2, guardarEvento: 1, getAjustes: 0, getPremios: 0, guardarAjustes: 1,
-  borrarEvento: 1, apuntarEvento: 3, notaEvento: 3, guardarAusencia: 4, crearPersona: 1, darDeBaja: 1 };
+  borrarEvento: 1, apuntarEvento: 3, notaEvento: 3, guardarAusencia: 4, crearPersona: 1, darDeBaja: 1, avisoWeb: 0 };
 const HOJA_VISITAS = 'MESA_VISITAS';  // v4.58: PERSONA_ID | ULTIMA_VEZ | VECES (la última vez que cada uno abrió la web; como mucho, una vez por hora)  // v4.28: los eventos (castañada, PortAventura…) con quién va
 const TURNOS = ['COMIDA', 'CENA', 'DORMIR'];
 // v5.28 (T0586): las visitas, ir por la mañana o por la tarde sin comer ni cenar. Se apuntan como un turno más
@@ -124,6 +125,7 @@ const API_ = {
   guardarAusencia: function (a) { return guardarAusencia(a[0], a[1], a[2], a[3], a[4], a[5]); },
   crearPersona: function (a) { return crearPersona(a[0], a[1], a[2]); },
   darDeBaja: function (a) { return darDeBaja(a[0], a[1], a[2]); },
+  avisoWeb: function (a) { return avisoWeb(a[0], a[1], a[2]); },  // v5.32 (T0591): lo que alguien hace mal en una ventana de la web
 };
 
 function api_(fn, args, clave) {
@@ -143,16 +145,29 @@ function api_(fn, args, clave) {
 function apuntarError_(fn, args, error) {
   try {
     if (/^CLAVE/.test(error)) return;  // la clave de la familia (la web la pide sola) no es un error de uso
+    if (fn === 'avisoWeb') return;  // un aviso de la web que no se pudo apuntar no se apunta otra vez
     args = Array.isArray(args) ? args : [];
     const i = QUIEN_EN_[fn];
     const quien = String(fn === 'getDatos' ? ((args[0] || {}).yo || '') : (i !== undefined ? args[i] || '' : '')).slice(0, 80);
     let detalle = '';
-    try { detalle = JSON.stringify(fn === 'guardarPersona' || fn === 'guardarDia' ? [args[0], args[1]] : args.slice(0, 2)).slice(0, 400); } catch (e) { detalle = ''; }
+    try { detalle = JSON.stringify(fn === 'guardarPersona' || fn === 'guardarDia' ? [args[0], args[1]] : args.slice(0, 2)); } catch (e) { detalle = ''; }
+    filaError_(quien, fn, error, detalle);
+  } catch (e) { /* sin hoja de errores, no pasa nada */ }
+}
+/** v5.32 (T0591): lo que alguien hace mal en una ventana de la web (no llega a guardarse): el aviso que vio y en qué ventana */
+function avisoWeb(quien, texto, donde) {
+  const t = String(texto || '').trim();
+  if (!t) throw new Error('Falta el aviso.');
+  filaError_(String(quien || '').slice(0, 80), 'web', t, String(donde || ''));
+  return true;
+}
+function filaError_(quien, accion, error, detalle) {
+  try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const hoja = ss.getSheetByName(HOJA_ERRORES) || crearHoja_(ss, HOJA_ERRORES, ['CUANDO', 'QUIEN_ID', 'ACCION', 'ERROR', 'DETALLE']);
     const rango = hoja.getRange(hoja.getLastRow() + 1, 1, 1, 5);
     comoTexto_(rango);
-    rango.setValues([[ahora_(), quien, String(fn || '').slice(0, 40), String(error).slice(0, 300), detalle]]);
+    rango.setValues([[ahora_(), String(quien || ''), String(accion || '').slice(0, 40), String(error).slice(0, 300), String(detalle || '').slice(0, 400)]]);
   } catch (e) { /* sin hoja de errores, no pasa nada */ }
 }
 
