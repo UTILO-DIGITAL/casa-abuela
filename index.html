@@ -247,8 +247,9 @@
   .franja-detalle input[type=text] { width: 100%; }
   .franja-detalle > * { grid-column: 1 / -1; }
   .comida.con-detalle { cursor: pointer; }  /* v5.28: al tocar el bloque, todo lo suyo */
+  .tuyos-resumen { margin: 0; padding: 8px 12px; border-radius: calc(var(--radio) / 2); background: var(--color-principal-claro); font-size: 14px; }  /* v5.29 */
   .se-quita .fd-et { color: var(--color-texto-suave); }
-  .fd-fuera-abrir { justify-self: start; font-size: 14px; padding: 4px 0; }
+  .fd-fuera-abrir { justify-self: start; text-align: left; font-size: 14px; padding: 4px 0; }
   .fd-fuera { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 700; }
   .fd-contador { display: inline-flex; align-items: center; gap: 6px; }
   .franja-detalle .fd-contador input { width: 52px; flex: none; text-align: center; font-weight: 800; padding: 8px 4px; }
@@ -1219,7 +1220,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.28.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.29.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -3397,22 +3398,27 @@
       confirmarTarde([cambio], yo, function () { guardarCambios(yo, { turnos: [cambio] }, '¡Gracias! Apuntada a la ' + nombreTurno(fecha, turno) + '.'); });
     });
   }
-  /* v5.6: cada uno se ocupa también de los de debajo (hijos, nietos…, también los de su pareja): si no han contestado, cuenta como pendiente suyo */
-  function descendientes(id) {
-    const p = persona(id), pa = p && parejaDe(p), out = [], ya = {};
-    let nivel = [id].concat(pa ? [pa.id] : []);
-    while (nivel.length) {
-      const sig = [];
-      datos.personas.forEach(function (x) { if (x.hijoDe && nivel.indexOf(x.hijoDe) !== -1 && !ya[x.id]) { ya[x.id] = true; out.push(x.id); sig.push(x.id); const xp = parejaDe(x); if (xp && !ya[xp.id]) { ya[xp.id] = true; sig.push(xp.id); } } });
-      nivel = sig;
-    }
+  /* v5.29 (T0587): «los tuyos», de los que te ocupas: tu pareja y tus hijos (o los de tu pareja) que aún no tienen su familia
+     (ni pareja ni hijos). Los que ya la tienen se ocupan de los suyos. Sin fallecidos, sin los que están en camino y sin el servicio.
+     Antes (v5.6) era toda la descendencia: a una tía le salían 29. */
+  function losTuyos(id) {
+    const p = persona(id);
+    if (!p || esServicio(p)) return [];
+    const vivo = function (x) { return !!x && !!persona(x.id) && !esFallecido(x) && !enCamino(x) && !esServicio(x); };
+    const pa = parejaDe(p), padres = [id].concat(pa ? [pa.id] : []), out = [];
+    if (vivo(pa)) out.push(pa.id);
+    datos.personas.forEach(function (x) {
+      if (!x.hijoDe || padres.indexOf(x.hijoDe) === -1 || !vivo(x) || out.indexOf(x.id) !== -1 || x.id === id) return;
+      const suFamilia = !!parejaDe(x) || datos.personas.some(function (y) { return y.hijoDe === x.id; });
+      if (!suFamilia) out.push(x.id);
+    });
     return out;
   }
   function pendientesMios(e) {
     if (!yo || !persona(yo) || servicioYo()) return [];
     const g = {};
     genteEvento(e).forEach(function (p) { g[p.id] = true; });
-    return descendientes(yo).filter(function (id) { return g[id] && e.van.indexOf(id) === -1 && e.noVan.indexOf(id) === -1; });
+    return losTuyos(yo).filter(function (id) { return g[id] && e.van.indexOf(id) === -1 && e.noVan.indexOf(id) === -1; });  // v5.29
   }
   /* v5.18 (UX-10): «Contestar por ellos»: solo los tuyos (hijos, nietos…), con Va / No va en cada uno */
   function abrirTuyos(id) {
@@ -3420,7 +3426,7 @@
     if (!e) return;
     const g = {};
     genteEvento(e).forEach(function (p) { g[p.id] = true; });
-    const tuyos = descendientes(yo).filter(function (x) { return g[x]; });
+    const tuyos = losTuyos(yo).filter(function (x) { return g[x]; });  // v5.29
     const pintarT = function () {
       const ev = evento(id);
       $('dlg-tuyos').innerHTML = tuyos.map(function (pid) {
@@ -4937,6 +4943,7 @@
     const inicial = quien || (persona(yo) && !servicioYo() ? yo : '');
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(diaLargo(fecha)) + '</h2></div>' +
       '<div class="dlg-cuerpo">' + (pasado ? '<p class="ayuda">Ya pasó: así queda apuntado quién fue.</p>' : '') + buscadorHtml('Quién') +
+      '<div id="dlg-tuyos-caja"></div>' +  // v5.29 (T0587)
       '<fieldset class="franjas" data-no-preguntar><legend>¿A qué va?</legend><div class="franjas-op">' + FRANJAS.map(function (f) {
         return '<label class="franja"><input type="checkbox" value="' + f.id + '"><span>' + ICONO_TURNO_SVG[f.id] + f.corto + '</span></label>';
       }).join('') + '</div><p class="ayuda" id="dlg-ayuda-visita" hidden></p></fieldset>' +
@@ -4944,7 +4951,21 @@
       (pasado ? '' : '<label class="check"><input type="checkbox" id="dlg-cada-semana"> Repetir cada ' + cada + '</label>') + '</div>' +
       pie('Guardar'));
     const borrador = {};  // lo que se va escribiendo en cada franja, para no perderlo al marcar o desmarcar otra
-    const marcadas = function () { return Array.from($dlg.querySelectorAll('.franja input:checked')).map(function (c) { return c.value; }); };
+    let otros = [];  // v5.29: los tuyos marcados, que van con quien está arriba
+    const apodoDe = function (pid) { return (quienEs(pid) || {}).apodo || pid; };
+    function pintarTuyos() {
+      const t = losTuyos(elegidoBuscador);
+      $('dlg-tuyos-caja').innerHTML = t.length ? '<fieldset class="franjas tuyos-dia"><legend>¿Van también los tuyos?</legend><div class="franjas-op">' + t.map(function (pid) {
+        return '<label class="franja"><input type="checkbox" data-tuyo-dia="' + esc(pid) + '"' + (otros.indexOf(pid) !== -1 ? ' checked' : '') + '><span>' + esc(apodoDe(pid)) + '</span></label>';
+      }).join('') + '</div></fieldset>' : '';
+      $dlg.querySelectorAll('[data-tuyo-dia]').forEach(function (c) {
+        c.addEventListener('change', function () {
+          otros = Array.from($dlg.querySelectorAll('[data-tuyo-dia]:checked')).map(function (x) { return x.dataset.tuyoDia; });
+          guardarBorrador(); pintarDetalle();
+        });
+      });
+    }
+    const marcadas = function () { return Array.from($dlg.querySelectorAll('.franjas:not(.tuyos-dia) .franja input:checked')).map(function (c) { return c.value; }); };
     function guardarBorrador() {
       $dlg.querySelectorAll('[data-nota]').forEach(function (i) { (borrador[i.dataset.nota] = borrador[i.dataset.nota] || {}).nota = i.value; });
       $dlg.querySelectorAll('[data-acomp]').forEach(function (i) { (borrador[i.dataset.acomp] = borrador[i.dataset.acomp] || {}).acomp = i.value; });
@@ -4963,9 +4984,14 @@
       pintarAviso();
       pintarAyuda();
       const id = elegidoBuscador, m = marcadas();
-      $('dlg-detalle').innerHTML = FRANJAS.map(function (f) {
+      const resumen = otros.length ? '<p class="tuyos-resumen">Lo marcado vale para ' + esc(lista([apodoDe(id)].concat(otros.map(apodoDe)))) + '. La nota y los de fuera, solo para ' + esc(apodoDe(id)) + '.</p>' : '';
+      $('dlg-detalle').innerHTML = resumen + FRANJAS.map(function (f) {
         const t = f.id, b = borrador[t] || {}, a = id ? apunte(fecha, t, id) : null;
-        if (m.indexOf(t) === -1) return a ? '<div class="franja-detalle se-quita"><span class="fd-et">' + ICONO_TURNO_SVG[t] + '<s>' + esc(f.corto) + '</s> <small>· se quitará</small></span></div>' : '';
+        if (m.indexOf(t) === -1) {
+          if (!a) return '';
+          const quitan = [id].concat(otros.filter(function (x) { return apunte(fecha, t, x); }));
+          return '<div class="franja-detalle se-quita"><span class="fd-et">' + ICONO_TURNO_SVG[t] + '<s>' + esc(f.corto) + '</s> <small>· se quitará' + (quitan.length > 1 ? ' a ' + esc(lista(quitan.map(apodoDe))) : '') + '</small></span></div>';
+        }
         const nota = b.nota !== undefined ? b.nota : (a ? a.nota || '' : '');
         const acomp = b.acomp !== undefined ? b.acomp : String(a && a.acompanantes || 0);
         return '<div class="franja-detalle"><span class="fd-et">' + ICONO_TURNO_SVG[t] + esc(f.corto) + (a && a.fijo ? ' <small>· va siempre</small>' : '') + '</span>' +
@@ -4979,7 +5005,9 @@
       Object.keys(borrador).forEach(function (k) { delete borrador[k]; });
       const tiene = FRANJAS.filter(function (f) { return id && apunte(fecha, f.id, id); }).map(function (f) { return f.id; });
       // desde un «+» o «Falta alguien», además, la franja tocada; desde un nombre, solo lo que ya tiene
-      $dlg.querySelectorAll('.franja input').forEach(function (c) { c.checked = tiene.indexOf(c.value) !== -1 || ((!quien || !tiene.length) && c.value === turno); });
+      $dlg.querySelectorAll('.franjas:not(.tuyos-dia) .franja input').forEach(function (c) { c.checked = tiene.indexOf(c.value) !== -1 || ((!quien || !tiene.length) && c.value === turno); });
+      otros = id && apunte(fecha, turno, id) ? losTuyos(id).filter(function (x) { return apunte(fecha, turno, x); }) : [];  // v5.29: si ya vais juntos, marcados
+      pintarTuyos();
       pintarDetalle();
       if (typeof foto === 'function') fotoInicial = foto();
     }
@@ -5011,16 +5039,33 @@
         sel.forEach(function (t) { if (!fj.some(function (f) { return f.dow === dow(fecha) && f.turno === t; })) fj.push({ dow: dow(fecha), turno: t }); });
         if (fj.length !== fijosDe(id).length) fijos = fj;
       }
-      return { turnos: turnos, fijos: fijos, sel: sel };
+      // v5.29: los tuyos marcados: lo añadido se les añade; lo quitado (que tenía quien está arriba) se les quita; lo demás, igual
+      const deOtros = otros.map(function (x) {
+        const tx = [];
+        FRANJAS.forEach(function (f) {
+          const t = f.id, tiene = !!apunte(fecha, t, x);
+          if (sel.indexOf(t) !== -1 && !tiene) tx.push({ fecha: fecha, turno: t, apuntado: true });
+          if (sel.indexOf(t) === -1 && apunte(fecha, t, id) && tiene) tx.push({ fecha: fecha, turno: t, apuntado: false });
+        });
+        const c = {};
+        if (tx.length) c.turnos = tx;
+        if (fijos) {
+          const fx = fijosDe(x).map(function (f) { return { dow: f.dow, turno: f.turno }; });
+          sel.forEach(function (t) { if (!fx.some(function (f) { return f.dow === dow(fecha) && f.turno === t; })) fx.push({ dow: dow(fecha), turno: t }); });
+          if (fx.length !== fijosDe(x).length) c.fijos = fx;
+        }
+        return { id: x, cambios: c };
+      }).filter(function (o) { return Object.keys(o.cambios).length; });
+      return { turnos: turnos, fijos: fijos, sel: sel, otros: deOtros };
     }
     // solo pregunta al salir si se ha tocado algo desde que se abrió (o desde que se eligió a la persona); buscar no cuenta
-    const foto = function () { guardarBorrador(); return JSON.stringify([elegidoBuscador, marcadas(), FRANJAS.map(function (f) { const b = borrador[f.id] || {}; return [b.nota || '', b.acomp || '']; }), !!($('dlg-cada-semana') && $('dlg-cada-semana').checked)]); };
+    const foto = function () { guardarBorrador(); return JSON.stringify([elegidoBuscador, otros, marcadas(), FRANJAS.map(function (f) { const b = borrador[f.id] || {}; return [b.nota || '', b.acomp || '']; }), !!($('dlg-cada-semana') && $('dlg-cada-semana').checked)]); };
     let fotoInicial = '';
     dlgComprobar = function () { return foto() !== fotoInicial; };
     montarBuscador({ seleccion: inicial, alElegir: cargarPersona, sinResultado: 'No está en la lista. Si viene alguien de fuera de la familia, apúntate tú y súmalo en «Viene alguien de fuera».' });  // v5.28: sin «añadir a la lista»: la familia ya está; quien viene de fuera, en «Viene alguien de fuera»
     cargarPersona(inicial);
     fotoInicial = foto();
-    $dlg.querySelectorAll('.franja input').forEach(function (c) { c.addEventListener('change', function () { guardarBorrador(); pintarDetalle(); }); });
+    $dlg.querySelectorAll('.franjas:not(.tuyos-dia) .franja input').forEach(function (c) { c.addEventListener('change', function () { guardarBorrador(); pintarDetalle(); }); });
     $('dlg-detalle').addEventListener('click', function (e) {  // los de fuera de la familia: solo cuántos, sin darlos de alta
       const b = e.target.closest('[data-fuera-mas], [data-fuera-menos]');
       if (!b) return;
@@ -5040,12 +5085,18 @@
       const cambios = {};
       if (c.turnos.length) cambios.turnos = c.turnos;
       if (c.fijos) cambios.fijos = c.fijos;
-      if (!Object.keys(cambios).length) { if (c.sel.length) { cerrarDialogo(); return; } errorDialogo('Marca a qué va: por la mañana, a comer, por la tarde, a cenar o a dormir.'); return; }
-      const nombre = (quienEs(id) || {}).apodo || '';
+      const todos = (Object.keys(cambios).length ? [{ id: id, cambios: cambios }] : []).concat(c.otros);  // v5.29: también los tuyos
+      if (!todos.length) { if (c.sel.length) { cerrarDialogo(); return; } errorDialogo('Marca a qué va: por la mañana, a comer, por la tarde, a cenar o a dormir.'); return; }
+      const nombres = lista([id].concat(otros).map(apodoDe)), varios = otros.length > 0;
       const que = lista(c.sel.map(function (t) { return { MANANA: 'por la mañana', COMIDA: 'a comer', TARDE: 'por la tarde', CENA: 'a cenar', DORMIR: 'a dormir' }[t]; }));
-      const mensaje = c.sel.length ? 'Hecho: ' + nombre + ' va ' + que + (cambios.fijos ? ' todos los ' + plural : ' el ' + diaLargo(fecha).toLowerCase()) + '.' : 'Hecho: ' + nombre + ' ya no va el ' + diaLargo(fecha).toLowerCase() + '.';
-      const quitaFijos = (cambios.turnos || []).filter(function (t) { return !t.apuntado && (apunte(t.fecha, t.turno, id) || {}).fijo; });
-      const seguir = function () { conQuien(function () { confirmarTarde(cambios.turnos || [], id, function () { guardarCambios(id, cambios, mensaje); }); }); };
+      const mensaje = c.sel.length ? 'Hecho: ' + nombres + (varios ? ' van ' : ' va ') + que + (c.fijos ? ' todos los ' + plural : ' el ' + diaLargo(fecha).toLowerCase()) + '.' : 'Hecho: ' + nombres + (varios ? ' ya no van' : ' ya no va') + ' el ' + diaLargo(fecha).toLowerCase() + '.';
+      const quitaFijos = [];
+      todos.forEach(function (o) { (o.cambios.turnos || []).forEach(function (t) { if (!t.apuntado && (apunte(t.fecha, t.turno, o.id) || {}).fijo) quitaFijos.push(t); }); });
+      const guardar = function () {
+        if (todos.length === 1) { guardarCambios(todos[0].id, todos[0].cambios, mensaje); return; }
+        enSegundoPlano('guardarPersonas', [todos, yo, rango()], mensaje, function () { todos.forEach(function (o) { aplicarPersonaLocal(o.id, o.cambios); }); });
+      };
+      const seguir = function () { conQuien(function () { confirmarTarde(cambios.turnos || [], id, guardar); }); };
       if (quitaFijos.length) elegirAlcance(quienEs(id), quitaFijos, seguir); else seguir();
     });
   }
