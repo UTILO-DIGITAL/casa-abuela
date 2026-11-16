@@ -887,7 +887,34 @@
   .arbol-ano { font-family: var(--letra-texto); font-weight: 700; font-size: 11.5px; fill: var(--color-principal-oscuro); }
   .arbol-persona.muerto .arbol-nombre { fill: var(--color-texto-suave); }
   /* v4.14: pestaña Huecos */
-  .huecos-resumen { margin: 0 0 16px; font-size: 18px; font-weight: 800; }
+  .huecos-resumen { margin: 0; font-size: 18px; font-weight: 800; }
+  .ev-buscar { display: block; margin: 0 0 12px; max-width: 520px; }
+  .ev-buscar input { width: 100%; }
+  .ev-encontrados { margin: 4px 0 12px; font-weight: 800; }
+  /* v5.23: Huecos, más cómodo: los próximos 3 días primero; cada hueco, un botón que apunta */
+  .huecos-cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin: 0 0 18px; }
+  .huecos-cab .principal { display: inline-flex; align-items: center; gap: 8px; }
+  .huecos-cab .principal svg { width: 20px; height: 20px; flex: none; }
+  .huecos-lista { align-items: start; }
+  .huecos-sec { margin: 18px 0 10px; font-family: var(--letra-titulos); font-weight: 600; font-size: 22px; }
+  .huecos-sec.urgente { color: var(--color-error); }
+  .huecos-ok { margin: 6px 0 4px; font-weight: 800; color: var(--color-principal-oscuro); }
+  .huecos-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  @media (min-width: 900px) { .huecos-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .hd { display: flex; gap: 14px; align-items: flex-start; padding: 12px 14px; background: #fff; border: 1px solid var(--color-linea); border-radius: var(--radio); }
+  .hd-hoja { flex: none; }
+  .hd-cuerpo { flex: 1; min-width: 0; display: grid; gap: 8px; }
+  .hd-dia { margin: 0; font-family: var(--letra-titulos); font-weight: 600; font-size: 19px; }
+  .hd-dia span { font-family: var(--letra-texto); font-size: 14px; font-weight: 800; color: var(--color-texto-suave); }
+  .hd-huecos { display: grid; gap: 8px; }
+  .hueco-boton { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 50px; padding: 8px 12px; border: 0; border-radius: 12px; background: var(--color-accion); color: #fff; font: inherit; text-align: left; cursor: pointer; }
+  .hueco-boton svg { width: 22px; height: 22px; flex: none; }
+  .hueco-boton span { display: grid; line-height: 1.2; min-width: 0; }
+  .hueco-boton b { font-size: 16px; font-weight: 800; }
+  .hueco-boton small { font-size: 13px; font-weight: 700; opacity: .92; }
+  .hueco-boton.pronto { background: var(--color-error); }
+  .hueco-boton.solo { background: #FFF3D6; color: #6B4600; border: 1.5px solid #E9C46A; }
+  .hueco-boton:hover { filter: brightness(1.05); }
   .huecos-dia { margin: 0 0 12px; padding: 10px 14px; background: #fff; border: 1px solid var(--color-linea); border-radius: var(--radio); }
   .huecos-dia h3 { margin: 0 0 6px; font-family: var(--letra-titulos); font-weight: 600; font-size: 20px; }
   .huecos-dia h3 span { font-family: var(--letra-texto); font-size: 15px; font-weight: 800; color: var(--color-texto-suave); }
@@ -1069,7 +1096,7 @@
       <a href="#semana" data-vista="semana">Semana</a>
       <a href="#eventos" data-vista="eventos">Eventos<span class="nav-badge" id="badge-eventos" hidden></span></a>
       <a href="#personas" data-vista="personas">Personas</a>
-      <a href="#huecos" data-vista="huecos">Huecos</a>
+      <a href="#huecos" data-vista="huecos">Huecos<span class="nav-badge" id="badge-huecos" hidden></span></a>
       <a href="#rellenar" data-vista="rellenar" id="nav-rellenar" hidden>Por rellenar<span class="nav-badge" id="badge-rellenar" hidden></span></a>
       <a href="#ajustes" data-vista="ajustes" id="nav-ajustes" hidden>Ajustes</a>
       <a href="#mas" id="nav-mas" role="button" aria-haspopup="dialog"><span id="nav-mas-t">Más</span> ▾<span class="nav-badge" id="badge-mas" hidden></span></a>
@@ -1100,6 +1127,7 @@
   </section>
 
   <section id="vista-eventos" hidden>
+    <label class="buscar ev-buscar" for="ev-q" id="ev-buscar"><span class="oculto">Buscar un evento</span><input id="ev-q" type="search" autocomplete="off" placeholder="Buscar un evento (por ejemplo: Navidad 2025)"></label>
     <div id="eventos-lista"><p class="vacio">Cargando…</p></div>
   </section>
   <section id="vista-rellenar" hidden>
@@ -1129,7 +1157,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.22.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.23.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1692,6 +1720,9 @@
     $('salir-sencillo').hidden = !sencillo;
     if (sencillo && (vista === 'huecos' || vista === 'rellenar')) { ponerVista('semana'); return; }
     $('nav-ajustes').hidden = !esAdmin();  // v4.58
+    // v5.23: en la pestaña Huecos, cuántas comidas, cenas o noches sin nadie hay en los próximos 3 días
+    const urg = sencillo || servicioYo() ? 0 : huecosEntre(hoy(), sumar(hoy(), 2)).filter(function (x) { return !x.serv.length; }).length;
+    $('badge-huecos').hidden = !urg; $('badge-huecos').textContent = urg; $('badge-huecos').setAttribute('aria-label', urg + ' sin nadie en los próximos 3 días');
     const serv = servicioYo();  // v4.86: el servicio ve la Semana y los Eventos
     document.body.classList.toggle('modo-servicio', serv);
     if (serv && ['personas', 'huecos', 'rellenar', 'ajustes'].indexOf(vista) !== -1) { ponerVista('semana'); return; }
@@ -1724,40 +1755,50 @@
   /* v4.14: Huecos: de hoy al final de la semana que viene, las comidas, cenas y noches sin nadie o solo con el servicio.
      No cuentan las que no hace falta ni en las que la abuela no está. */
   let huecosDias = 7;
+  /* v5.23: los huecos de unos días (solo los que hay cargados): falta alguien o solo el servicio */
+  function huecosEntre(desde, hasta) {
+    const out = [];
+    for (let f = desde < datos.config.inicio ? datos.config.inicio : desde; f <= hasta; f = sumar(f, 1)) {
+      if (rangoCargado && f > rangoCargado.hasta) break;
+      TURNOS.forEach(function (t) {
+        if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id) || yaPaso(f, t.id)) return;
+        const ids = idsDe(f, t.id);
+        if (compania(ids, t.id).length) return;
+        const serv = ids.filter(function (id) { return esServicio(persona(id)); }).map(function (id) { return (persona(id) || {}).apodo || id; });
+        out.push({ fecha: f, turno: t, serv: serv });
+      });
+    }
+    return out;
+  }
   function pintarHuecos() {
     if (vista !== 'huecos') return;
     const h = hoy(), fin = sumar(lunesDe(h), 13 + semanasExtra * 7);
     huecosDias = diasEntre(h, fin) + 1;  // v5.14: el WhatsApp de aquí, los mismos días que la pantalla
-    const dias = [];
-    let sinNadie = 0, soloServicio = 0;
-    for (let f = h < datos.config.inicio ? datos.config.inicio : h; f <= fin; f = sumar(f, 1)) {
-      const huecos = [];
-      TURNOS.forEach(function (t) {
-        if (sinTurno(f, t.id) !== null || fueraTurno(f, t.id) || yaPaso(f, t.id)) return;  // v4.63: lo que ya pasó, no
-        const ids = idsDe(f, t.id);
-        if (compania(ids, t.id).length) return;  // v4.73: por la noche, el servicio ya acompaña (la abuela no está sola)
-        const serv = ids.filter(function (id) { return esServicio(persona(id)); }).map(function (id) { return (persona(id) || {}).apodo || id; });
-        if (serv.length) soloServicio++; else sinNadie++;
-        huecos.push({ turno: t, serv: serv });
-      });
-      if (huecos.length) dias.push({ fecha: f, huecos: huecos });
-    }
+    const todos = huecosEntre(h, fin);
+    const sinNadie = todos.filter(function (x) { return !x.serv.length; }).length, soloServicio = todos.length - sinNadie;
+    const limite = sumar(h, 2);
+    const porDia = function (l) { const d = {}, orden = []; l.forEach(function (x) { if (!d[x.fecha]) { d[x.fecha] = []; orden.push(x.fecha); } d[x.fecha].push(x); }); return orden.map(function (f) { return { fecha: f, huecos: d[f] }; }); };
     const vez = function (n, uno, varios) { return n === 1 ? uno : varios.replace('%', n); };
-    let html = '<p class="huecos-resumen">' + (!sinNadie && !soloServicio
-      ? 'No hay huecos de aquí al ' + diaLargo(fin).toLowerCase() + ': todo tiene a alguien.'
-      : 'De aquí al ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, 'falta alguien en 1 comida, cena o noche', 'falta alguien en % comidas, cenas o noches') : '', soloServicio ? vez(soloServicio, '1 solo con el servicio', '% solo con el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>';
-    // v5.9: el mismo mensaje de «Lo que falta» que en Semana, a mano desde aquí
-    if ((sinNadie || soloServicio) && !modoAbuela()) html += '<div class="huecos-compartir"><button type="button" class="principal con-icono" data-compartir-huecos>' + ICONO_COMPARTIR + '<span>Avisar al grupo por WhatsApp</span></button></div>';
-    html += dias.map(function (d) {
-      return '<section class="huecos-dia"><h3>' + DIAS[dow(d.fecha)] + ' <span>' + (d.fecha === h ? 'Hoy' : ddmm(d.fecha)) + '</span></h3><ul>' +
+    const dia = function (d) {
+      const etq = d.fecha === h ? 'Hoy' : d.fecha === sumar(h, 1) ? 'Mañana' : DIAS[dow(d.fecha)];
+      return '<li class="hd"><span class="dia-hoja hd-hoja"><small>' + DIAS[dow(d.fecha)].slice(0, 3).toUpperCase() + '</small><b>' + Number(d.fecha.slice(8)) + '</b></span>' +
+        '<div class="hd-cuerpo"><p class="hd-dia">' + etq + ' <span>' + ddmm(d.fecha) + '</span></p><div class="hd-huecos">' +
         d.huecos.map(function (x) {
           const datosTurno = ' data-anadir data-fecha="' + d.fecha + '" data-turno="' + x.turno.id + '"';
-          return '<li><span class="hueco-turno">' + x.turno.nombre + '</span>' +
-            (x.serv.length ? '<span class="hueco-estado solo-servicio">Solo el servicio: ' + esc(lista(x.serv)) + '</span>' : '<span class="hueco-estado sin-nadie' + (diasEntre(hoy(), d.fecha) <= 1 ? ' pronto' : '') + '">Falta alguien</span>') +
-            '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(d.fecha, x.turno.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button></li>';
-        }).join('') + '</ul></section>';
-    }).join('');
-    if (semanasExtra < 8) html += '<button type="button" class="accion" data-mas-semanas>Ver dos semanas más</button>';
+          const nombre = x.turno.id === 'DORMIR' ? 'Noche' : x.turno.nombre;
+          return x.serv.length
+            ? '<button type="button" class="hueco-boton solo"' + datosTurno + '>' + ICONO_TURNO_SVG[x.turno.id] + '<span><b>' + nombre + ' · solo el servicio</b><small>Con ' + esc(lista(x.serv)) + '. Apúntate</small></span></button>'
+            : '<button type="button" class="hueco-boton' + (d.fecha <= sumar(h, 1) ? ' pronto' : '') + '"' + datosTurno + '>' + ICONO_TURNO_SVG[x.turno.id] + '<span><b>' + nombre + ' · falta alguien</b><small>¡Apúntate!</small></span></button>';
+        }).join('') + '</div></div></li>';
+    };
+    const pronto = porDia(todos.filter(function (x) { return x.fecha <= limite; })), luego = porDia(todos.filter(function (x) { return x.fecha > limite; }));
+    let html = '<div class="huecos-cab"><p class="huecos-resumen">' + (!todos.length
+      ? '¡Todo cubierto hasta el ' + diaLargo(fin).toLowerCase() + '! Gracias.'
+      : 'Hasta el ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, 'falta alguien en 1 comida, cena o noche', 'falta alguien en % comidas, cenas o noches') : '', soloServicio ? vez(soloServicio, 'en 1 solo está el servicio', 'en % solo está el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>' +
+      (todos.length && !modoAbuela() ? '<button type="button" class="principal con-icono" data-compartir-huecos>' + ICONO_COMPARTIR + '<span>Avisar al grupo por WhatsApp</span></button>' : '') + '</div>';
+    if (pronto.length) html += '<h3 class="huecos-sec urgente">Los próximos 3 días</h3><ul class="huecos-lista">' + pronto.map(dia).join('') + '</ul>';
+    else if (todos.length) html += '<p class="huecos-ok">✓ Los próximos 3 días están cubiertos.</p>';
+    if (luego.length) html += '<h3 class="huecos-sec">Más adelante</h3><ul class="huecos-lista">' + luego.map(dia).join('') + '</ul>';
     $('huecos-lista').innerHTML = html;
   }
 
@@ -3299,6 +3340,8 @@
   function yoSinContestar(e) { return !!(yo && persona(yo)) && !servicioYo() && e.van.indexOf(yo) === -1 && e.noVan.indexOf(yo) === -1; }  // v5.18: al servicio no se le piden los eventos de la familia
   function sinContestar(e) { return yoSinContestar(e) || pendientesMios(e).length > 0; }
   document.addEventListener('click', function (ev) { const b = ev.target.closest('[data-ev-filtro]'); if (!b) return; evFiltro = b.dataset.evFiltro; pintarEventos(); });
+  $('ev-q').addEventListener('input', function () { pintarEventos(); });  // v5.23
+  document.addEventListener('click', function (ev) { if (!ev.target.closest('[data-ev-limpiar]')) return; $('ev-q').value = ''; pintarEventos(); });
   function pintarEventos() {
     const $l = $('eventos-lista');
     if (!$l) return;
@@ -3312,19 +3355,28 @@
     if (evFiltro === 'confirmar' && !porConfirmar.length && !modoAbuela()) evFiltro = 'proximos';
     // v4.89: arriba, Eventos o Fechas señaladas (son cosas distintas); dentro de Eventos, por confirmar, próximos y pasados
     const pest = [modoAbuela() || !persona(yo) || !porConfirmar.length ? null : ['confirmar', 'Por confirmar', porConfirmar.length], /* v5.18: a cero, no sale */ ['proximos', 'Próximos', proximos.length], ['pasados', 'Pasados', pasados.length]].filter(Boolean);
-    const lista = evFiltro === 'confirmar' ? porConfirmar : evFiltro === 'pasados' ? pasados : proximos;
+    let lista = evFiltro === 'confirmar' ? porConfirmar : evFiltro === 'pasados' ? pasados : proximos;
     const enFechas = evFiltro === 'fechas';
+    // v5.23: buscar en todos los eventos (pasados y futuros) por nombre, sitio, texto, mes o año: «Navidad 2025»
+    $('ev-buscar').hidden = enFechas;
+    const palabras = enFechas ? [] : sinAcentos($('ev-q').value.trim()).split(/\s+/).filter(Boolean);
+    const buscando = palabras.length > 0;
+    if (buscando) lista = todos.filter(function (e) {
+      const t = sinAcentos([e.nombre, e.lugar, e.texto, fechaEvento(e), e.desde.slice(0, 4), e.hasta.slice(0, 4)].join(' '));
+      return palabras.every(function (w) { return t.indexOf(w) !== -1; });
+    }).sort(function (a, b) { return b.desde.localeCompare(a.desde); });
     $('ev-anadir').hidden = enFechas || vista !== 'eventos';  // v4.92; v5.12: y solo en Eventos: en las fechas señaladas no se añaden eventos
     $l.innerHTML = '<div class="ev-secciones" role="tablist"><button type="button" role="tab" data-ev-filtro="' + (porConfirmar.length && !modoAbuela() ? 'confirmar' : 'proximos') + '" aria-selected="' + !enFechas + '">Eventos</button>' + /* v5.18: el número, una vez */
         '<button type="button" role="tab" data-ev-filtro="fechas" aria-selected="' + enFechas + '">Fechas señaladas</button></div>' +
-      (enFechas ? '' : '<div class="ev-filtros" role="tablist">' + pest.map(function (x) {
+      (buscando ? '<p class="ev-encontrados">' + (lista.length === 1 ? '1 evento' : lista.length + ' eventos') + ' con «' + esc($('ev-q').value.trim()) + '» <button type="button" class="enlace" data-ev-limpiar>Ver todos</button></p>' : '') +
+      (enFechas || buscando ? '' : '<div class="ev-filtros" role="tablist">' + pest.map(function (x) {
         return '<button type="button" role="tab" data-ev-filtro="' + x[0] + '" aria-selected="' + (evFiltro === x[0]) + '">' + x[1] + (x[2] ? ' <span class="ev-filtro-n' + (x[0] === 'confirmar' ? ' alerta' : '') + '">' + x[2] + '</span>' : '') + '</button>';
       }).join('') + '</div>') +
       (evFiltro === 'fechas'
         ? (prox.length ? '<ul class="proximas">' + prox.join('') + '</ul>' : '<p class="vacio">Nada en los próximos 30 días.</p>') +
           '<p class="ayuda">Cumpleaños, aniversarios y las fechas que cada uno guarda en su ficha (bautizo, primera comunión, santo…), de los próximos 30 días. Solo salen las que tienen el día y el mes.</p>'
         : lista.length ? '<div class="ev-lista">' + lista.map(tarjetaEvento).join('') + '</div>'
-        : '<p class="vacio">' + (evFiltro === 'pasados' ? 'Aún no ha pasado ningún evento.' : evFiltro === 'confirmar' ? '¡Lo tienes todo contestado!' : 'No hay ningún evento a la vista. Añade el primero: una comida especial, una excursión, un viaje…') + '</p>');
+        : '<p class="vacio">' + (buscando ? 'Ningún evento con eso. Prueba con otra palabra o solo el año.' : evFiltro === 'pasados' ? 'Aún no ha pasado ningún evento.' : evFiltro === 'confirmar' ? '¡Lo tienes todo contestado!' : 'No hay ningún evento a la vista. Añade el primero: una comida especial, una excursión, un viaje…') + '</p>');
   }
   function abrirEvento(e) {
     const h = hoy();
