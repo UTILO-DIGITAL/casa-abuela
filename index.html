@@ -6,7 +6,10 @@
 <title>Casa Abuela</title>
 <meta name="apple-mobile-web-app-title" content="Casa Abuela">
 <meta name="theme-color" content="#0B6E61">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B6E61'/%3E%3Ccircle cx='32' cy='32' r='15' fill='none' stroke='%23FFFCF7' stroke-width='6'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%23FF5A3C'/%3E%3C/svg%3E">
+<!-- v5.21: el icono de la app, la casita con corazón (al guardarla en la pantalla de inicio del móvil). iOS lo lee al añadirla: hay que quitarla y volver a añadirla -->
+<link rel="icon" type="image/svg+xml" href="icono.svg?v=2">
+<link rel="apple-touch-icon" href="icono-180.png?v=2">
+<link rel="manifest" href="manifest.webmanifest?v=1">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,7 +45,11 @@
     color-scheme: light;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--color-fondo); color: var(--color-texto); }
+  html, body { margin: 0; color: var(--color-texto); }
+  /* v5.13: la franja de la hora del iPhone (instalada como app) toma el COLOR de fondo del body, no sus imágenes: el color es el
+     verde de la cabecera y el crema de la página va pintado encima como imagen. Sin esto salía blanca y difuminada (como en la
+     plataforma de Utilo, T0430). html, sin fondo, para que el del body llegue a toda la pantalla. */
+  body { background-color: var(--color-principal-oscuro); background-image: linear-gradient(var(--color-fondo), var(--color-fondo)); min-height: 100vh; min-height: 100dvh; }
   /* v4.3: tamaño fijo en el móvil, sin pellizcar ni doble toque (en el ordenador queda el zoom del navegador) */
   html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   html, body { overscroll-behavior-x: none; }  /* v4.95: deslizar a los lados no lleva a la página de atrás (Chrome y Android; en el iPhone, instalada como app) */
@@ -75,6 +82,8 @@
   /* v4.92: en la vista sencilla, la salida a la vista, arriba a la derecha */
   .salir-arriba { display: none; position: absolute; top: 0; right: max(16px, var(--lado-der, 0px)); min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 2px solid #fff; background: rgba(255,255,255,.15); color: #fff; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
   .modo-abuela .salir-arriba { display: inline-flex; align-items: center; }
+  .salir-arriba .sa-corto { display: none; }
+  @media (max-width: 560px) { .salir-arriba .sa-largo { display: none; } .salir-arriba .sa-corto { display: inline; } .modo-abuela .cabecera h1 { padding-right: 84px; } }  /* v5.16: que no pise el título */
   @media (min-width: 760px) { .yo-chip { right: 32px; } }
   .yo-menu { display: grid; gap: 8px; }
   .dlg-salir { margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; background: #FFF0C2; border: 1px solid #F1C85A; }
@@ -104,6 +113,21 @@
   nav.vistas.hay-antes.hay-mas { -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 44px), transparent); }
   nav.vistas.hay-antes:not(.hay-mas) { -webkit-mask-image: linear-gradient(to right, transparent, #000 32px); mask-image: linear-gradient(to right, transparent, #000 32px); }
   nav.vistas a { flex: none; }
+  /* v5.16: en el móvil, cuatro pestañas y «Más ▾» con Por rellenar y Ajustes (antes se cortaban y Ajustes no se veía) */
+  #nav-mas { display: none; }
+  @media (max-width: 560px) {
+    nav.vistas.con-mas #nav-rellenar, nav.vistas.con-mas #nav-ajustes { display: none; }
+    nav.vistas.con-mas #nav-mas { display: inline-flex; }
+    nav.vistas.con-mas { -webkit-mask-image: none; mask-image: none; }
+    nav.vistas.con-mas { gap: 0; justify-content: space-between; }
+    nav.vistas.con-mas a { padding-left: 6px; padding-right: 6px; font-size: 14px; }
+    nav.vistas.con-mas #nav-mas { padding-right: 4px; }
+    #badge-mas { min-width: 0; width: 9px; height: 9px; padding: 0; font-size: 0; margin-left: 3px; align-self: flex-start; margin-top: 10px; }  /* un punto: el número sale dentro */
+  }
+  .casilla { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 700; cursor: pointer; }
+  .casilla input { width: 22px; height: 22px; margin: 0; }
+  .mas-menu { display: grid; gap: 10px; }
+  .mas-menu button { justify-content: space-between; min-height: 52px; font-size: 18px; }
   nav.vistas a[aria-current="page"] { background: var(--color-fondo); color: var(--color-principal-oscuro); }
 
   .pagina { max-width: 1360px; margin: 0 auto; padding: 20px 16px 48px; }
@@ -125,8 +149,8 @@
   .g-parejas { background: var(--gen-parejas-fondo); color: var(--gen-parejas-texto); }
   .g-bisnietos { background: var(--gen-bisnietos-fondo); color: var(--gen-bisnietos-texto); }
   .g-otros { background: var(--gen-otros-fondo); color: var(--gen-otros-texto); }
-  .p.soy-yo { box-shadow: inset 0 0 0 3px var(--color-accion); }
-  button.fila-persona.soy-yo, button.fila-persona.fila-caja.soy-yo { box-shadow: inset 0 0 0 3px var(--color-accion); border-radius: calc(var(--radio) / 2); padding-left: 10px; padding-right: 10px; }
+  .p.soy-yo { box-shadow: inset 0 0 0 3px var(--color-principal); }
+  button.fila-persona.soy-yo, button.fila-persona.fila-caja.soy-yo { box-shadow: inset 0 0 0 3px var(--color-principal); border-radius: calc(var(--radio) / 2); padding-left: 10px; padding-right: 10px; }
   button.p { border: 0; font: inherit; text-align: left; cursor: pointer; min-height: 40px; }
   button.p:hover { filter: brightness(.95); }
 
@@ -197,7 +221,7 @@
   button.mas svg { width: 20px; height: 20px; }
   button.mas:hover { background: var(--color-principal-claro); }
   .comida-cab { align-items: center !important; }
-  /* v4.6: «Falta alguien» con el icono, en la línea del turno */
+  /* v4.6: «Aún no viene nadie», en la línea del turno */
   .comida-cab { flex-wrap: wrap; }  /* en columnas estrechas, el botón baja debajo del título */
   .comida-cab .nadie.con-icono { margin-left: auto; gap: 6px; min-height: 36px; padding: 4px 10px; white-space: nowrap; }
   .comida-cab .nadie.con-icono svg { width: 18px; height: 18px; flex: none; }
@@ -232,7 +256,20 @@
   .falta-suave .enlace { color: #7A4B00; font-weight: 800; }
   .rt-desglose { font-size: 13px; font-weight: 700; color: var(--color-texto-suave); }
   /* v5.2: menos ruido en la Semana */
-  .falta-aviso { font-weight: 800; color: var(--color-error); font-size: 15px; }
+  .falta-aviso { font-weight: 800; color: #8A5A00; font-size: 15px; }
+  .falta-aviso.pronto { color: var(--color-error); }
+  /* v5.22: «Falta alguien», un botón coral que llama la atención; hoy y mañana, en rojo y con un latido suave */
+  .falta-boton { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 14px; border: 0; border-radius: 14px; background: var(--color-accion); color: #fff; font: inherit; text-align: left; cursor: pointer; box-shadow: 0 3px 10px rgba(217, 72, 15, .3); }
+  .falta-boton svg { width: 24px; height: 24px; flex: none; }
+  .falta-boton span { display: grid; line-height: 1.15; }
+  .falta-boton b { font-size: 17px; font-weight: 800; }
+  .falta-boton small { font-size: 13.5px; font-weight: 700; opacity: .92; }
+  .falta-boton:hover { filter: brightness(1.06); }
+  .falta-boton.pronto { background: var(--color-error); box-shadow: 0 3px 12px rgba(179, 38, 30, .35); }
+  @media (prefers-reduced-motion: no-preference) { .falta-boton.pronto { animation: latido 2.4s ease-in-out infinite; } }
+  @keyframes latido { 0%, 70%, 100% { transform: scale(1); } 80% { transform: scale(1.03); } 90% { transform: scale(1); } }
+  .turno-cont .comida-cab:has(.falta-boton) { display: block; }
+  @media (min-width: 760px) { .dias-semana .falta-boton { padding: 8px 10px; gap: 8px; min-height: 48px; } .dias-semana .falta-boton b { font-size: 15px; white-space: nowrap; } .dias-semana .falta-boton small { font-size: 12.5px; } .dias-semana .falta-boton svg { width: 20px; height: 20px; } }
   /* v5.2: el «+» se ve como botón (círculo blanco con borde y sombra); la etiqueta de la comida, plana */
   .turno-lado button.mas { width: 40px; height: 40px; margin-top: 8px; border-radius: 50%; border: 2px solid currentColor; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
   .turno-lado button.mas svg { width: 20px; height: 20px; }
@@ -346,6 +383,11 @@
   }
   dialog.editor[open] { display: flex; flex-direction: column; }
   dialog::backdrop { background: rgba(28, 43, 38, .45); }
+  /* v5.16: con el zoom de las vistas Cómoda y Ágil, el diálogo se medía antes de agrandarse y se salía por arriba */
+  body.vista-comoda:not(.modo-abuela) dialog.editor { max-height: calc((100dvh - 24px) / 1.08); width: min(560px, calc((100vw - 24px) / 1.08)); }
+  body.vista-agil:not(.modo-abuela) dialog.editor { max-height: calc((100dvh - 24px) / .9); width: min(560px, calc((100vw - 24px) / .9)); }
+  /* UX-07: el botón flotante no tapa la última tarjeta */
+  #vista-eventos { padding-bottom: 88px; }
   .dlg-cab { padding: 16px 20px 12px; border-bottom: 1px solid var(--color-linea); display: grid; gap: 6px; }
   .dlg-cab h2 { font-family: var(--letra-titulos); font-weight: 600; font-size: 24px; line-height: 1.15; margin: 0; }
   .dlg-cuerpo { padding: 16px 20px; display: grid; gap: 16px; overflow: auto; }
@@ -414,6 +456,7 @@
     .dias-semana .comida-cab .nadie.con-icono { font-size: 14px; padding: 3px 7px; gap: 4px; }
     .dias-semana .comida-cab .nadie.con-icono svg { width: 16px; height: 16px; }
   }
+  @media (min-width: 1000px) { body.vista-agil:not(.modo-abuela) .dias-semana { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; } }
   @media (min-width: 1200px) {
     .dias-semana { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
     .dias-semana .dia-cab { padding: 10px 12px; gap: 6px; flex-wrap: nowrap; }
@@ -438,8 +481,15 @@
     .cabecera p#subtitulo { display: inline; margin-left: 12px; font-size: 15px; opacity: .85; }
     nav.vistas { margin-top: 6px; }
     nav.vistas a { min-height: 38px; padding-top: 4px; padding-bottom: 4px; }
-    .pagina { padding-top: 14px; }
+    .pagina { padding-top: 8px; }
     dialog.editor { max-height: calc(100dvh - 12px); }
+    /* v5.15: en horizontal, menos cabecera y más días */
+    .cabecera h1 { font-size: 20px; }
+    .cabecera p#subtitulo { display: none; }
+    nav.vistas a { min-height: 34px; }
+    .navegador { margin-bottom: 8px; gap: 6px; }
+    .navegador .titulo-nav h2 { font-size: 17px; }
+    .navegador .accion.paso { min-height: 36px; padding-top: 4px; padding-bottom: 4px; }
   }
   @media (prefers-reduced-motion: no-preference) {
     button.accion, .p { transition: background-color .18s, color .18s; }
@@ -486,6 +536,8 @@
   /* v2: quién eres */
   .quien-soy { margin: 24px 0 0; font-size: 15px; color: var(--color-texto-suave); }
   .actualizando { margin: -8px 0 8px; text-align: center; font-size: 13px; color: var(--color-texto-suave); }
+  .actualizando { position: fixed; z-index: 70; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); margin: 0; padding: 6px 14px; border-radius: 999px; background: var(--color-principal-oscuro); color: #fff; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,.2); }  /* v5.19: fijo, sin mover nada */
+  @media (max-width: 759px) { [data-imprimir] { display: none !important; } }  /* imprimir, solo en el ordenador */
   /* v4.15: acompañantes y eventos */
   .mas-n { margin-left: 4px; padding: 0 6px; border-radius: 999px; background: #fff; color: var(--color-principal-oscuro); font-size: 13px; font-weight: 800; }
   .evento-dia { margin: 0; padding: 10px 14px 10px 12px; background: #FFE7E0; border-left: 4px solid var(--color-accion); display: grid; gap: 4px; }  /* v4.50: los eventos, en coral; las fechas, en amarillo */
@@ -497,9 +549,18 @@
   .evento-dia button.mini { justify-self: start; margin-left: 0; }
   /* v4.35: el modo sencillo de la abuela: solo para mirar */
   .modo-abuela nav.vistas a[data-vista="huecos"], .modo-abuela [data-nueva-persona], .modo-abuela .fp-falta-corto, .modo-abuela .eventos-barra, .modo-abuela #quien-soy, .modo-abuela #mis-proximas, .modo-abuela .nav-herr, .modo-abuela .instalar,
-  .modo-abuela .utilo, .modo-abuela #huerfanos, .modo-abuela .paso { display: none !important; }
+  .modo-abuela .utilo, .modo-abuela #huerfanos, .modo-abuela #per-filtros-btn, .modo-abuela #per-filtros { display: none !important; }  /* v5.17: sin Filtros (solo mirar) */
   .modo-abuela .nadie.suave { border: 0; background: none; padding: 0; min-height: 0; color: var(--color-texto-suave); font-weight: 700; }
   .dia-cab .campana { margin-left: auto; white-space: nowrap; }
+  /* v5.17: la vista sencilla, grande en todas las pestañas (antes, en el ordenador, la letra era la de siempre) */
+  body.modo-abuela .pagina { font-size: 18px; }
+  @media (min-width: 760px) {
+    body.modo-abuela .pagina { zoom: 1.1; }  /* v5.20: un poco más grande, no mucho (la abuela ve bien) */
+    body.modo-abuela dialog.editor { zoom: 1.1; max-height: calc((100dvh - 24px) / 1.1); width: min(560px, calc((100vw - 24px) / 1.1)); }
+    body.modo-abuela #per-arbol-btn { scale: 1.1; transform-origin: right bottom; }
+  }
+  .modo-abuela .dia-cab .campana { white-space: normal; text-align: left; }
+  .modo-abuela .arbol-et text, .modo-abuela .arbol text { font-size: 15px; }
   /* v4.44: rellenar lo que falta: familias, nombres y la ficha de cada uno */
   .rf-intro h2 { margin: 2px 0 4px; }
   .rf-paso { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--color-principal-oscuro); }
@@ -554,7 +615,8 @@
   .pr-medallas span { color: var(--color-texto-suave); }
   .pr-pts { font-size: 11px; font-weight: 800; color: #8A5A00; }
   .aj-config fieldset, .aj-config > div { max-width: 560px; }
-  .aj-config .check { display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-weight: 700; }
+  .aj-config .check { display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-weight: 700; grid-column: 1 / -1; justify-self: start; white-space: nowrap; }  /* v5.19: la casilla junto a su texto, a la izquierda */
+  .aj-config { max-width: 720px; }
   .aj-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
   .aj-tabla th { text-align: left; font-size: 12px; color: var(--color-texto-suave); font-weight: 800; padding: 4px 6px 4px 0; }
   .aj-tabla td { padding: 6px 6px 6px 0; border-top: 1px solid var(--color-linea); vertical-align: top; }
@@ -622,7 +684,7 @@
   .aj-top { margin: 0; padding-left: 20px; font-size: 14px; display: grid; gap: 4px; }
   .aj-top span { color: var(--color-texto-suave); }
   .aj-grupo { margin: 4px 0 8px; }
-  .aj-grupo-t { margin: 6px 0 2px; font-weight: 800; color: var(--color-accion); }
+  .aj-grupo-t { margin: 6px 0 2px; font-weight: 800; color: var(--color-texto-suave); }  /* v5.19: en gris, no en naranja */
   .aj-grupo-t span { color: var(--color-texto-suave); font-weight: 700; font-size: 13px; }
   .aj-filas { list-style: none; margin: 0; padding: 0; }
   .aj-filas li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--color-linea); font-size: 14px; }
@@ -789,14 +851,14 @@
   .arbol-et { position: absolute; box-sizing: border-box; padding: 5px 9px 0; border-radius: 9px; display: flex; flex-direction: column; cursor: default; font-family: var(--letra-texto); }
   .arbol-et[data-persona], .arbol-et[data-comida-abuela] { cursor: pointer; }
   .arbol-et[data-persona]:hover, .arbol-et[data-comida-abuela]:hover { background: rgba(14, 138, 122, .06); }
-  .arbol-et b { font-weight: 800; font-size: 15px; line-height: 19px; color: var(--color-texto); white-space: nowrap; }
-  .arbol-et span { font-weight: 600; font-size: 12.5px; line-height: 18px; color: var(--color-texto-suave); white-space: nowrap; }
+  .arbol-et b { font-weight: 800; font-size: 16px; line-height: 19px; color: var(--color-texto); white-space: nowrap; }
+  .arbol-et span { font-weight: 600; font-size: 14px; line-height: 18px; color: var(--color-texto-suave); white-space: nowrap; }
   .arbol-et.muerto b { color: var(--color-texto-suave); }
   .arbol-et.futuro b, .arbol-et.futuro span { color: var(--color-futuro); }
   .arbol-et .barra-embarazo { margin: 3px 0 0; max-width: none; flex: none; }
   .arbol-et.fuera-filtro { opacity: .28; }
   .arbol-caja.fuera-filtro { opacity: .45; }
-  .arbol-et.soy-yo { box-shadow: inset 0 0 0 2.5px var(--color-accion); }
+  .arbol-et.soy-yo { box-shadow: inset 0 0 0 2.5px var(--color-principal); }
   .arbol-ano-et { position: absolute; height: 20px; line-height: 20px; font-family: var(--letra-texto); font-size: 11.5px; font-weight: 700; color: var(--color-principal-oscuro); text-align: right; pointer-events: none; }
   .arbol-ano-et.futuro { color: var(--color-futuro); }
   .arbol-lineas path { fill: none; stroke: #CDBFAD; stroke-width: 2; stroke-linejoin: round; }
@@ -819,7 +881,7 @@
   .arbol-zona { fill: transparent; }
   .arbol-persona[data-persona], .arbol-persona[data-comida-abuela] { cursor: pointer; }
   .arbol-persona[data-persona]:hover .arbol-zona, .arbol-persona[data-comida-abuela]:hover .arbol-zona { fill: rgba(14, 138, 122, .06); }
-  .arbol-persona.soy-yo .arbol-zona { stroke: var(--color-accion); stroke-width: 2.5; }
+  .arbol-persona.soy-yo .arbol-zona { stroke: var(--color-principal); stroke-width: 2.5; }
   .arbol-nombre { font-family: var(--letra-texto); font-weight: 800; font-size: 15px; fill: var(--color-texto); }
   .arbol-dato { font-family: var(--letra-texto); font-weight: 600; font-size: 12.5px; fill: var(--color-texto-suave); }
   .arbol-ano { font-family: var(--letra-texto); font-weight: 700; font-size: 11.5px; fill: var(--color-principal-oscuro); }
@@ -834,7 +896,8 @@
   .huecos-dia li:first-child { border-top: 0; }
   .hueco-turno { min-width: 64px; font-weight: 800; color: var(--color-principal-oscuro); }
   .hueco-estado { flex: 1; min-width: 0; font-weight: 700; }
-  .hueco-estado.sin-nadie { color: var(--color-error); }
+  .hueco-estado.sin-nadie { color: var(--color-accion); font-weight: 800; }
+  .hueco-estado.sin-nadie.pronto { color: var(--color-error); }
   .hueco-estado.solo-servicio { color: #8A5A00; }
   /* Pestaña Personas */
   /* v4.12.7: buscar, Filtros y Añadir en una línea; el panel de filtros, con su contador en cada opción */
@@ -967,8 +1030,21 @@
   .buscador input { font: inherit; min-height: 44px; padding: 8px 12px; border-radius: calc(var(--radio) / 2); border: 1px solid var(--color-principal-oscuro); background: #fff; color: var(--color-texto); }
   .buscador .titulo-lista { margin: 0; font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
   .resultados { display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow: auto; }
-  .resultados .p[aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--color-accion); }
-  .elegido { margin: 0; font-weight: 800; }
+  .resultados .p[aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--color-principal); }
+  .resultados .p[aria-pressed="true"] b::before { content: '✓ '; color: var(--color-principal); }
+  .elegido { margin: 0; font-weight: 800; color: var(--color-principal-oscuro); }
+  .rf-opc { color: var(--color-texto-suave); font-weight: 600; }
+  input::placeholder, textarea::placeholder { color: #8A9590; font-weight: 400; opacity: 1; }  /* v5.18: el ejemplo, en gris (no parece escrito) */
+  .tuyos { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .tuyos li { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: var(--radio); background: #fff; border: 1px solid var(--color-linea); }
+  /* v5.16 (UX-37): zonas táctiles de 44 px como mínimo */
+  .ev-familia .ev-ver { min-height: 40px; min-width: 64px; display: inline-flex; align-items: center; justify-content: center; }
+  .ev-bots .ev-si:not(.grande), .ev-bots .ev-no:not(.grande) { min-width: 44px; min-height: 44px; }
+  .cal-cab .icono { min-width: 44px; min-height: 44px; }
+  td label:has(input[type="checkbox"]) { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; }
+  td input[type="checkbox"], label.check input[type="checkbox"] { width: 22px; height: 22px; }
+  label.check { min-height: 44px; display: flex; align-items: center; gap: 10px; }
+  .rt-total { min-height: 44px; }
   button.enlace.alta-nueva { justify-self: start; margin: 0; padding: 8px 0; text-align: left; }
   #impresion { display: none; }
   @media print {
@@ -986,7 +1062,7 @@
 <header class="cabecera">
   <div class="cabecera-dentro">
     <button type="button" id="yo-chip" class="yo-chip" hidden></button>
-    <button type="button" class="salir-arriba" data-salir-sencillo>Salir de la vista sencilla</button>
+    <button type="button" class="salir-arriba" data-salir-sencillo><span class="sa-largo">Salir de la vista sencilla</span><span class="sa-corto">Salir</span></button>
     <h1>Casa Abuela</h1>
     <p id="subtitulo">Quién viene a comer y a cenar</p>
     <nav class="vistas" aria-label="Vistas">
@@ -994,8 +1070,9 @@
       <a href="#eventos" data-vista="eventos">Eventos<span class="nav-badge" id="badge-eventos" hidden></span></a>
       <a href="#personas" data-vista="personas">Personas</a>
       <a href="#huecos" data-vista="huecos">Huecos</a>
-      <a href="#rellenar" data-vista="rellenar" id="nav-rellenar" hidden><span class="nav-largo">Por rellenar</span><span class="nav-corto">Rellenar</span><span class="nav-badge" id="badge-rellenar" hidden></span></a>
+      <a href="#rellenar" data-vista="rellenar" id="nav-rellenar" hidden>Por rellenar<span class="nav-badge" id="badge-rellenar" hidden></span></a>
       <a href="#ajustes" data-vista="ajustes" id="nav-ajustes" hidden>Ajustes</a>
+      <a href="#mas" id="nav-mas" role="button" aria-haspopup="dialog"><span id="nav-mas-t">Más</span> ▾<span class="nav-badge" id="badge-mas" hidden></span></a>
     </nav>
   </div>
 </header>
@@ -1051,8 +1128,8 @@
     <p>Utilo prepara herramientas sencillas para pequeños comercios, negocios y particulares, para que pierdan menos tiempo en organizar su día a día: reservas, turnos, pedidos o calendarios como este, cada cosa hecha a la medida de cada uno.</p>
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
-  <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir del modo sencillo</button></p>
-  <footer>Hecho con cariño por Utilo · v5.12.0</footer>
+  <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
+  <footer>Hecho con cariño por Utilo · v5.22.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1072,7 +1149,7 @@
 (function () {
   const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-  const TURNOS = [{ id: 'COMIDA', nombre: 'Comida' }, { id: 'CENA', nombre: 'Cena' }, { id: 'DORMIR', nombre: 'Dormir' }];
+  const TURNOS = [{ id: 'COMIDA', nombre: 'Comida' }, { id: 'CENA', nombre: 'Cena' }, { id: 'DORMIR', nombre: 'Noche' }];  // v5.19: «Noche» en todas partes
   const CLAVE_YO = 'mesa-abuela-yo';  // se mantiene del nombre antiguo para que nadie tenga que volver a elegir
   const GENERACIONES = [
     { clave: 'Tios', clase: 'g-hijos', nombre: 'hijos' },
@@ -1115,6 +1192,7 @@
   let semanasExtra = 0;  // v4.15: Huecos, «Ver dos semanas más»  // las fechas que cubren los datos que hay en memoria
   const ESCRITORIO = window.matchMedia('(min-width: 760px)');
   const CINCO = window.matchMedia('(min-width: 1200px)');  // v4.5: en ordenador, cinco días
+  const CINCO_AGIL = window.matchMedia('(min-width: 1000px)');  // v5.15: en la vista ágil, desde 1000 px
   let cargando = false;
   const abiertos = new Set();
 
@@ -1206,7 +1284,7 @@
   function lunesInicio() { return datos ? lunesDe(datos.config.inicio) : null; }
   /* v4.2: la ventana de días (tablet: tres; ordenador, v4.5: cinco) y la semana van juntas */
   function enEscritorio() { return ESCRITORIO.matches; }
-  function cuantosDias() { return CINCO.matches ? 5 : 3; }
+  function cuantosDias() { return CINCO.matches || (CINCO_AGIL.matches && vistaElegida() === 'agil' && !modoAbuela()) ? 5 : 3; }
   /* v4.8: hoy (o el día elegido) en el centro: en ordenador, dos días a cada lado; en tablet, uno; en el móvil, la semana */
   function lado() { return enEscritorio() ? (cuantosDias() - 1) / 2 : 0; }
   function primerDia() { return sumar(diaFoco, -lado()); }
@@ -1290,7 +1368,7 @@
     return { desde: ini < lunesSel ? ini : lunesSel, hasta: fin };
   }
   function cubierto() { const n = necesita(); return !!rangoCargado && rangoCargado.desde <= n.desde && rangoCargado.hasta >= n.hasta; }
-  function etiquetaTurno(turno) { return turno === 'CENA' ? 'Cena' : (turno === 'DORMIR' ? 'Dormir' : 'Comida'); }
+  function etiquetaTurno(turno) { return turno === 'CENA' ? 'Cena' : (turno === 'DORMIR' ? 'Noche' : 'Comida'); }
   function horaDe(turno) { return turno === 'CENA' ? datos.config.horaCena : (turno === 'DORMIR' ? (datos.config.horaDormir || '22:30') : datos.config.horaComida); }
   function nombreTurno(fecha, turno) { return (turno === 'CENA' ? 'cena' : (turno === 'DORMIR' ? 'noche' : 'comida')) + ' del ' + DIAS[dow(fecha)].toLowerCase() + ' ' + ddmm(fecha); }
   function minutosHasta(fecha, turno) {
@@ -1318,8 +1396,11 @@
   function deQuien(p) {
     if (!p) return '';
     if (esServicio(p)) return 'servicio';
-    const g = generacion(p);
-    return p.familia && p.familia !== 'Otros' ? g.nombre + ' · ' + p.familia : g.nombre;
+    // v5.15: en singular y desde la abuela (hija, nieto, bisnieta…), no «nietos»
+    const j = String(p.jerarquia || ''), m = p.sexo === 'Mujer';
+    const rol = j === 'Tios' ? (m ? 'hija' : 'hijo') : j === 'Tios +1' ? (m ? 'nuera' : 'yerno') : j === 'Nietos' ? (m ? 'nieta' : 'nieto')
+      : j === 'Nietos +1' ? 'pareja de ' + (m ? 'un nieto' : 'una nieta') : /^Biznietos/.test(j) ? (j === 'Biznietos' ? (m ? 'bisnieta' : 'bisnieto') : 'pareja de bisnieto') : generacion(p).nombre;
+    return p.familia && p.familia !== 'Otros' ? rol + ' · ' + p.familia : rol;
   }
   function etiquetaMenu(v) { return String(v || '').replace(/^[^A-Za-zÁÉÍÓÚáéíóúÑñ]+/, '').trim() || 'Entero'; }
   function apunte(fecha, turno, id) { return datos.apuntes.find(function (a) { return a.fecha === fecha && a.turno === turno && a.persona === id; }); }
@@ -1342,15 +1423,15 @@
     const a = fecha ? apunte(fecha, turno, id) : null;  // v4.14.1: su nota, dentro de su fila
     const mas = a && a.acompanantes ? '<span class="mas-n">+' + a.acompanantes + '</span>' : '';  // v4.15: acompañantes
     return '<button type="button" class="p ' + clase(p) + (id === yo ? ' soy-yo' : '') + '" data-persona="' + esc(id) + '"' +
-      (fecha ? ' data-fecha="' + fecha + '" data-turno="' + turno + '"' : '') + ' aria-label="Editar a ' + esc(nombre) + '"><b>' + esc(nombre) + mas + marcaMenu(p) + '</b><small>' +
-      esc(deQuien(p)) + '</small>' + (a && a.nota ? '<span class="nota-chip">' + esc(a.nota) + '</span>' : '') + '</button>';
+      (fecha ? ' data-fecha="' + fecha + '" data-turno="' + turno + '"' : '') + ' aria-label="Editar a ' + esc(nombre) + '"><b>' + esc(nombre) + mas + marcaMenu(p) + '</b>' +
+      (a && a.nota ? '<span class="nota-chip">' + esc(a.nota) + '</span>' : '') + '</button>';
   }
   /* Marca en la tarjeta para medio menú o sin menú (entero no lleva nada) */
   const ICONO_MEDIO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>';
   const ICONO_NADA = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M6 18L18 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
   function marcaMenu(p) {
     const m = etiquetaMenu(p && p.menu);
-    if (m === 'Medio') return '<span class="marca-menu medio">' + ICONO_MEDIO + 'medio</span>';
+    if (m === 'Medio') return '<span class="marca-menu medio">' + ICONO_MEDIO + 'media ración</span>';
     if (m === 'Nada') return '<span class="marca-menu nada">' + ICONO_NADA + 'sin menú</span>';
     return '';
   }
@@ -1527,12 +1608,12 @@
     if (extra) tamanos.Entero = (tamanos.Entero || 0) + extra;
     const total = comen.length - noComen.length + extra;
     const partes = [];
-    if (tamanos.Entero) partes.push(tamanos.Entero === 1 ? '1 menú entero' : tamanos.Entero + ' menús enteros');
+    if (tamanos.Entero) partes.push(tamanos.Entero === 1 ? '1 ración normal' : tamanos.Entero + ' raciones normales');  // v5.19: raciones
     Object.keys(tamanos).forEach(function (m) {
       if (m === 'Entero') return;
-      partes.push(tamanos[m] === 1 ? '1 ' + (m === 'Medio' ? 'medio' : 'menú ' + m.toLowerCase()) : tamanos[m] + ' ' + (m === 'Medio' ? 'medios' : 'menús ' + m.toLowerCase()));
+      partes.push(tamanos[m] === 1 ? '1 ' + (m === 'Medio' ? 'media ración' : 'ración ' + m.toLowerCase()) : tamanos[m] + ' ' + (m === 'Medio' ? 'medias raciones' : 'raciones ' + m.toLowerCase()));
     });
-    let detalle = Object.keys(tamanos).length === 1 && tamanos.Entero ? (total === 1 ? 'Menú entero' : 'Todos menú entero') : lista(partes).replace(/^./, function (c) { return c.toUpperCase(); });
+    let detalle = Object.keys(tamanos).length === 1 && tamanos.Entero ? (tamanos.Entero === 1 ? '1 ración normal' : tamanos.Entero + ' raciones normales') : lista(partes).replace(/^./, function (c) { return c.toUpperCase(); });
     if (noComen.length) detalle += '. ' + lista(noComen) + (noComen.length === 1 ? ' no come' : ' no comen');
     return { total: total, detalle: detalle };
   }
@@ -1621,6 +1702,12 @@
     $('badge-eventos').hidden = !pend; $('badge-eventos').textContent = pend; $('badge-eventos').setAttribute('aria-label', pend + ' por contestar');
     $('badge-rellenar').hidden = !mios.length; $('badge-rellenar').textContent = mios.length; $('badge-rellenar').setAttribute('aria-label', mios.length + ' por rellenar');
     document.querySelector('nav.vistas').classList.toggle('muchas', !$('nav-rellenar').hidden);
+    // v5.16: «Más ▾» en el móvil
+    const conMas = !$('nav-rellenar').hidden || !$('nav-ajustes').hidden;
+    document.querySelector('nav.vistas').classList.toggle('con-mas', conMas);
+    $('badge-mas').hidden = $('nav-rellenar').hidden || !mios.length; $('badge-mas').textContent = mios.length;
+    $('nav-mas-t').textContent = vista === 'rellenar' ? 'Por rellenar' : vista === 'ajustes' ? 'Ajustes' : 'Más';
+    if (vista === 'rellenar' || vista === 'ajustes') $('nav-mas').setAttribute('aria-current', 'page'); else $('nav-mas').removeAttribute('aria-current');
     bordesNav();  // v4.87
     if (vista === 'ajustes') { if (!esAdmin()) { ponerVista('semana'); return; } if (!ajustes) pintarAjustes(); }  // v4.35: la Semana, los Eventos y (v4.37) las Personas, para mirar
     pintarNavegador();
@@ -1636,9 +1723,11 @@
 
   /* v4.14: Huecos: de hoy al final de la semana que viene, las comidas, cenas y noches sin nadie o solo con el servicio.
      No cuentan las que no hace falta ni en las que la abuela no está. */
+  let huecosDias = 7;
   function pintarHuecos() {
     if (vista !== 'huecos') return;
     const h = hoy(), fin = sumar(lunesDe(h), 13 + semanasExtra * 7);
+    huecosDias = diasEntre(h, fin) + 1;  // v5.14: el WhatsApp de aquí, los mismos días que la pantalla
     const dias = [];
     let sinNadie = 0, soloServicio = 0;
     for (let f = h < datos.config.inicio ? datos.config.inicio : h; f <= fin; f = sumar(f, 1)) {
@@ -1656,7 +1745,7 @@
     const vez = function (n, uno, varios) { return n === 1 ? uno : varios.replace('%', n); };
     let html = '<p class="huecos-resumen">' + (!sinNadie && !soloServicio
       ? 'No hay huecos de aquí al ' + diaLargo(fin).toLowerCase() + ': todo tiene a alguien.'
-      : 'De aquí al ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, '1 hueco sin nadie', '% huecos sin nadie') : '', soloServicio ? vez(soloServicio, '1 solo con el servicio', '% solo con el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>';
+      : 'De aquí al ' + diaLargo(fin).toLowerCase() + ': ' + [sinNadie ? vez(sinNadie, 'falta alguien en 1 comida, cena o noche', 'falta alguien en % comidas, cenas o noches') : '', soloServicio ? vez(soloServicio, '1 solo con el servicio', '% solo con el servicio') : ''].filter(Boolean).join(' y ') + '.') + '</p>';
     // v5.9: el mismo mensaje de «Lo que falta» que en Semana, a mano desde aquí
     if ((sinNadie || soloServicio) && !modoAbuela()) html += '<div class="huecos-compartir"><button type="button" class="principal con-icono" data-compartir-huecos>' + ICONO_COMPARTIR + '<span>Avisar al grupo por WhatsApp</span></button></div>';
     html += dias.map(function (d) {
@@ -1664,7 +1753,7 @@
         d.huecos.map(function (x) {
           const datosTurno = ' data-anadir data-fecha="' + d.fecha + '" data-turno="' + x.turno.id + '"';
           return '<li><span class="hueco-turno">' + x.turno.nombre + '</span>' +
-            (x.serv.length ? '<span class="hueco-estado solo-servicio">Solo el servicio: ' + esc(lista(x.serv)) + '</span>' : '<span class="hueco-estado sin-nadie">Sin nadie</span>') +
+            (x.serv.length ? '<span class="hueco-estado solo-servicio">Solo el servicio: ' + esc(lista(x.serv)) + '</span>' : '<span class="hueco-estado sin-nadie' + (diasEntre(hoy(), d.fecha) <= 1 ? ' pronto' : '') + '">Falta alguien</span>') +
             '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(d.fecha, x.turno.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button></li>';
         }).join('') + '</ul></section>';
     }).join('');
@@ -1700,17 +1789,20 @@
       return;
     }
     $n.classList.toggle('con-pasos', tres);
+    // v5.15: el título, los días que se ven (no la semana entera); se avanza día a día y la semana se elige en el calendario
+    const v = ventana(), MES3 = function (f) { return MESES[Number(f.slice(5, 7)) - 1].slice(0, 3); };
+    const corto = function (f) { return DIAS[dow(f)].slice(0, 3) + ' ' + Number(f.slice(8)); };
+    const titulo = corto(v[0]) + (v[0].slice(5, 7) !== v[v.length - 1].slice(5, 7) ? ' ' + MES3(v[0]) : '') + ' – ' + corto(v[v.length - 1]) + ' ' + MES3(v[v.length - 1]);
+    const enHoy = v.indexOf(hoy()) !== -1;
     $n.innerHTML =
-      (tres ? '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaFoco <= minFoco() ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Día anterior</button>' : '') +
+      '<button type="button" class="accion paso" data-paso-dia="-1"' + (diaFoco <= minFoco() ? ' disabled' : '') + '>' + FLECHA_IZQ + 'Antes</button>' +
       '<div class="nav-centro">' +
-      '<button type="button" class="flecha" data-semana="-1" aria-label="' + (tres ? 'Semana anterior' : '7 días antes') + '"' + ((tres ? lunesSel <= lunesInicio() : dias[0] <= datos.config.inicio) ? ' disabled' : '') + '>' + FLECHA_IZQ + '</button>' +
-      '<div class="titulo-nav"><h2>Del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '</h2>' +
-      (actual ? '' : '<button type="button" class="enlace" data-semana="0">' + (tres ? 'Volver a esta semana' : 'Volver a hoy') + '</button>') + '</div>' +
-      '<button type="button" class="flecha" data-semana="1" aria-label="' + (tres ? 'Semana siguiente' : '7 días después') + '">' + FLECHA_DER + '</button>' +
-      '<span class="nav-herr"><button type="button" class="icono" data-calendario aria-label="Elegir la semana en el calendario" title="Calendario">' + ICONO_CALENDARIO + '</button>' +  // v5.9: también en el ordenador
+      '<div class="titulo-nav"><h2>' + esc(titulo) + '</h2>' +
+      (enHoy ? '' : '<button type="button" class="enlace" data-semana="0">Volver a hoy</button>') + '</div>' +
+      '<span class="nav-herr"><button type="button" class="icono" data-calendario aria-label="Elegir la semana en el calendario" title="Elegir la semana">' + ICONO_CALENDARIO + '</button>' +
       '<button type="button" class="icono" data-compartir aria-label="Compartir" title="Compartir">' + ICONO_COMPARTIR + '</button>' +
       '<button type="button" class="icono" data-imprimir aria-label="Imprimir" title="Imprimir">' + ICONO_IMPRIMIR + '</button></span></div>' +
-      (tres ? '<button type="button" class="accion paso" data-paso-dia="1">Día siguiente' + FLECHA_DER + '</button>' : '');
+      '<button type="button" class="accion paso" data-paso-dia="1">Después' + FLECHA_DER + '</button>';
   }
 
   function bloqueDia(fecha, opciones) {
@@ -1723,7 +1815,7 @@
     let html = '<article class="dia' + (fecha === h ? ' hoy' : '') + (pasado ? ' pasado' : '') + (abierto ? ' abierto' : '') + (sinTodo ? ' sin' : '') + '">';
     html += '<div class="dia-cab"><span class="dia-hoja" aria-hidden="true"><small>' + DIAS[dow(fecha)].slice(0, 3).toUpperCase() + '</small><b>' + Number(fecha.slice(8, 10)) + '</b></span><h3>' + DIAS[dow(fecha)] + '</h3><span>' + (fecha === h ? 'Hoy' : ddmm(fecha)) + '</span>' +
       (plegable ? '<button type="button" class="mini solo-movil" data-plegar="' + fecha + '" aria-expanded="' + abierto + '">' + (abierto ? 'Ocultar' : 'Ver') + '</button>' : '') +
-      (modoAbuela() && !pasado ? '<button type="button" class="mini campana" data-preguntar="' + fecha + '" aria-label="Copiar quién viene el ' + diaLargo(fecha).toLowerCase() + '">' + ICONO_CAMPANA + '¿Quién viene?</button>' : '') +  // v4.38
+      (modoAbuela() && !pasado && !enEscritorio() ? '<button type="button" class="mini campana" data-preguntar="' + fecha + '" aria-label="Preguntar por WhatsApp quién viene el ' + diaLargo(fecha).toLowerCase() + '">' + ICONO_COMPARTIR + 'Preguntar por WhatsApp</button>' : '') +  // v5.17: en el ordenador, no; y dice lo que hace  // v4.38
       (modoAbuela() ? '' : '<button type="button" class="mini' + (plegable && !abierto ? ' solo-escritorio' : '') + '" data-dia="' + fecha + '" aria-label="Notas del ' + diaLargo(fecha).toLowerCase() + '">Nota</button>') + '</div>';
     const cumples = textoCumples(fecha);
     if (cumples.length) html += '<p class="nota-dia cumple">' + cumples.map(esc).join('<br>') + '</p>';
@@ -1749,7 +1841,7 @@
               const varios = diasDelEvento(e).length > 1, d = diasDe(e, yo), voy = e.van.indexOf(yo) !== -1;
               const si = voy && (!varios || !d || d.indexOf(fecha) !== -1);
               const no = e.noVan.indexOf(yo) !== -1 || (voy && varios && d && d.indexOf(fecha) === -1);
-              return '<p class="evento-vas"><b>' + (varios ? '¿Vas este día?' : '¿Vas?') + '</b><span>' +
+              return '<p class="evento-vas"><b>' + (si ? 'Has dicho que vas' : no ? 'Has dicho que no vas' : varios ? '¿Vas este día?' : '¿Vas?') + '</b><span>' +  // v5.15: contestado, se dice igual que en Eventos
                 '<button type="button" class="accion" data-ev-dia-yo="' + esc(e.id) + '|' + fecha + '|si" aria-pressed="' + si + '">' + ICONO_SI + 'Voy</button>' +
                 '<button type="button" class="accion" data-ev-dia-yo="' + esc(e.id) + '|' + fecha + '|no" aria-pressed="' + no + '">' + ICONO_NO + 'No voy</button></span></p>';
             })() : '');
@@ -1773,9 +1865,9 @@
       const conMas = !modoAbuela();  // v4.99: el «+», en la columna de color; v5.1: siempre (también lo pasado, los eventos y lo que no hace falta), menos en la vista sencilla
       html += '<div class="comida turno-' + t.id.toLowerCase() + (motivo !== null ? ' no-hace-falta' : '') + (paso ? ' ya-paso' : '') + '"><div class="turno-lado"><span class="turno-et" aria-hidden="true">' + ICONO_TURNO_SVG[t.id] + '<span>' + etiq + '</span></span>' +
         (conMas ? '<button type="button" class="mas"' + datosTurno + ' aria-label="Añadir a alguien a la ' + nombreTurno(fecha, t.id) + '" title="Añadir a alguien">' + ICONO_MAS + '</button>' : '') + '</div><div class="turno-cont"><div class="comida-cab"><h4 class="oculto">' + etiq + '</h4>' +
-        (paso && motivo === null && !comp.length ? '<span class="nadie suave">Ya pasó · no fue nadie</span>' :
-          faltaAlguien && modoAbuela() ? '<span class="nadie suave">Nadie apuntado</span>' : motivo === null && modoAbuela() ? '' :
-          faltaAlguien ? '<span class="falta-aviso">Falta alguien</span>'  // v5.2: aviso, no botón (el «+» de la izquierda añade)
+        (paso && motivo === null && !comp.length ? '<span class="nadie suave">No fue nadie</span>' :
+          faltaAlguien && modoAbuela() ? '<span class="nadie suave">Aún sin apuntar</span>' : motivo === null && modoAbuela() ? '' :
+          faltaAlguien ? '<button type="button" class="falta-boton' + (diasEntre(hoy(), fecha) <= 1 ? ' pronto' : '') + '"' + datosTurno + ' aria-label="Falta alguien en la ' + nombreTurno(fecha, t.id) + ': apúntate">' + ICONO_MAS + '<span><b>Falta alguien</b><small>' + (servicioYo() ? 'Toca para apuntarte' : '¡Apúntate!') + '</small></span></button>'  /* v5.22: un botón que se ve y apunta (la razón de ser de la web) */  // v5.15: una sola frase; en rojo solo hoy y mañana  // v5.2: aviso, no botón (el «+» de la izquierda añade)
           : '') + '</div>';
       const evT = ft && eventoEn(fecha, t.id);  // v4.31
       if (evT) html += '<p class="turno-evento">' + ICONO_EVENTO + esc(evT.nombre) + '</p>';  // v4.32: en el hueco, el evento tal cual
@@ -1785,11 +1877,7 @@
       const fam = ids.filter(function (id) { return !esServicio(persona(id)); });
       const servTodo = ids.filter(function (id) { return esServicio(persona(id)); });
       const al = t.id === 'DORMIR' ? [] : ids.map(persona).filter(function (p) { return p && p.alergias; });
-      if (modoAbuela()) {  // la abuela, con los nombres: para ella lo importante es quién viene
-        if (fam.length) html += '<div class="gente">' + fam.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
-        if (servTodo.length) html += '<div class="servicio-linea">Servicio:' + servTodo.map(function (id) { return chip(id, fecha, t.id); }).join('') + '</div>';
-        if (al.length) html += '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>';
-      } else if (ids.length) html += resumenTurno(fecha, t.id, ids, fam, servTodo, al, !ft && motivo === null);  // v4.75: fuera, el resumen; al tocarlo, el desglose
+      if (ids.length) html += resumenTurno(  /* v5.20: también en la vista sencilla, el resumen por familias (se abre al tocarlo) */fecha, t.id, ids, fam, servTodo, al, !ft && motivo === null);  // v4.75: fuera, el resumen; al tocarlo, el desglose
       if (!modoAbuela() && yo && persona(yo) && ids.indexOf(yo) !== -1 && !paso) {  // v4.91: lo tuyo, a la vista, y quitarte en un toque
         html += '<div class="tu-vas"><span>' + ICONO_SI + 'Tú ' + (t.id === 'DORMIR' ? 'duermes' : 'vas') + '</span><button type="button" class="accion" data-quitarme="' + fecha + '|' + t.id + '">' + (t.id === 'DORMIR' ? 'Ya no duermo' : 'Ya no voy') + '</button></div>';
       }
@@ -1823,7 +1911,7 @@
         const extra = ids2.reduce(function (n, id) { return n + ((apunte(fecha, turno, id) || {}).acompanantes || 0); }, 0);
         const notas = ids2.filter(conNota).map(function (id) { return '<span class="rt-nota"><b>' + esc((persona(id) || {}).apodo || id) + ':</b> ' + esc(apunte(fecha, turno, id).nota) + '</span>'; }).join('');
         return '<button type="button" class="rt-familia' + (ids2.indexOf(yo) !== -1 ? ' con-yo' : '') + '" data-rt-fam="' + esc(clave(f)) + '" aria-expanded="' + ab + '">' +
-            '<span class="rt-cab"><b>' + esc(f) + '</b><span class="rt-n">' + (ids2.length + extra) + '</span><span class="rt-flecha" aria-hidden="true">' + (ab ? '▴' : '▾') + '</span></span>' + (ab ? '' : notas) + '</button>' +
+            '<span class="rt-cab"><b>' + esc(f) + '</b><span class="rt-n">' + ((ids2.length + extra) === 1 ? 'va 1' : 'van ' + (ids2.length + extra)) + '</span><span class="rt-flecha" aria-hidden="true">' + (ab ? '▴' : '▾') + '</span></span>' + (ab ? '' : notas) + '</button>' +
           (ab ? '<div class="gente rt-abierta">' + ids2.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '');
       }).join('') + '</div>' : '') +
       (serv.length ? '<div class="servicio-linea servicio-texto">Servicio: ' + serv.map(function (id) { return chip(id, fecha, turno); }).join('<span class="y">y</span>') + '</div>' : '');
@@ -1842,10 +1930,10 @@
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(titulo.charAt(0).toUpperCase() + titulo.slice(1)) + '</h2></div><div class="dlg-cuerpo">' +
       (turno !== 'DORMIR' && cuenta ? '<p class="dt-total"><b>' + r.total + ' a la mesa</b>, contando a la abuela' + (serv.length ? ' y al servicio' : '') + '.<br>Para cocinar: ' + esc(r.detalle.charAt(0).toLowerCase() + r.detalle.slice(1)) + '.</p>' : '') +
       (al.length ? '<ul class="alergias">' + al.map(function (p) { return '<li>' + esc(p.apodo) + ': ' + esc(p.alergias) + '</li>'; }).join('') + '</ul>' : '') +
-      orden.map(function (f) { return '<h3 class="dt-fam">' + esc(f === '?' ? 'Otros' : cortoFamilia(f)) + ' <small>' + grupos[f].length + '</small></h3><div class="gente">' + grupos[f].map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>'; }).join('') +
+      orden.map(function (f) { return '<h3 class="dt-fam">' + esc(f === '?' ? 'Otros' : cortoFamilia(f)) + ' <small>' + (grupos[f].length === 1 ? '1 persona' : grupos[f].length + ' personas') + '</small></h3><div class="gente">' + grupos[f].map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>'; }).join('') +
       (serv.length ? '<div class="servicio-linea">Servicio:' + serv.map(function (id) { return chip(id, fecha, turno); }).join('') + '</div>' : '') +
       '<p class="ayuda">' + (servicioYo() ? 'Toca a alguien para ver quién es.' : 'Toca a alguien para cambiar lo suyo.') + '</p></div>' +
-      '<div class="dlg-pie"><div class="botones">' + (sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">' + (servicioYo() ? 'Apuntarme' : 'Añadir a alguien') + '</button>' : '') +
+      '<div class="dlg-pie"><div class="botones">' + (!modoAbuela() && sinTurno(fecha, turno) === null && !fueraTurno(fecha, turno) ? '<button type="button" class="principal" id="dlg-dt-anadir">' + (servicioYo() ? 'Apuntarme' : 'Añadir a alguien') + '</button>' : '') +
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     if ($('dlg-dt-anadir')) $('dlg-dt-anadir').addEventListener('click', function () { cerrarDialogo(); if (servicioYo()) apuntarme(fecha, turno); else abrirAnadir(fecha, turno); });
@@ -1920,20 +2008,23 @@
   /* v4.35: salir del modo sencillo: con la clave de la familia, para que no se salga sin querer */
   function salirSencillo() {
     // v4.92: si la vista sencilla la eligió uno mismo (no es la abuela), se sale sin clave, a la cómoda
-    if (persona(yo) && !editor(yo)) { guardarVista('comoda'); pintar(); aviso('Listo: vista cómoda. Puedes cambiarla tocando tu nombre.'); return; }
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Salir del modo sencillo</h2></div>' +
+    const antes = (function () { try { return localStorage.getItem('casa-abuela-vista-antes') || 'comoda'; } catch (e) { return 'comoda'; } })();  // v5.16
+    if (persona(yo) && !editor(yo)) { guardarVista(antes); pintar(); aviso('Listo: vista ' + (antes === 'agil' ? 'ágil' : 'cómoda') + '. Puedes cambiarla tocando tu nombre.'); return; }
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Salir de la vista sencilla</h2></div>' +
       '<div class="dlg-cuerpo"><p class="ayuda">Para volver a la web completa, escribe la clave de la familia.</p>' +
       (pistaClave() ? '<p class="pista-clave"><strong>Pista:</strong> ' + esc(pistaClave()) + '</p>' : '') +  // v4.78
-      '<label class="campo" for="dlg-salir-clave">Clave<input id="dlg-salir-clave" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>' +
+      '<label class="campo" for="dlg-salir-clave">Clave<input id="dlg-salir-clave" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"></label>' +
+      '<label class="casilla"><input type="checkbox" id="dlg-salir-ver"> Ver la clave</label></div>' +
       pie('Salir'));
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     const n = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
     const salir = function () {
       if (leerClave() && n($('dlg-salir-clave').value) !== n(leerClave())) { errorDialogo('Esa no es la clave. Prueba otra vez.'); return; }
-      if (persona(yo) && leerVista() === 'sencilla') guardarVista('comoda'); else { yo = ''; guardarYo(''); }  // v4.91
+      if (persona(yo) && leerVista() === 'sencilla') guardarVista(antes); else { yo = ''; guardarYo(''); }  // v4.91
       cerrarDialogo(); pintar();
     };
     $('dlg-guardar').addEventListener('click', salir);
+    $('dlg-salir-ver').addEventListener('change', function () { $('dlg-salir-clave').type = this.checked ? 'text' : 'password'; });
     $('dlg-salir-clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); salir(); } });
     $('dlg-cerrar').textContent = 'Cancelar';  // v4.92
   }
@@ -1974,16 +2065,20 @@
     if (abuelo && !(p.fechas || []).some(function (x) { return /^bautizo$/i.test(x.que); })) f.push('bautizo');  // v4.65: de los abuelos, también el bautizo
     return f;
   }
+  /* v5.19 (UX-12): lo obligatorio es el cumpleaños y la boda; lo demás, «si lo sabes» (en gris, no cuenta en el número) */
+  const RF_OBLIG = ['cumple', 'boda'];
+  function rfOblig(p) { return rfFalta(p).filter(function (k) { return RF_OBLIG.indexOf(k) !== -1; }); }
+  function rfOpc(p) { return rfFalta(p).filter(function (k) { return RF_OBLIG.indexOf(k) === -1; }); }
   /* v4.65: los abuelos, que se preguntan a todas las familias (alguien lo sabrá) */
-  function rfAbuelos() { return (datos.editores || []).filter(function (p) { return rfFalta(p).length; }); }
+  function rfAbuelos() { return (datos.editores || []).filter(function (p) { return rfOblig(p).length; }); }
   /* v4.65: «Por rellenar» sale a quien entra mientras a su familia o a los abuelos les falte algo */
   function rfMios() {
     const y = yo && quienEs(yo);
     if (!y || editor(yo) || modoAbuela()) return [];
-    const fam = esServicio(y) || y.familia === 'Otros' ? [] : rfGente(familiaDe(y)).filter(function (p) { return rfFalta(p).length; });
+    const fam = esServicio(y) || y.familia === 'Otros' ? [] : rfGente(familiaDe(y)).filter(function (p) { return rfOblig(p).length; });
     return fam.concat(rfAbuelos());
   }
-  function rfNombre(p, k) { return k === 'cumple' && esFallecido(p) ? 'nacimiento' : RF_NOMBRES[k]; }
+  function rfNombre(p, k) { return k === 'cumple' && esFallecido(p) ? 'nacimiento' : k === 'boda' && p.boda && Number(p.boda.slice(3, 5)) ? 'el año de la boda' : RF_NOMBRES[k]; }
   const RF_NOMBRES = { bautizo: 'bautizo', fallecio: 'fallecimiento', cumple: 'cumpleaños', sexo: 'hombre o mujer', apellido: 'apellido', menu: 'menú', novios: 'inicio del noviazgo', boda: 'boda', santo: 'santo' };
   function rfContexto(p) {
     const padre = p.hijoDe && quienEs(p.hijoDe), otro = padre && parejaDe(padre), pa = parejaDe(p);
@@ -1998,31 +2093,33 @@
     const familias = [];
     datos.personas.forEach(function (p) { const f = familiaDe(p); if (!esServicio(p) && p.familia !== 'Otros' && familias.indexOf(f) === -1) familias.push(f); });
     if (!rfFamilia) {
-      const conFalta = familias.filter(function (f) { return rfGente(f).some(function (p) { return rfFalta(p).length; }) || rfAbuelos().length; });  // v4.67: las completas, no
+      const conFalta = familias.filter(function (f) { return rfGente(f).some(function (p) { return rfOblig(p).length; }) || rfAbuelos().length; });  // v4.67: las completas, no
       $r.innerHTML = !conFalta.length ? '<p class="rf-todo">✓ ¡Está todo relleno! Gracias.</p>' : '<div class="rf-intro"><p class="rf-paso">Paso 1 de 2</p><h2>¿De qué familia eres?</h2><p class="ayuda">Luego toca tu nombre (o el de alguien de tu familia) y rellena lo que sepas.</p></div>' +
         '<ul class="rf-lista">' + conFalta.map(function (f) {
-          const n = rfGente(f).filter(function (p) { return rfFalta(p).length; }).length;
+          const n = rfGente(f).filter(function (p) { return rfOblig(p).length; }).length;
           return '<li><button type="button" class="rf-fila" data-rf-fam="' + esc(f) + '"><span class="rf-txt"><b>' + esc(nombreFamilia(f).replace(/^Familia /, '')) + '</b>' +
-            '<small class="' + (n ? 'rf-pend' : 'rf-ok') + '">' + (n ? (n === 1 ? '1 persona con algo pendiente' : n + ' personas con algo pendiente') : '✓ Todo completo') + '</small></span><span class="rf-flecha" aria-hidden="true">›</span></button></li>';
+            '<small class="' + (n ? 'rf-pend' : 'rf-ok') + '">' + (n ? (n === 1 ? '1 persona sin cumpleaños o boda' : n + ' personas sin cumpleaños o boda') : '✓ Lo importante, completo') + '</small></span><span class="rf-flecha" aria-hidden="true">›</span></button></li>';
         }).join('') + '</ul>';
       return;
     }
     const orden = ordenPorNucleos(rfGente(rfFamilia));
-    const quedan = orden.filter(function (x) { return rfFalta(x.p).length; }).length;
-    const abuelos = rfAbuelos();  // v4.65
+    const quedan = orden.filter(function (x) { return rfOblig(x.p).length; }).length;
+    const abuelos = (datos.editores || []).filter(function (p) { return rfFalta(p).length; });  // v4.65; v5.19: de los abuelos, todo lo que se sepa
     $r.innerHTML = '<p><button type="button" class="enlace" data-rf-fam="">‹ Todas las familias</button></p>' +
       '<div class="rf-intro"><p class="rf-paso">Paso 2 de 2</p><h2>' + esc(nombreFamilia(rfFamilia)) + '</h2>' +
-      '<p class="ayuda">' + (quedan ? 'Toca un nombre para rellenar lo que le falta. ' + (quedan === 1 ? 'Queda 1 persona.' : 'Quedan ' + quedan + ' personas.') : '¡Esta familia está completa! Gracias.') + '</p></div>' +
+      '<p class="ayuda">' + (quedan ? 'Toca un nombre para rellenar lo que le falta. ' + (quedan === 1 ? 'Queda 1 persona sin cumpleaños o boda.' : 'Quedan ' + quedan + ' personas sin cumpleaños o boda.') : 'Los cumpleaños y las bodas de esta familia ya están. ¡Gracias! Si sabes algo más, puedes añadirlo.') + '</p></div>' +
       (abuelos.length ? '<h3 class="rf-grupo">De los abuelos</h3><p class="ayuda">Lo preguntamos a todas las familias: si sabes algo, rellénalo. A la abuela le hará ilusión.</p>' +
         '<ul class="rf-lista">' + abuelos.map(function (p) { return filaRF({ p: p, nivel: 0 }); }).join('') + '</ul>' +
-        '<h3 class="rf-grupo">' + esc(nombreFamilia(rfFamilia)) + '</h3>' : '') +
+        (orden.some(function (x) { return rfFalta(x.p).length; }) ? '<h3 class="rf-grupo">' + esc(nombreFamilia(rfFamilia)) + '</h3>' : '') : '') +  // v5.19: sin título vacío
       '<ul class="rf-lista">' + orden.filter(function (x) { return rfFalta(x.p).length; }).map(filaRF).join('') + '</ul>';  // v4.67: quien está completo, no sale
     function filaRF(x) {
         const p = x.p, f = rfFalta(p);
         const sangria = x.nivel ? ' style="margin-left:' + (x.nivel * 14) + 'px"' : '';
         const txt = '<span class="rf-txt"><b>' + esc(p.apodo) + (esFallecido(p) ? ' †' : '') + (p.nombre || p.apellido ? ' <span class="rf-nombre">' + esc([p.nombre, p.apellido].filter(Boolean).join(' ')) + '</span>' : '') + '</b>' +
           (rfContexto(p) && !editor(p.id) ? '<small>' + esc(rfContexto(p)) + '</small>' : '') +
-          (f.length ? '<small class="rf-pend">Falta: ' + esc(f.map(function (k) { return rfNombre(p, k); }).join(' · ')) + '</small>' : '<small class="rf-ok">✓ Completo</small>') + '</span>';
+          (rfOblig(p).length ? '<small class="rf-pend">Falta: ' + esc(rfOblig(p).map(function (k) { return rfNombre(p, k); }).join(' · ')) + '</small>' : '') +
+          (rfOpc(p).length ? '<small class="rf-opc">Si lo sabes: ' + esc(rfOpc(p).map(function (k) { return rfNombre(p, k); }).join(' · ')) + '</small>' : '') +
+          (f.length ? '' : '<small class="rf-ok">✓ Completo</small>') + '</span>';
         return '<li' + sangria + '><button type="button" class="rf-fila' + (f.length ? '' : ' hecha') + '" data-rf-persona="' + esc(p.id) + '">' + txt + '<span class="rf-flecha" aria-hidden="true">›</span></button></li>';
     }
   }
@@ -2202,7 +2299,7 @@
     const activos7 = gente.filter(function (p) { const v = visita[p.id]; return v && v.ultima.slice(0, 10) > hace7; }).length;
     const cambios7 = ajustes.cambios.filter(function (x) { return x.cuando.slice(0, 10) > hace7; }).length;
     const familiaRF = datos.personas.filter(function (p) { return !esServicio(p) && p.familia !== 'Otros' && !esFallecido(p) && !enCamino(p); });
-    const completos = familiaRF.filter(function (p) { return !rfFalta(p).filter(function (k) { return k !== 'santo'; }).length; }).length;  // el santo no cuenta para esta cifra
+    const completos = familiaRF.filter(function (p) { return !rfOblig(p).length; }).length;  // v5.19: lo obligatorio (cumpleaños y boda)
     const pct = function (a, b) { return b ? Math.round(a / b * 100) : 0; };
     const cifra = function (n, de, et, extra) { return '<div class="aj-kpi"><b>' + n + (de !== null ? '<small> de ' + de + '</small>' : '') + '</b><span>' + et + '</span>' + (extra || '') + '</div>'; };
     // por familia
@@ -2223,7 +2320,7 @@
         cifra(usan.length, gente.length, 'han entrado alguna vez') +
         cifra(activos7, null, 'han entrado esta semana') +
         cifra(cambios7, null, 'cambios esta semana') +
-        cifra(pct(completos, familiaRF.length) + '%', null, 'con los datos completos', '<span class="aj-acc"><a href="#rellenar" class="enlace" data-ir-rellenar>Ver lo que falta</a><button type="button" class="enlace" id="aj-pedir">Pedirlo al grupo</button></span>') +
+        cifra(pct(completos, familiaRF.length) + '%', null, 'con cumpleaños y boda', '<span class="aj-acc"><a href="#rellenar" class="enlace" data-ir-rellenar>Ver lo que falta</a><button type="button" class="enlace" id="aj-pedir">Pedirlo al grupo</button></span>') +
       '</div>' +
       '<h3 class="rf-sec">Por familia</h3><ul class="aj-fams">' + porFam.map(function (x) {
         return '<li><span class="aj-fam-n">' + esc(famNom(x.f)) + '</span><span class="aj-barra"><i style="width:' + pct(x.usan, x.total) + '%"></i></span><span class="aj-fam-c">' + x.usan + ' de ' + x.total + '</span></li>';
@@ -2234,12 +2331,12 @@
         const v = visita[p.id];
         return '<tr><td><b>' + esc(p.apodo) + '</b></td><td>' + esc(v ? haceCuanto(v.ultima) : '—') + '</td><td class="n">' + (cambiosDe[p.id] || 0) + '</td></tr>';
       }).join('') + '</tbody></table>' : '<p class="vacio">Aún nadie.</p>') +
-      (nunca.length ? '<h3 class="rf-sec">No la han usado nunca (' + nunca.length + ')</h3>' + porFam.filter(function (x) { return x.nunca.length; }).map(function (x) {
+      (nunca.length ? '<h3 class="rf-sec aj-aun">Aún no han entrado (' + nunca.length + ')</h3>' + porFam.filter(function (x) { return x.nunca.length; }).map(function (x) {
         return '<div class="aj-grupo"><p class="aj-grupo-t">' + esc(famNom(x.f)) + ' <span>' + x.nunca.length + '</span></p><ul class="aj-filas">' + x.nunca.map(function (p) {
           return '<li><span><b>' + esc(p.apodo) + '</b>' + ([p.nombre, p.apellido].filter(Boolean).join(' ') && [p.nombre, p.apellido].filter(Boolean).join(' ') !== p.apodo ? ' <small>' + esc([p.nombre, p.apellido].filter(Boolean).join(' ')) + '</small>' : '') + '</span>' +
-            '<button type="button" class="mini" data-no-cuenta="' + esc(p.id) + '" aria-label="' + esc(p.apodo) + ' no usa la web">No usa la web</button></li>';
+            '<button type="button" class="mini" data-no-cuenta="' + esc(p.id) + '" aria-label="' + esc(p.apodo) + ' no cuenta">No contar</button></li>';
         }).join('') + '</ul></div>';
-      }).join('') + '<p class="ayuda">Si alguien no va a usarla (no tiene móvil, por ejemplo), toca «No cuenta» y deja de salir aquí y en las cifras.</p>' : '') +
+      }).join('') + '<p class="ayuda">Si alguien no va a usarla (no tiene móvil, por ejemplo), toca «No contar» y deja de salir aquí y en las cifras.</p>' : '') +
       (noCuentan.length ? '<h3 class="rf-sec">No cuentan (' + noCuentan.length + ')</h3><ul class="aj-filas gris">' + noCuentan.map(function (id) { return '<li><span>' + esc(nombre(id)) + '</span><button type="button" class="mini" data-si-cuenta="' + esc(id) + '" aria-label="Volver a contar a ' + esc(nombre(id)) + '">Volver a contar</button></li>'; }).join('') + '</ul>' : '') +
       '<p class="ayuda">Las visitas se apuntan desde que se publicó esto (como mucho una vez por hora); los cambios, de los últimos ' + ajustes.cambios.length + '. No cuentan los bisnietos, los menores de 18, el servicio ni los marcados como «No cuenta».</p></section>';
   }
@@ -2289,13 +2386,13 @@
       '<div class="pr-grid">' +
         '<article class="pr-card pr-oro"><h3>Top 10 general</h3><ol>' + (top.length ? top.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + g.puntos + ' puntos</b></li>'; }).join('') : '<li>Aún nadie.</li>') + '</ol>' +
           (pr.general.length > top.length ? '<p class="pr-mas">Y ' + (pr.general.length - top.length) + ' más con puntos.</p>' : '') + '</article>' +
-        (pr.familias.length ? '<article class="pr-card"><h3>Familias del mes</h3><ol>' + pr.familias.map(function (f) { return '<li><span>' + esc(cortoFamilia(f.familia)) + '</span><b>' + f.visitas + '</b></li>'; }).join('') + '</ol></article>' : '') +
+        (pr.familias.length ? '<article class="pr-card"><h3>Familias del mes</h3><ol>' + pr.familias.map(function (f) { return '<li><span>' + esc(cortoFamilia(f.familia)) + '</span><b>' + f.visitas + (f.visitas === 1 ? ' visita' : ' visitas') + '</b></li>'; }).join('') + '</ol></article>' : '') +
         pr.categorias.map(function (c) {
           return '<article class="pr-card"><h3>' + esc(c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^./, function (x) { return x.toUpperCase(); })) + '</h3><p class="pr-texto">' + esc(c.texto) + '</p><ol>' +
             (c.gente.length ? c.gente.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + esc(valorCat(c.id, g.valor)) + '</b><small>+' + g.puntos + '</small></li>'; }).join('') : '<li class="pr-nadie">Aún nadie.</li>') + '</ol></article>';
         }).join('') +
         (pr.medallas.length ? '<article class="pr-card pr-ancha"><h3>Medallas</h3><ul class="pr-medallas">' + pr.medallas.map(function (m) { return '<li><b>' + esc(m.titulo) + '</b> <small class="pr-pts">' + (m.puntos || pr.puntosMedalla) + ((m.puntos || pr.puntosMedalla) === 1 ? ' punto' : ' puntos') + '</small> <span>' + esc(m.gente.join(', ')) + '</span></li>'; }).join('') + '</ul></article>' : '') +
-        (pr.servicio.length ? '<article class="pr-card pr-ancha"><h3>El servicio</h3><ul class="pr-medallas">' + pr.servicio.map(function (x) { return '<li><b>' + esc(x.apodo) + '</b> <span>' + esc(x.medallas.length ? x.medallas.map(function (m) { return m.titulo; }).join(' · ') : 'sin medallas este mes') + '</span></li>'; }).join('') + '</ul></article>' : '') +
+        (pr.servicio.length ? '<article class="pr-card pr-ancha"><h3>Quienes la cuidan</h3><ul class="pr-medallas">' + pr.servicio.map(function (x) { return '<li><b>' + esc(x.apodo) + '</b> <span>' + esc(x.medallas.map(function (m) { return m.titulo; }).concat(['Gracias por cuidarla']).join(' · '))  /* v5.19: nunca «sin medallas» */ + '</span></li>'; }).join('') + '</ul></article>' : '') +
       '</div><p class="ayuda">Solo lo ves tú. En el resumen para el grupo solo van los destacados y las gracias: nunca quién va menos.</p>';
   }
   /* en el mensaje al grupo, las medallas dichas de los demás */
@@ -2355,13 +2452,6 @@
     finde: function (v) { return v + (v === 1 ? ' visita' : ' visitas'); }, semana: function (v) { return v + (v === 1 ? ' visita' : ' visitas'); },
     compania: function (v) { return v + (v === 1 ? ' invitado' : ' invitados'); }, secretaria: function (v) { return v + (v === 1 ? ' vez' : ' veces'); }
   };
-  // v5.11: las medallas, dichas de todos y en llano
-  const INF_MED = { planes: 'Fueron a los eventos familiares', contesta: 'Contestaron a todos los eventos', semanas: 'Fueron todas las semanas del mes', fijo: 'Tienen su día fijo con la abuela',
-    bienvenida: 'Primera vez en la mesa', memoria: 'Completaron datos de la familia', noche: 'Se quedaron a dormir', 'finde-uno': 'Fueron en fin de semana', doble: 'Comieron y cenaron el mismo día',
-    'en-familia': 'Fueron con su familia', trae: 'Trajeron invitados', notas: 'Dejaron notas para organizarse', previsor: 'Se apuntaron con una semana de margen', mano: 'Apuntaron a otros de la familia', 'ni-uno': 'Fueron a todos los eventos',
-    comidas: 'Muchas comidas con la abuela', cenas: 'Muchas cenas con la abuela', noches: 'Muchas noches con la abuela' };
-  // v5.11: las de quienes la cuidan, sin cifras ni comparaciones
-  const INF_MED_CUIDA = { 'nunca-falla': 'Siempre está', 'mas-noches': 'Compañía de noche', noches: 'Compañía de noche', comidas: 'Comidas con la abuela', cenas: 'Cenas con la abuela', dias: 'Cariño de cada día', semanas: 'Todas las semanas', gracias: 'Gracias por cuidarla' };
   const INF_ICONO_MED = { 'ni-uno': 'diana', contesta: 'check', semanas: 'repetir', fijo: 'chincheta', bienvenida: 'globo', memoria: 'camara', noche: 'luna', 'finde-uno': 'sol', doble: 'cubiertos', 'en-familia': 'gente', trae: 'gente', notas: 'carta', previsor: 'calendario', planes: 'brillo', mano: 'ayuda',
     'nunca-falla': 'estrella', 'mas-noches': 'luna', noches: 'cama', comidas: 'cubiertos', cenas: 'luna', dias: 'corazon', 'tu-dia': 'calendario', gracias: 'corazon' };
   const INF_GRUPO = { 'Previsor': 'Previsores', 'Guardián de la memoria': 'Guardianes de la memoria', 'Compañía de noche': 'Compañía de noche', 'Comida y cena': 'Comida y cena el mismo día' };
@@ -2454,7 +2544,7 @@
   function infServicioMedallas(pr) {
     return (pr.servicio || []).map(function (x) {
       const m = x.medallas.length ? x.medallas.slice() : [];
-      m.push({ id: 'gracias', titulo: 'Gracias por cuidar de la abuela' });  // v5.7: el servicio, siempre con su medalla
+      m.push({ id: 'gracias', titulo: 'Gracias por cuidarla' });  // v5.7: el servicio, siempre con su medalla
       return { apodo: x.apodo, medallas: m };
     });
   }
@@ -2486,7 +2576,7 @@
     const partes = [[t.comidas, 'comida', 'comidas'], [t.cenas, 'cena', 'cenas'], [t.noches, 'noche durmiendo allí', 'noches durmiendo allí']].filter(function (x) { return x[0]; }).map(function (x) { return x[0] + ' ' + (x[0] === 1 ? x[1] : x[2]); });
     if (vt) filas.push(['cubiertos', String(vt), vt === 1 ? 'visita a la abuela' : 'visitas a la abuela', lista(partes)]);
     if (conDias) filas.push(['calendario', String(cu.dias), 'días con alguien de la familia en casa', 'de los ' + nDias + ' días del mes']);
-    if (cu.mesaLlena && cu.mesaLlena.n > 2) filas.push(['estrella', String(cu.mesaLlena.n), 'personas en la mesa más llena', 'el ' + INF_DIA1[new Date(cu.mesaLlena.fecha + 'T12:00:00').getDay()] + ' ' + infFecha(cu.mesaLlena.fecha) + (cu.mesaLlena.turno === 'CENA' ? ', a cenar' : ', a comer')]);
+    if (cu.mesaLlena && cu.mesaLlena.n > 2) filas.push(['estrella', String(cu.mesaLlena.n), 'personas en la mesa más llena (con invitados)', 'el ' + INF_DIA1[new Date(cu.mesaLlena.fecha + 'T12:00:00').getDay()] + ' ' + infFecha(cu.mesaLlena.fecha) + (cu.mesaLlena.turno === 'CENA' ? ', a cenar' : ', a comer')]);
     if (t.personas) filas.push(['gente', String(t.personas), t.personas === 1 ? 'persona de la familia ha ido a verla' : 'personas de la familia han ido a verla', cu.familias > 1 ? 'de ' + cu.familias + ' ramas de la familia (cada hijo de la abuela, con los suyos)' : 'cada una cuenta una vez']);
     if (cu.vanEventos && cu.eventos) filas.push(['brillo', String(cu.vanEventos), 'personas en los eventos familiares', cu.eventos === 1 ? 'en el evento del mes' : 'en los ' + cu.eventos + ' eventos del mes']);
     if (filas.length) {
@@ -2654,8 +2744,8 @@
     const fr = [];
     if (cu.antelacionH >= 1) { const ant = cu.antelacionH >= 36 ? Math.round(cu.antelacionH / 24) + ' días' : cu.antelacionH + ' horas'; fr.push([ant, 'de margen al apuntarse', 'Lo normal es apuntarse con ' + ant + ' de antelación. Así la casa se organiza mejor.']); }
     if (cu.anterior) { const a = cu.anterior.comidas + cu.anterior.cenas + cu.anterior.noches, n = t.comidas + t.cenas + t.noches; if (a && n > a) fr.push(['+' + (n - a), 'visitas más que el mes pasado', 'Este mes, ' + n + '; el anterior, ' + a + '.']); }
-    const nMed = (pr.medallas || []).reduce(function (s2, m) { return s2 + m.gente.length; }, 0) + infServicioMedallas(pr).reduce(function (s2, x) { return s2 + x.medallas.length; }, 0);
-    if (nMed) fr.push([String(nMed), 'medallas repartidas', 'Entre la familia y quienes cuidan de la abuela. Cada uno ve las suyas en la web, tocando su nombre.']);
+    const nMed = (pr.medallas || []).reduce(function (s2, m) { return s2 + m.gente.length; }, 0);  // v5.14: las de la familia, las de la página de medallas
+    if (nMed) fr.push([String(nMed), 'medallas para la familia', 'Las de la página de medallas, sumando las de cada uno. Cada uno ve las suyas en la web, tocando su nombre.']);
     if (cu.acompanantes) fr.push([String(cu.acompanantes), cu.acompanantes === 1 ? 'invitado a la mesa' : 'invitados a la mesa', 'Amigos y gente de fuera que alguien de la familia trajo.']);
     const nuevos = ((pr.medallas || []).filter(function (m) { return m.id === 'bienvenida'; })[0] || { gente: [] }).gente;
     if (nuevos.length) fr.push([String(nuevos.length), nuevos.length === 1 ? 'cara nueva en la mesa' : 'caras nuevas en la mesa', (nuevos.length === 1 ? '¡Bienvenido, ' : '¡Bienvenidos, ') + lista(nuevos.slice(0, 3)) + (nuevos.length > 3 ? ' y los demás' : '') + '!']);
@@ -2687,7 +2777,7 @@
             const hh = this.alto(c, k);
             infCaja(c, 70, y, INF_W - 140, hh, 24 * k, INF_C.oroClaro);
             infIcono(c, INF_ICONO_MED[m.id], 70 + 50 * k, y + 44 * k, 30 * k, INF_C.tinta, INF_C.oro);
-            infTexto(c, INF_MED[m.id] || PARA_GRUPO[m.titulo] || INF_GRUPO[m.titulo] || m.titulo, 70 + 100 * k, y + 56 * k, 36 * k, 600, INF_C.tinta, 't', 'left', INF_W - 400);
+            infTexto(c, m.titulo,  /* v5.14: el mismo nombre que en el menú de cada uno */ 70 + 100 * k, y + 56 * k, 36 * k, 600, INF_C.tinta, 't', 'left', INF_W - 400);
             infTexto(c, m.gente.length === 1 ? '1 persona' : m.gente.length + ' personas', INF_W - 100, y + 54 * k, 24 * k, 800, INF_C.suave, 'n', 'right');
             const t = texto(c, k);
             infParrafo(c, t, 100, y + 100 * k, ancho, 26 * k, 700, INF_C.suave, 33 * k, 'n');
@@ -2703,9 +2793,9 @@
           infLetra(c, 800, 25 * k, 'n');
           let px = 100, py = 0;
           return x.medallas.map(function (m) {
-            const w = Math.min(c.measureText(INF_MED_CUIDA[m.id] || m.titulo.replace(/, contigo$/, ', con ella')).width + 80 * k, INF_W - 200);
+            const w = Math.min(c.measureText(m.titulo).width + 80 * k, INF_W - 200);
             if (px + w > INF_W - 100) { px = 100; py += 56 * k; }
-            const r = { tx: INF_MED_CUIDA[m.id] || m.titulo.replace(/, contigo$/, ', con ella'), id: m.id, x: px, y: py, w: w }; px += w + 14 * k; return r;
+            const r = { tx: m.titulo, id: m.id, x: px, y: py, w: w }; px += w + 14 * k; return r;
           });
         };
         return {
@@ -2830,7 +2920,7 @@
       '<section class="aj-sec aj-config"><h2>Configuración</h2>' +  // v4.62: en bloques de una columna (en el móvil se descuadraba)
         '<fieldset><legend>Clave</legend>' + campo('clave', 'Clave de la familia', 'password', c.clave, ' maxlength="40" autocomplete="off" autocapitalize="off"') + '<label class="check"><input type="checkbox" id="aj-ver-clave"> Mostrar la clave</label>' + campo('pista', 'Pista', 'text', c.pista, ' maxlength="100" autocomplete="off"') +
           '<p class="ayuda">Si cambias la clave, a todos les pedirá la nueva la próxima vez que entren (con la pista).</p></fieldset>' +
-        '<fieldset><legend>Horas</legend><div class="aj-horas">' + campo('comida', 'Comida', 'time', c.horaComida) + campo('cena', 'Cena', 'time', c.horaCena) + campo('dormir', 'Dormir', 'time', c.horaDormir) + '</div></fieldset>' +
+        '<fieldset><legend>Horas</legend><div class="aj-horas">' + campo('comida', 'Comida', 'time', c.horaComida) + campo('cena', 'Cena', 'time', c.horaCena) + campo('dormir', 'Noche (hora de dormir)', 'time', c.horaDormir) + '</div></fieldset>' +
         '<fieldset><legend>Avisos y calendario</legend>' +
           '<label class="campo" for="aj-aviso">Avisar de «falta alguien»<span class="aj-con-sufijo"><input id="aj-aviso" type="number" min="0" max="48" inputmode="numeric" value="' + esc(c.avisoHoras) + '"><span>horas antes</span></span></label>' +
           campo('inicio', 'El calendario empieza el', 'date', c.inicio) + '</fieldset>' +
@@ -2939,9 +3029,9 @@
       '<p class="evento-gente"><b>' + esc(resumenEvento(e)) + '</b></p>' + barraEvento(e) +
       (function () {  // v5.6: los tuyos que aún no han contestado
         const pm = pasado || modoAbuela() ? [] : pendientesMios(e);
-        return pm.length ? '<p class="ev-pend-mios">Falta que contesten los tuyos: <b>' + esc(lista(pm.map(function (id) { return (persona(id) || {}).apodo || id; }))) + '</b> <button type="button" class="enlace" data-ev-ver="' + esc(e.id) + '">Contestar por ' + (pm.length === 1 ? 'él o ella' : 'ellos') + ' ›</button></p>' : '';
+        return pm.length ? '<p class="ev-pend-mios">Falta que contesten los tuyos: <b>' + esc(lista(pm.map(function (id) { return (persona(id) || {}).apodo || id; }))) + '</b> <button type="button" class="enlace" data-ev-tuyos="' + esc(e.id) + '">Contestar por ' + (pm.length === 1 ? 'él o ella' : 'ellos') + ' ›</button></p>' : '';
       })() +
-      (function () { const l = porFamiliaEvento(e).filter(function (x) { return x.van; }); return l.length ? '<p class="evento-gente"><span>' + esc(l.map(function (x) { return cortoFamilia(x.f) + ' ' + x.van; }).join(' · ')) + '</span></p>' : ''; })() +
+      (function () { const l = porFamiliaEvento(e).filter(function (x) { return x.van; }); return l.length ? '<p class="evento-gente"><span>' + esc(l.map(function (x) { return cortoFamilia(x.f) + ': ' + (x.van === 1 ? 'va 1' : 'van ' + x.van); }).join(' · ')) + '</span></p>' : ''; })() +
       listaNotas(e, 3, false) +  // v4.68
       '<div class="evento-botones">' + (pasado || modoAbuela() ? '' :
         '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? ICONO_SI + 'Voy' : 'Voy') + '</button>' +
@@ -2981,7 +3071,7 @@
       (e.texto ? '<p class="evento-texto">' + esc(e.texto) + '</p>' : '') +
       (!pasado ? (function () {  // v4.51: lo primero, si vas tú
         const yoP = yo && persona(yo), st = yoP ? estado(yoP) : '';
-        return '<div class="ev-yo"><b>' + (yoP ? '¿Vas, ' + esc(yoP.apodo) + '?' : '¿Vas tú?') + '</b><span class="ev-bots">' +
+        return '<div class="ev-yo"><b>' + (yoP && st === 'si' ? 'Has dicho que vas' : yoP && st === 'no' ? 'Has dicho que no vas' : yoP ? '¿Vas, ' + esc(yoP.apodo) + '?' : '¿Vas tú?') + '</b><span class="ev-bots">' +
           '<button type="button" class="ev-si grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|si" aria-pressed="' + (st === 'si') + '">' + ICONO_SI + 'Voy</button>' +
           '<button type="button" class="ev-no grande" data-ev-p="' + esc(e.id) + '|' + esc(yo || '') + '|no" aria-pressed="' + (st === 'no') + '">' + ICONO_NO + 'No voy</button></span>' +
           (st === 'si' && varios ? botonesDias(e, yoP.id, 'Qué días vas:') : '') + (st ? lineaNota(e, yoP.id) : '') + '</div>';
@@ -2996,7 +3086,7 @@
       // v4.30: una sola lista: cada familia con sus números y, al tocar «Ver», quién es justo debajo
       '<div class="ev-resumen">' + porFamiliaEvento(e).map(function (x) {
         return '<details class="ev-familia" data-fam="' + esc(x.f) + '"' + (abiertasEv[x.f] ? ' open' : '') + '><summary>' +
-          '<b class="ev-fam-nombre">' + esc(cortoFamilia(x.f)) + '</b><span class="ev-van">' + (x.van && x.van === x.gente.length ? 'van todos' : x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : '—') + '</span>' +
+          '<b class="ev-fam-nombre">' + esc(cortoFamilia(x.f)) + '</b><span class="ev-van">' + (x.van && x.van === x.gente.length ? 'van todos' : x.van ? (x.van === 1 ? 'va 1' : 'van ' + x.van) : 'nadie aún') + '</span>' +
           '<span class="ev-barra" aria-hidden="true"><i class="si" style="width:' + (x.van / x.gente.length * 100) + '%"></i><i class="no" style="width:' + (x.no / x.gente.length * 100) + '%"></i></span>' +
           '<span class="ev-resto">' + [x.no ? (x.no === 1 ? '1 no puede' : x.no + ' no pueden') : '', x.pend ? x.pend + ' sin contestar' : ''].filter(Boolean).join(' · ') + '</span>' +
           '<span class="mini ev-ver" aria-hidden="true"></span></summary>' +
@@ -3144,6 +3234,18 @@
   function apuntarme(fecha, turno) {
     conQuien(function () {
       if (idsDe(fecha, turno).indexOf(yo) !== -1) { aviso('Ya estás apuntada a la ' + nombreTurno(fecha, turno) + '.'); return; }
+      // v5.18 (UX-35): antes de apuntarse, una pregunta (un toque sin querer ya no apunta)
+      if (!$('dlg-yo-apuntar')) {
+        abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Te apuntas a la ' + esc(nombreTurno(fecha, turno)) + '?</h2></div>' +
+          '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-yo-apuntar">Sí, me apunto</button><button type="button" class="accion quitar" id="dlg-cerrar">Cancelar</button></div></div>');
+        $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+        $('dlg-yo-apuntar').addEventListener('click', function () { cerrarDialogo(); apuntarmeYa(fecha, turno); });
+        return;
+      }
+    });
+  }
+  function apuntarmeYa(fecha, turno) {
+    conQuien(function () {
       const cambio = { fecha: fecha, turno: turno, apuntado: true };
       confirmarTarde([cambio], yo, function () { guardarCambios(yo, { turnos: [cambio] }, '¡Gracias! Apuntada a la ' + nombreTurno(fecha, turno) + '.'); });
     });
@@ -3165,7 +3267,36 @@
     genteEvento(e).forEach(function (p) { g[p.id] = true; });
     return descendientes(yo).filter(function (id) { return g[id] && e.van.indexOf(id) === -1 && e.noVan.indexOf(id) === -1; });
   }
-  function yoSinContestar(e) { return !!(yo && persona(yo)) && e.van.indexOf(yo) === -1 && e.noVan.indexOf(yo) === -1; }
+  /* v5.18 (UX-10): «Contestar por ellos»: solo los tuyos (hijos, nietos…), con Va / No va en cada uno */
+  function abrirTuyos(id) {
+    const e = evento(id);
+    if (!e) return;
+    const g = {};
+    genteEvento(e).forEach(function (p) { g[p.id] = true; });
+    const tuyos = descendientes(yo).filter(function (x) { return g[x]; });
+    const pintarT = function () {
+      const ev = evento(id);
+      $('dlg-tuyos').innerHTML = tuyos.map(function (pid) {
+        const p = persona(pid) || {}, st = ev.van.indexOf(pid) !== -1 ? 'si' : ev.noVan.indexOf(pid) !== -1 ? 'no' : '';
+        return '<li><b>' + esc(p.apodo || pid) + '</b><span class="ev-bots"><button type="button" class="ev-si grande" data-tuyo="' + esc(pid) + '|si" aria-pressed="' + (st === 'si') + '">' + ICONO_SI + 'Va</button>' +
+          '<button type="button" class="ev-no grande" data-tuyo="' + esc(pid) + '|no" aria-pressed="' + (st === 'no') + '">' + ICONO_NO + 'No va</button></span></li>';
+      }).join('');
+    };
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Van los tuyos a ' + esc(e.nombre) + '?</h2><div><small>' + esc(fechaEvento(e)) + '</small></div></div>' +
+      '<div class="dlg-cuerpo" data-no-preguntar><p class="ayuda">Contesta por cada uno. Se guarda al tocar.</p><ul class="tuyos" id="dlg-tuyos"></ul></div>' +
+      '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-cerrar">Listo</button></div></div>');
+    pintarT();
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $('dlg-tuyos').addEventListener('click', function (ev) {
+      const b = ev.target.closest('[data-tuyo]');
+      if (!b) return;
+      ev.stopPropagation();
+      const x = b.dataset.tuyo.split('|');
+      confirmarEnEvento(id, x[0], x[1] === 'si', null, true);
+      setTimeout(pintarT, 0);
+    });
+  }
+  function yoSinContestar(e) { return !!(yo && persona(yo)) && !servicioYo() && e.van.indexOf(yo) === -1 && e.noVan.indexOf(yo) === -1; }  // v5.18: al servicio no se le piden los eventos de la familia
   function sinContestar(e) { return yoSinContestar(e) || pendientesMios(e).length > 0; }
   document.addEventListener('click', function (ev) { const b = ev.target.closest('[data-ev-filtro]'); if (!b) return; evFiltro = b.dataset.evFiltro; pintarEventos(); });
   function pintarEventos() {
@@ -3180,11 +3311,11 @@
     if (!evFiltro) evFiltro = porConfirmar.length ? 'confirmar' : 'proximos';
     if (evFiltro === 'confirmar' && !porConfirmar.length && !modoAbuela()) evFiltro = 'proximos';
     // v4.89: arriba, Eventos o Fechas señaladas (son cosas distintas); dentro de Eventos, por confirmar, próximos y pasados
-    const pest = [modoAbuela() || !persona(yo) ? null : ['confirmar', 'Por confirmar', porConfirmar.length], ['proximos', 'Próximos', proximos.length], ['pasados', 'Pasados', pasados.length]].filter(Boolean);
+    const pest = [modoAbuela() || !persona(yo) || !porConfirmar.length ? null : ['confirmar', 'Por confirmar', porConfirmar.length], /* v5.18: a cero, no sale */ ['proximos', 'Próximos', proximos.length], ['pasados', 'Pasados', pasados.length]].filter(Boolean);
     const lista = evFiltro === 'confirmar' ? porConfirmar : evFiltro === 'pasados' ? pasados : proximos;
     const enFechas = evFiltro === 'fechas';
     $('ev-anadir').hidden = enFechas || vista !== 'eventos';  // v4.92; v5.12: y solo en Eventos: en las fechas señaladas no se añaden eventos
-    $l.innerHTML = '<div class="ev-secciones" role="tablist"><button type="button" role="tab" data-ev-filtro="' + (porConfirmar.length && !modoAbuela() ? 'confirmar' : 'proximos') + '" aria-selected="' + !enFechas + '">Eventos' + (porConfirmar.length && !modoAbuela() ? ' <span class="ev-filtro-n alerta">' + porConfirmar.length + '</span>' : '') + '</button>' +
+    $l.innerHTML = '<div class="ev-secciones" role="tablist"><button type="button" role="tab" data-ev-filtro="' + (porConfirmar.length && !modoAbuela() ? 'confirmar' : 'proximos') + '" aria-selected="' + !enFechas + '">Eventos</button>' + /* v5.18: el número, una vez */
         '<button type="button" role="tab" data-ev-filtro="fechas" aria-selected="' + enFechas + '">Fechas señaladas</button></div>' +
       (enFechas ? '' : '<div class="ev-filtros" role="tablist">' + pest.map(function (x) {
         return '<button type="button" role="tab" data-ev-filtro="' + x[0] + '" aria-selected="' + (evFiltro === x[0]) + '">' + x[1] + (x[2] ? ' <span class="ev-filtro-n' + (x[0] === 'confirmar' ? ' alerta' : '') + '">' + x[2] + '</span>' : '') + '</button>';
@@ -3201,7 +3332,7 @@
       '<label class="campo" for="dlg-ev-nombre">Qué es<input id="dlg-ev-nombre" type="text" maxlength="60" autocomplete="off" placeholder="Por ejemplo: PortAventura" value="' + esc(e ? e.nombre : '') + '"></label>' +
       '<div class="dos dos-iguales"><label class="campo" for="dlg-ev-desde">Desde<input id="dlg-ev-desde" type="date" value="' + esc(e ? e.desde : h) + '"></label>' +
       '<label class="campo" for="dlg-ev-hasta">Hasta<input id="dlg-ev-hasta" type="date" value="' + esc(e ? e.hasta : h) + '"></label></div>' +
-      '<div class="dos dos-iguales"><label class="campo" for="dlg-ev-cuando">Cuándo<select id="dlg-ev-cuando">' + Object.keys(CUANDO_EV).map(function (k) { return '<option value="' + k + '"' + ((e ? e.cuando : 'DIA') === k ? ' selected' : '') + '>' + CUANDO_EV[k].charAt(0).toUpperCase() + CUANDO_EV[k].slice(1) + '</option>'; }).join('') + '</select></label>' +
+      '<div class="dos dos-iguales"><label class="campo" for="dlg-ev-cuando">Momento del día<select id="dlg-ev-cuando">' + Object.keys(CUANDO_EV).map(function (k) { return '<option value="' + k + '"' + ((e ? e.cuando : 'DIA') === k ? ' selected' : '') + '>' + CUANDO_EV[k].charAt(0).toUpperCase() + CUANDO_EV[k].slice(1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-ev-hora">Hora<input id="dlg-ev-hora" type="text" maxlength="40" autocomplete="off" placeholder="Por ejemplo: 9:00" value="' + esc(e ? e.hora || '' : '') + '"></label></div>' +
       '<div id="dlg-ev-dias" hidden></div>' +
       '<label class="campo" for="dlg-ev-lugar">Dónde<input id="dlg-ev-lugar" type="text" maxlength="100" autocomplete="off" placeholder="Por ejemplo: PortAventura, Salou" value="' + esc(e ? e.lugar || '' : '') + '"></label>' +
@@ -3277,9 +3408,10 @@
   $('ev-anadir').addEventListener('click', function () { abrirEvento(null); });
   document.addEventListener('click', function (ev) {
     if (ev.target.closest('[data-salir-sencillo]')) { salirSencillo(); return; }
-    const b = ev.target.closest('[data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p], [data-ev-dias], [data-ev-dia], [data-ev-nota], [data-ev-compartir], [data-ev-dia-yo]');
+    const b = ev.target.closest('[data-ev-tuyos], [data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p], [data-ev-dias], [data-ev-dia], [data-ev-nota], [data-ev-compartir], [data-ev-dia-yo]');
     if (!b) return;
     if (modoAbuela() && !b.dataset.evVer) return;  // v4.35: en el modo sencillo, solo ver
+    if (b.dataset.evTuyos) { abrirTuyos(b.dataset.evTuyos); return; }  // v5.18
     if (b.dataset.evVoy) apuntarEv(b.dataset.evVoy, true);
     else if (b.dataset.evNovoy) apuntarEv(b.dataset.evNovoy, false);
     else if (b.dataset.evVer) abrirDetalleEvento(b.dataset.evVer);
@@ -3302,7 +3434,7 @@
   function sangreDe(p) { return familiaDe(p) === 'Servicio' || familiaDe(p) === 'Otros' ? '' : (esDeFuera(p) ? 'pareja' : 'sangre'); }
   function comeDe(p) { const m = p.menu ? etiquetaMenu(p.menu) : ''; return m === 'Entero' ? 'entero' : (m === 'Medio' ? 'mitad' : (m === 'Nada' ? 'nada' : 'sin')); }
   const VALOR = {
-    falta: function (p) { return falta(p).length ? 'si' : ''; },
+    falta: function (p) { return rfOblig(p).length ? 'si' : ''; },  // v5.19: lo mismo que Por rellenar
     familia: familiaDe,
     generacion: function (p) { return familiaDe(p) === 'Servicio' ? 'servicio' : generacion(p).nombre; },
     sangre: sangreDe,
@@ -3411,11 +3543,11 @@
     const ordenGen = GENERACIONES.map(function (g) { return g.nombre; }).concat(['servicio']);
     orden.generacion.sort(function (a, b) { return ordenGen.indexOf(a) - ordenGen.indexOf(b); });
     const grupos = [
-      modoAbuela() ? null : ['falta', 'Mostrar', [['si', 'Les falta algo']]],  // v4.37: en el modo sencillo no se piden datos
+      modoAbuela() ? null : ['falta', 'Mostrar', [['si', 'Sin cumpleaños o boda']]],  // v4.37: en el modo sencillo no se piden datos
       ['familia', 'Familia', [['*', 'Toda la familia ' + nombreGrande()]].concat(orden.familia.map(function (f) { return [f, nombreFamilia(f).replace(/^Familia /, '')]; }))],
       ['generacion', 'Generación', orden.generacion.map(function (g) { return [g, g.charAt(0).toUpperCase() + g.slice(1)]; })],
       ['sangre', 'Sangre', [['sangre', 'De sangre'], ['pareja', 'Entraron por pareja']]],
-      ['come', 'Qué come', [['entero', 'Entero'], ['mitad', 'La mitad'], ['nada', 'No come'], ['sin', 'Sin anotar']]],
+      ['come', 'Ración', [['entero', 'Normal'], ['mitad', 'Media'], ['nada', 'No come (bebé)'], ['sin', 'Sin anotar']]],
     ];
     $p.innerHTML = grupos.filter(Boolean).map(function (g) {
       const k = g[0];
@@ -3481,7 +3613,7 @@
     };
     const arbol = nodo(raiz, 0);
     const corta = function (t, k) { return t.length > k ? t.slice(0, k - 1) + '…' : t; };
-    const nombreDe = function (p) { return corta(p.nombre ? p.nombre + (p.apellido ? ' ' + p.apellido : '') : p.apodo, 22); };
+    const nombreDe = function (p) { return corta(p.apodo || p.nombre || '', 22); };  // v5.19: el apodo, como en la lista (el nombre completo, al pasar por encima y en la ficha)
     const datoDe = function (p) {
       if (esFallecido(p)) {
         const n = p.cumple && p.cumple.length >= 10 ? p.cumple.slice(6, 10) : '';
@@ -3519,13 +3651,14 @@
     situa(arbol, 20, 20);
     const W = ancho(arbol) + 40;
     // v4.41: los nombres y las edades, como texto normal encima del dibujo (Safari del iPhone deja de pintar el texto del SVG al deslizar)
-    let etiquetas = '';
+    let etiquetas = '', yoArbol = null;
     const persona_ = function (p, py, bw, bx, by) {
       const clic = ' data-persona="' + esc(p.id) + '"';  // v4.53: los abuelos también, a su ficha
+      if (p.id === yo) yoArbol = { x: bx + bw / 2, y: by + py };  // v5.19: para abrir centrado en ti
       const dato = datoDe(p);
       etiquetas += '<div class="arbol-et' + (hayFiltros() && !pasaFiltros(p) ? ' fuera-filtro' : '') + (esFallecido(p) ? ' muerto' : '') + (enCamino(p) ? ' futuro' : '') + (p.id === yo ? ' soy-yo' : '') + '"' + clic +
         ' style="left:' + (bx + 3) + 'px;top:' + (by + py - 3) + 'px;width:' + (bw - 6) + 'px;height:' + (altoP(p) + 6) + 'px">' +
-        '<b>' + esc(nombreDe(p)) + '</b>' + (dato ? '<span>' + esc(dato) + '</span>' : '') +
+        '<b title="' + esc([p.nombre, p.apellido].filter(Boolean).join(' ')) + '">' + esc(nombreDe(p)) + '</b>' + (dato ? '<span>' + esc(dato) + '</span>' : '') +
         (semanasEmbarazo(p) ? '<span class="barra-embarazo" role="img" aria-label="' + semanasEmbarazo(p) + ' de 40 semanas"><i style="width:' + Math.round(semanasEmbarazo(p) / 40 * 100) + '%"></i></span>' : '') + '</div>';
       return '';
     };
@@ -3565,7 +3698,8 @@
       '<p class="ayuda">Desliza para moverte y toca a alguien para ver su ficha. El corazón, cuándo empezaron a salir; el anillo, la boda; †, fallecido.</p>';
     const lienzo = document.querySelector('.arbol-lienzo');
     if (sitio) { lienzo.scrollLeft = sitio.x; lienzo.scrollTop = sitio.y; window.scrollTo(0, sitio.pag); return; }
-    lienzo.scrollLeft = (centroX !== undefined ? centroX : arbol.x) * arbolZoom - lienzo.clientWidth / 2;
+    lienzo.scrollLeft = (centroX !== undefined ? centroX : yoArbol ? yoArbol.x : arbol.x) * arbolZoom - lienzo.clientWidth / 2;
+    if (centroX === undefined && yoArbol) lienzo.scrollTop = Math.max(0, yoArbol.y * arbolZoom - lienzo.clientHeight / 2);  // v5.19: abre en ti
   }
 
   $('per-filtros').addEventListener('click', function (e) {
@@ -3828,7 +3962,7 @@
         ['Sí', 'No'].map(function (v) { return '<option value="' + v + '"' + (p && p.casados === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') + '</select></label>' : '') +
       '<div class="fechas-de-pareja">' + campoFechaPareja('nv', 'Inicio del noviazgo', p ? p.novios || '' : '') + campoFechaPareja('bd', 'Boda (también si es la que viene)', p ? p.boda || '' : '', 10) + '<p class="ayuda">Para el aviso del aniversario hace falta el día y el mes.</p></div></div>' +
       '<label class="campo" for="dlg-hijode">Hijo o hija de<select id="dlg-hijode">' + opcionesPersonas(p ? p.hijoDe || '' : '', p ? p.id : '') + '</select></label>' +
-      '<p class="ayuda">Con su pareja forma un núcleo («Familia» y los apellidos de él y de ella). Basta con poner a uno de los padres: sale en el núcleo de ese padre o madre y su pareja.</p></div></fieldset>';
+      '<p class="ayuda">Su familia en la web se forma con su pareja. Basta con poner a uno de los padres: sale con ese padre o madre y su pareja.</p></div></fieldset>';
   }
   /* Del Servicio o de Otros: sin parentesco ni núcleo (y a Otros, sin cumpleaños) */
   function ajustarFormularioFamilia() {
@@ -3960,7 +4094,7 @@
     return '<fieldset class="solo-no-otros"><legend>Otras fechas <small class="leyenda-suave">· lo que haga ilusión recordar</small></legend><div id="dlg-otras">' +
       lista.map(function (x, i) { return filaOtraFecha(i, x); }).join('') + '</div>' +
       '<button type="button" class="accion" id="dlg-of-mas">+ Añadir otra fecha</button>' +
-      '<p class="ayuda">El bautizo, la primera comunión, el santo… Para que salga el aviso cada año (en su día y en «Próximas fechas») hace falta <b>el día y el mes</b>; con el año, además, sale cuántos años hace. Si falta el día o el mes, no saldrá nunca.</p></fieldset>';
+      '<p class="ayuda">El bautizo, la primera comunión, el santo… Para que salga el aviso cada año (en su día y en «Fechas señaladas») hace falta <b>el día y el mes</b>; con el año, además, sale cuántos años hace. Si falta el día o el mes, no saldrá nunca.</p></fieldset>';
   }
   function montarOtrasFechas() {
     const caja = $('dlg-otras');
@@ -4113,10 +4247,10 @@
         $('bus-titulo').textContent = res.length ? '' : 'No hay nadie con ese nombre en la lista.';
       }
       $('bus-res').innerHTML = res.map(function (p) {
-        return '<button type="button" class="p ' + (editor(p.id) ? 'g-otros' : clase(p)) + '" data-elegir="' + esc(p.id) + '" aria-pressed="' + (p.id === elegidoBuscador) + '"><b>' + esc(p.apodo) + (editor(p.id) ? '' : marcaMenu(p)) + '</b><small>' + esc(editor(p.id) ? 'sin apuntarse a comer' : deQuien(p)) + '</small></button>';
+        return '<button type="button" class="p ' + (editor(p.id) ? 'g-otros' : clase(p)) + '" data-elegir="' + esc(p.id) + '" aria-pressed="' + (p.id === elegidoBuscador) + '"><b>' + esc(p.apodo) + (editor(p.id) ? '' : marcaMenu(p)) + '</b><small>' + esc(editor(p.id) ? '' : deQuien(p)) + '</small></button>';
       }).join('');
       const e = quienEs(elegidoBuscador);
-      $('bus-elegido').textContent = e ? 'Elegido: ' + e.apodo : '';
+      $('bus-elegido').textContent = e ? '✓ ' + e.apodo : '';  // v5.16
       // v4.6: si no está en la lista (o es otra persona con el mismo nombre), se puede dar de alta
       const texto = $('bus-q').value.trim();
       $('bus-alta').hidden = !(opciones.alta && texto);
@@ -4147,16 +4281,17 @@
       '<div class="yo-menu">' + (p ? '<button type="button" class="accion" id="dlg-yo-comidas">' + (servicioYo() ? 'Mis días' : 'Mis comidas') + '</button><button type="button" class="accion" id="dlg-yo-datos">Mis datos</button>' : '') +
         '<button type="button" class="accion" id="dlg-yo-otro">No soy ' + esc(q.apodo) + ' (cambiar de persona)</button></div>' +
       (p ? '<fieldset class="yo-vista"><legend>Cómo quieres ver la web</legend><div class="forma-ev" role="radiogroup">' + [['agil', 'Ágil', 'Letra pequeña, cabe más'], ['comoda', 'Cómoda', 'Letra y botones grandes'], ['sencilla', 'Sencilla', 'Solo para mirar, como la abuela']].map(function (x) {
-        return '<button type="button" role="radio" data-vista-elige="' + x[0] + '" aria-pressed="' + (vistaElegida() === x[0]) + '" aria-checked="' + (vistaElegida() === x[0]) + '"><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div><p class="ayuda">Se guarda en este móvil. Para salir de la sencilla hace falta la clave.</p></fieldset>' : '') +
+        return '<button type="button" role="radio" data-vista-elige="' + x[0] + '" aria-pressed="' + (vistaElegida() === x[0]) + '" aria-checked="' + (vistaElegida() === x[0]) + '"><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div><p class="ayuda">Se guarda en este aparato. Desde la sencilla se vuelve con «Salir de la vista sencilla», arriba.</p></fieldset>' : '') +
       (p ? '<div id="yo-medallas"><p class="ayuda">Mirando tus medallas…</p></div>' : '') + '</div>' +
       '<div class="dlg-pie"><div class="botones"><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     if ($('dlg-yo-datos')) $('dlg-yo-datos').addEventListener('click', function () { cerrarDialogo(); abrirPersona(yo); });
     if ($('dlg-yo-comidas')) $('dlg-yo-comidas').addEventListener('click', function () { cerrarDialogo(); abrirMisComidas(); });
-    $('dlg-yo-otro').addEventListener('click', function () { cerrarDialogo(); olvidarYo(true); preguntarQuien(null); });
+    $('dlg-yo-otro').addEventListener('click', function () { cerrarDialogo(); preguntarQuien(null, true); });  // v5.16: sigues siendo tú hasta elegir a otro
     $dlg.querySelectorAll('[data-vista-elige]').forEach(function (b) { b.addEventListener('click', function () {  // v4.91
+      if (b.dataset.vistaElige === 'sencilla' && vistaElegida() !== 'sencilla') { try { localStorage.setItem('casa-abuela-vista-antes', vistaElegida() || 'comoda'); } catch (e) {} }  // v5.16: para volver a la de antes
       guardarVista(b.dataset.vistaElige); cerrarDialogo(); pintar();
-      aviso(b.dataset.vistaElige === 'sencilla' ? 'Vista sencilla: solo para mirar. Para salir, abajo, «Salir del modo sencillo».' : 'Listo: vista ' + (b.dataset.vistaElige === 'agil' ? 'ágil' : 'cómoda') + '.');
+      aviso(b.dataset.vistaElige === 'sencilla' ? 'Vista sencilla: solo para mirar. Para salir, arriba, «Salir de la vista sencilla».' : 'Listo: vista ' + (b.dataset.vistaElige === 'agil' ? 'ágil' : 'cómoda') + '.');
     }); });
     if (p) llamar('misNumeros', [yo]).then(function (n) { const $m = $('yo-medallas'); if ($m) $m.innerHTML = htmlMedallas(n); })
       .catch(function () { const $m = $('yo-medallas'); if ($m) $m.innerHTML = ''; });
@@ -4172,7 +4307,7 @@
     }
     return (n.top10 ? '<div class="mn-top-caja"><b>Top 10 general · ' + n.puntos + ' puntos</b><span>¡Estás entre los que más acompañan a la abuela! Por eso tu nombre sale en dorado.</span></div>'
         : '<div class="mn-top-caja fuera"><b>' + (n.puntos ? 'Llevas ' + n.puntos + (n.puntos === 1 ? ' punto' : ' puntos') : 'Aún no tienes puntos') + '</b><span>Suma puntos en las categorías para entrar en el top 10 general y que tu nombre salga en dorado.</span></div>') +
-      (l.length ? '<details class="mn-distinciones"><summary class="mn-dias-tit">Tus medallas (' + l.length + ')</summary><ul>' + l.map(function (d) {
+      (l.length ? '<details class="mn-distinciones" open><summary class="mn-dias-tit">Tus medallas (' + l.length + ')</summary><ul>' + l.map(function (d) {
         return '<li' + (d.categoria ? ' class="cat"' : '') + '><b>' + esc(d.titulo) + '</b>' + (d.puntos ? '<em>' + d.puntos + (d.puntos === 1 ? ' punto' : ' puntos') + '</em>' : '') + '<span>' + esc(d.texto) + '</span></li>'; }).join('') + '</ul></details>'
         : '<p class="ayuda">Aún no tienes medallas. Ve a comer con la abuela, apúntate con tiempo, contesta a los eventos… y irán saliendo.</p>') +
       '<details class="mn-como"><summary>Cómo funciona</summary><p>Hay nueve categorías, de los últimos 30 días: comidas, cenas, noches, eventos, avisar con tiempo, fin de semana, entre semana, traer compañía y la secretaría de la familia (apuntar y contestar por los demás). En cada una, los 10 primeros se llevan medalla y puntos: 10 al primero, 9 al segundo… y 1 al décimo (los empatados, igual).</p>' +
@@ -4187,13 +4322,13 @@
     if (!callado) aviso((antes ? 'Los cambios ya no se guardan a nombre de ' + antes.apodo + '. ' : '') + 'Al apuntarte o cambiar algo, te preguntaremos quién eres.', 6000);
   }
   function conQuien(siguiente) { if (quienEs(yo)) siguiente(); else preguntarQuien(siguiente); }
-  function preguntarQuien(siguiente) {
+  function preguntarQuien(siguiente, cambiando) {  // v5.16: «cambiando», desde «No soy…»: no se olvida a nadie hasta elegir
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Quién eres?</h2></div>' +
-      '<div class="dlg-cuerpo"><p class="ayuda">Se guarda en este móvil y sirve para saber quién hace cada cambio.</p>' + buscadorHtml('Busca tu nombre') + '</div>' +
+      '<div class="dlg-cuerpo" data-no-preguntar><p class="ayuda">Se guarda en este aparato y sirve para saber quién hace cada cambio.</p>' + buscadorHtml('Busca tu nombre') + '</div>' +
       '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones">' +
       '<button type="button" class="principal" id="dlg-guardar">Seguir</button>' +
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cancelar</button></div></div>');
-    montarBuscador({ editores: true, seleccion: yo });
+    montarBuscador({ editores: true, seleccion: cambiando ? '' : yo });
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
       if (!elegidoBuscador) { errorDialogo('Busca y toca tu nombre para seguir.'); return; }
@@ -4201,14 +4336,15 @@
       const entrar = function () {
         yo = elegido; guardarYo(yo);
         cerrarDialogo(); pintar();  // v4.92: arriba, ya con tu nombre
-        if (q) aviso('Hola, ' + q.apodo + '. Ahora los cambios van a tu nombre.');
+        if (q) aviso(modoAbuela() ? 'Hola, ' + q.apodo.toLowerCase().replace(/^abuel/, 'abuel') + '.' : 'Hola, ' + q.apodo + '. Ahora los cambios van a tu nombre.');
         cargar().then(function () { if (siguiente) siguiente(); });
       };
       // v4.94: para ponerse en el nombre de alguien, su cumpleaños (el día y el mes); quien no lo tiene puesto, entra sin más
       const c = (q && q.cumple) || '', dd = Number(c.slice(0, 2)), mm = Number(c.slice(3, 5));
       if (elegido === yo || !dd || !mm) { entrar(); return; }
-      abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Eres ' + esc(q.apodo) + '?</h2></div>' +
-        '<div class="dlg-cuerpo"><p class="ayuda">Para confirmarlo, dinos qué día es tu cumpleaños.</p><div class="dos dos-iguales">' +
+      const quien = /^abuela$/i.test(q.apodo) ? 'la abuela' : /^abuelo$/i.test(q.apodo) ? 'el abuelo' : q.apodo;  // v5.16
+      abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">¿Eres ' + esc(quien) + '?</h2></div>' +
+        '<div class="dlg-cuerpo" data-no-preguntar><p class="ayuda">Para confirmarlo, dinos qué día es tu cumpleaños.</p><div class="dos dos-iguales">' +
         '<label class="campo" for="dlg-cdia">Día<select id="dlg-cdia"><option value="">—</option>' + Array.from({ length: 31 }, function (_, k) { return '<option value="' + (k + 1) + '">' + (k + 1) + '</option>'; }).join('') + '</select></label>' +
         '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' + MESES.map(function (m, k) { return '<option value="' + (k + 1) + '">' + m + '</option>'; }).join('') + '</select></label></div></div>' +
         '<div class="dlg-pie"><p class="dlg-error" id="dlg-error" hidden></p><div class="botones"><button type="button" class="principal" id="dlg-entrar">Entrar</button>' +
@@ -4248,7 +4384,7 @@
   function guardarCambios(id, cambios, mensaje) {
     // v4.74: si se apunta a una comida o cena sin servicio, se le avisa de que tiene que ir antes
     const sinS = (cambios.turnos || []).filter(function (t) { return t.apuntado && t.fecha >= hoy() && !fueraTurno(t.fecha, t.turno) && sinServicio(t.fecha, t.turno); })[0];
-    if (sinS) mensaje = mensaje + ' ' + avisoSinServicio(sinS.fecha, sinS.turno);
+    if (sinS && !yaPaso(sinS.fecha, sinS.turno)) mensaje = mensaje + ' ' + avisoSinServicio(sinS.fecha, sinS.turno);
     return enSegundoPlano('guardarPersona', [id, cambios, yo, rango()], mensaje, function () { aplicarPersonaLocal(id, cambios); });
   }
 
@@ -4389,8 +4525,10 @@
   // El aviso «close» llega un momento después: si para entonces ya se ha abierto otra ventana, no se vacía (v4.12)
   $dlg.addEventListener('close', function () { if (!$dlg.open) $dlg.innerHTML = ''; });
   let dlgCambiado = false;  // v4.91: si has escrito algo, tocar fuera pregunta antes de cerrar
-  $dlg.addEventListener('input', function () { dlgCambiado = true; });
-  $dlg.addEventListener('change', function () { dlgCambiado = true; });
+  // v5.16: al cambiar algo, el error de antes se va; y donde no se escribe nada que perder, no se pregunta al salir
+  const alCambiar = function (e) { const er = $('dlg-error'); if (er) er.hidden = true; if (e.target.closest('[data-no-preguntar]')) return; dlgCambiado = true; };
+  $dlg.addEventListener('input', alCambiar);
+  $dlg.addEventListener('change', alCambiar);
   function preguntarSalir() {  // v4.92: dentro de la ventana (los avisos del navegador no siempre salen)
     if ($dlg.querySelector('.dlg-salir')) return;
     const pieDlg = $dlg.querySelector('.dlg-pie') || $dlg;
@@ -4424,7 +4562,7 @@
       completo && completo !== p.apodo ? ['Nombre', completo] : null,
       !esServicio(p) && p.familia !== 'Otros' ? ['Familia', nombreFamilia(familiaDe(p)).replace(/^Familia /, '')] : ['De', deQuien(p)],
       esFallecido(p) ? (vidaTexto(p) ? ['Vida', vidaTexto(p).charAt(0).toUpperCase() + vidaTexto(p).slice(1)] : null) :  // v4.57: de quien ha fallecido, su vida y nada de comida
-        ['Come', m === 'Entero' ? 'Entero' : (m === 'Medio' ? 'La mitad' : (m === 'Nada' ? 'No come' : (m || 'Sin anotar')))],
+        ['Ración', m === 'Entero' ? 'Normal' : (m === 'Medio' ? 'Media' : (m === 'Nada' ? 'No come (bebé)' : (m || 'Sin anotar')))],
       p.alergias && !esFallecido(p) ? ['No come', p.alergias] : null,
     ].filter(Boolean);
     if (todo) {  // v5.3: el cumpleaños con la edad, de quién es hijo o hija, sus hijos y su día fijo
@@ -4499,7 +4637,7 @@
       Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '"' + (cd === i + 1 ? ' selected' : '') + '>' + (i + 1) + '</option>'; }).join('') + '</select></label>' +
       '<label class="campo" for="dlg-cmes">Mes<select id="dlg-cmes"><option value="">—</option>' +
       MESES.map(function (m, i) { return '<option value="' + (i + 1) + '"' + (cm === i + 1 ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' + campoAno((p.cumple || '').slice(6, 10)) + '</div></fieldset>' +
-      campoFallecio(p.fallecio || '') + campoOtrasFechas(p.fechas || []);
+      (p.id === yo ? '' : campoFallecio(p.fallecio || '')) + campoOtrasFechas(p.fechas || []);  // v5.19: en tu propia ficha, no
     if (!esAbuelo) html += '<fieldset><legend>Va siempre, desde hoy</legend><table class="tabla-turnos tabla-fijos"><thead><tr><th scope="col">Día</th>' + TURNOS.map(function (t) { return '<th scope="col">' + t.nombre + '</th>'; }).join('') + '</tr></thead><tbody>' +
       [1, 2, 3, 4, 5, 6, 0].map(function (d) {
         return '<tr><td>' + DIAS[d] + '</td>' + TURNOS.map(function (t) {
@@ -4617,12 +4755,12 @@
     return Number(v);
   }
   function abrirAnadir(fecha, turno) {
-    const ya = idsDe(fecha, turno);
-    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Añadir a la ' + esc(nombreTurno(fecha, turno)) + '</h2></div>' +
-      '<div class="dlg-cuerpo">' + (sinServicio(fecha, turno) && !fueraTurno(fecha, turno) ? '<p class="aviso-servicio">' + esc(avisoSinServicio(fecha, turno)) + '</p>' : '') + buscadorHtml('Quién viene') +
+    const ya = idsDe(fecha, turno), pasado = yaPaso(fecha, turno);  // v5.15: lo que ya pasó, «Apuntar que fue», sin avisos de futuro
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + (pasado ? 'Apuntar quién fue a la ' : 'Añadir a la ') + esc(nombreTurno(fecha, turno)) + '</h2></div>' +
+      '<div class="dlg-cuerpo">' + (pasado ? '<p class="ayuda">Ya pasó: así queda apuntado quién fue.</p>' : '') + (!pasado && sinServicio(fecha, turno) && !fueraTurno(fecha, turno) ? '<p class="aviso-servicio">' + esc(avisoSinServicio(fecha, turno)) + '</p>' : '') + buscadorHtml('Quién viene') +
       '<label class="campo" for="dlg-nota">Nota para ese día (si hace falta)<input id="dlg-nota" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: llega a las 21:30"></label>' +
       campoAcompanantes(0) + '</div>' +
-      pie('Apuntar'));
+      pie(pasado ? 'Apuntar que fue' : 'Apuntar'));
     montarBuscador({ excluir: ya, seleccion: ya.indexOf(yo) === -1 && persona(yo) ? yo : '', alta: true });
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
     $('dlg-guardar').addEventListener('click', function () {
@@ -4658,7 +4796,7 @@
       TURNOS.map(function (t) { return '<label class="check"><input type="checkbox" id="dlg-fuera-' + t.id + '"' + (nd[CAMPO_FUERA[t.id]] ? ' checked' : '') + '> ' + (t.id === 'DORMIR' ? 'La noche' : 'La ' + t.nombre.toLowerCase()) + '</label>'; }).join('') + '</div>' +
       '<label class="campo" for="dlg-motivo-fuera">Dónde está o por qué<input id="dlg-motivo-fuera" type="text" maxlength="140" autocomplete="off" placeholder="Por ejemplo: fin de semana en Barcelona" value="' + esc(nd.motivoFuera || '') + '"></label>' +
       '<button type="button" class="enlace" id="dlg-varios">Marcar varios días seguidos</button></fieldset>' +
-      turno('comida', 'Comida', nd.sinComida, nd.motivoComida) + turno('cena', 'Cena', nd.sinCena, nd.motivoCena) + turno('dormir', 'Dormir', nd.sinDormir, nd.motivoDormir) +
+      turno('comida', 'Comida', nd.sinComida, nd.motivoComida) + turno('cena', 'Cena', nd.sinCena, nd.motivoCena) + turno('dormir', 'Noche', nd.sinDormir, nd.motivoDormir) +
       '<p class="ayuda">Los cumpleaños salen solos: se ponen en la ficha de cada persona.</p></div>' +
       pie('Guardar el día', nd.evento || nd.nota || nd.notaServicio || nd.sinComida || nd.sinCena || nd.sinDormir || fuera(fecha) ? '<button type="button" class="accion quitar" id="dlg-borrar">Borrar todo</button>' : ''));
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
@@ -4895,7 +5033,7 @@
         if (faltan.length) lineas.push('• *' + diaLargo(f) + '*: ' + lista(faltan));
       });
       return '🏡 *Casa Abuela*\n_Lo que falta los próximos ' + n + ' días: del ' + ddmm(diasH[0]) + ' al ' + ddmm(diasH[n - 1]) + '_\n\n' +
-        (lineas.length ? '⚠️ *Falta alguien para:*\n' + lineas.join('\n') : '✅ Están todas las comidas, cenas y noches cubiertas. ¡Gracias a todos!') + enlace;
+        (lineas.length ? '🙋 *Falta alguien en:*\n' + lineas.join('\n') : '✅ Están todas las comidas, cenas y noches cubiertas. ¡Gracias a todos!') + enlace;
     }
     // v4.73: los próximos N días, desde hoy (de hoy, solo lo que aún no ha pasado)
     const prox = tipo.indexOf('prox:') === 0 ? Number(tipo.slice(5)) : 0;
@@ -4918,7 +5056,7 @@
         b += '\n\n' + ICONO_TURNO[t.id] + ' *' + t.nombre + '*' + (mesa ? ' (' + mesa + ' a la mesa, con la abuela)' : total > 1 ? ' (' + total + ')' : '');
         if (fueraTurno(f, t.id)) b += eventoEn(f, t.id) ? ' 🎉 ' + eventoEn(f, t.id).nombre : '\n🧳 La abuela no está';
         else if (motivo !== null && !comp.length) { b += '\nNo hace falta nadie' + (motivo ? ' (' + motivo + ')' : '') + '.'; return; }
-        else if (!comp.length) b += yaPaso(f, t.id) ? '\nNo fue nadie.' : '\n⚠️ Falta alguien';  // v4.63
+        else if (!comp.length) b += yaPaso(f, t.id) ? '\nNo fue nadie.' : '\n🙋 Falta alguien. ¿Quién se apunta?';  // v4.63
         comp.concat(serv).forEach(function (id) {
           const a = apunte(f, t.id, id);
           b += '\n• ' + apodo(id) + (a && a.acompanantes ? ' +' + a.acompanantes : '') + (serv.indexOf(id) !== -1 ? ' (servicio)' : '') + (a && a.nota ? ' _(' + a.nota + ')_' : '');
@@ -4948,7 +5086,8 @@
         { v: 'prox:3', t: 'Los próximos 3 días' }, { v: 'prox:5', t: 'Los próximos 5 días' }, { v: 'prox:7', t: 'Los próximos 7 días' }])
       .concat([2, 3, 4, 5, 6].map(function (n) { const f = sumar(hoy(), n); return { v: f, t: 'Quién viene el ' + diaLargo(f).toLowerCase() }; }))
       .concat(lunesSel > lunesDe(hoy()) ? [{ v: 'semana', t: 'Quién viene la semana del ' + ddmm(dias[0]) }] : [])
-      .concat([{ v: 'huecos:3', t: 'Lo que falta los próximos 3 días' }, { v: 'huecos:7', t: 'Lo que falta los próximos 7 días' }]);
+      .concat([{ v: 'huecos:3', t: 'Lo que falta los próximos 3 días' }, { v: 'huecos:7', t: 'Lo que falta los próximos 7 días' }])
+      .concat(inicialPedido && /^huecos:\d+$/.test(inicialPedido) && ['huecos:3', 'huecos:7'].indexOf(inicialPedido) === -1 ? [{ v: inicialPedido, t: 'Lo que falta hasta el ' + ddmm(sumar(hoy(), Number(inicialPedido.slice(7)) - 1)) + ' (lo de Huecos)' }] : []);
     const inicial = inicialPedido || (lunesSel > lunesDe(hoy()) ? 'semana' : hoy());
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Compartir por WhatsApp</h2></div>' +
       '<div class="dlg-cuerpo"><label class="campo" for="dlg-que">Qué quieres compartir<select id="dlg-que">' +
@@ -5019,7 +5158,7 @@
       return c ? '<p>' + esc(a.apodo) + ': ' + esc(c) + '</p>' : '';
     }).join('');
     $('impresion').innerHTML = '<h1>Casa Abuela · semana del ' + ddmm(dias[0]) + ' al ' + ddmm(dias[6]) + '</h1>' + '<p class="impreso">Impreso el ' + diaLargo(hoy()).toLowerCase() + ' a las ' + ahoraLocal().slice(11, 16) + '</p>' +  // v4.63 come +
-      '<table><thead><tr><th>Día</th><th>Comida (' + datos.config.horaComida + ')</th><th>Cena (' + datos.config.horaCena + ')</th><th>Dormir</th></tr></thead><tbody>' + filas + '</tbody></table>' +
+      '<table><thead><tr><th>Día</th><th>Comida (' + datos.config.horaComida + ')</th><th>Cena (' + datos.config.horaCena + ')</th><th>Noche</th></tr></thead><tbody>' + filas + '</tbody></table>' +
       '<p class="pie">Impreso el ' + ddmm(hoy()) + '. Lo que esté en la web manda sobre esta hoja.</p>';
     window.print();
   }
@@ -5052,7 +5191,7 @@
     if (el.hasAttribute('data-rt-fam')) { const k = el.dataset.rtFam; if (famAbiertas.has(k)) famAbiertas.delete(k); else famAbiertas.add(k); pintarSemana(); return; }  // v4.75
     if (el.hasAttribute('data-detalle-turno')) { const x = el.dataset.detalleTurno.split('|'); abrirDetalleTurno(x[0], x[1]); return; }  // v4.75
     if (el.hasAttribute('data-preguntar')) { preguntarDia(el.dataset.preguntar); return; }  // v4.38
-    if (modoAbuela() && !el.hasAttribute('data-semana') && !el.hasAttribute('data-plegar') && !el.hasAttribute('data-paso-dia')) return;  // v4.35: solo para mirar
+    if (modoAbuela() && !el.hasAttribute('data-semana') && !el.hasAttribute('data-plegar') && !el.hasAttribute('data-paso-dia') && !el.hasAttribute('data-rt-fam')) return;  // v5.20: abrir una familia, también  // v4.35: solo para mirar
     if (el.hasAttribute('data-semana')) {
       const paso = Number(el.dataset.semana);
       irADia(paso === 0 ? diaInicial() : sumar(diaFoco, paso * 7));
@@ -5067,7 +5206,7 @@
     } else if (el.hasAttribute('data-no-soy')) { olvidarYo();
     } else if (el.hasAttribute('data-mis-datos')) { conQuien(function () { abrirPersona(yo); });
     } else if (el.hasAttribute('data-mis-comidas')) { abrirMisComidas();
-    } else if (el.hasAttribute('data-compartir-huecos')) { abrirCompartir('huecos:7');  // v5.9
+    } else if (el.hasAttribute('data-compartir-huecos')) { abrirCompartir('huecos:' + huecosDias);  // v5.9; v5.14: los días que se ven
     } else if (el.hasAttribute('data-compartir-evento')) { abrirCompartir('evento:' + el.dataset.compartirEvento);
     } else if (el.hasAttribute('data-compartir')) { abrirCompartir();
     } else if (el.hasAttribute('data-imprimir')) { imprimir();
@@ -5106,7 +5245,7 @@
     pasoDia(e.key === 'ArrowLeft' ? -1 : 1);
   });
   /* Al pasar de móvil a ordenador (o al girar la tablet), se repinta con su forma */
-  [ESCRITORIO, CINCO].forEach(function (m) {
+  [ESCRITORIO, CINCO, CINCO_AGIL].forEach(function (m) {
     const repintar = function () { if (!datos) return; irADia(diaFoco); if (cubierto()) pintar(); else cargar(true); };
     if (m.addEventListener) m.addEventListener('change', repintar); else if (m.addListener) m.addListener(repintar);
   });
@@ -5138,6 +5277,18 @@
     else if (der > n.scrollLeft + n.clientWidth - 8) n.scrollLeft = der - n.clientWidth + 44;
     bordesNav();
   }
+  function abrirMas() {  // v5.16: lo que no cabe en las pestañas del móvil
+    const op = [];
+    if (!$('nav-rellenar').hidden) op.push(['rellenar', 'Por rellenar', $('badge-rellenar').hidden ? '' : $('badge-rellenar').textContent]);
+    if (!$('nav-ajustes').hidden) op.push(['ajustes', 'Ajustes', '']);
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Más</h2></div><div class="dlg-cuerpo"><div class="mas-menu">' +
+      op.map(function (x) { return '<button type="button" class="accion" data-ir-vista="' + x[0] + '"><span>' + x[1] + '</span>' + (x[2] ? '<span class="nav-badge">' + esc(x[2]) + '</span>' : '') + '</button>'; }).join('') +
+      '</div></div><div class="dlg-pie"><div class="botones"><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $dlg.querySelectorAll('[data-ir-vista]').forEach(function (b) { b.addEventListener('click', function () {
+      cerrarDialogo(); ponerVista(b.dataset.irVista); history.replaceState(null, '', '#' + vista); window.scrollTo(0, 0);
+    }); });
+  }
   function ponerVista(v) {
     if (v === 'ajustes') ajustes = null;  // v4.58: al entrar, lo último
     if (v === 'eventos') evFiltro = '';  // v4.92: al entrar, «Por confirmar» si hay algo
@@ -5156,6 +5307,7 @@
   document.querySelectorAll('nav.vistas a').forEach(function (a) {
     a.addEventListener('click', function (e) {
       e.preventDefault();
+      if (a.id === 'nav-mas') { abrirMas(); return; }  // v5.16
       ponerVista(a.dataset.vista);
       if (hayServidor) google.script.history.replace(null, { vista: vista }, vista);
       else history.replaceState(null, '', '#' + vista);
