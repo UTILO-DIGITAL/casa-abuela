@@ -564,3 +564,17 @@ ver('la pista llega con los datos, la clave no', conPista.config.pista === 'Lo q
   const ajW = R.getAjustes(M_, 'higuera');
   ver('avisos de la web: Control los recibe', ajW.errores.some(x => x.accion === 'web' && x.detalle === 'Jueves 19/11'));
 }
+// v5.32: Control nunca se queda corto en la semana, y el último error para el punto rojo
+{
+  const ultimoFila = hojas.MESA_ERRORES.filas[hojas.MESA_ERRORES.filas.length - 1][0];
+  ver('punto rojo: quien lleva la web recibe cuándo fue el último error', R.getDatos(Object.assign({}, V2, { yo: M_ })).ultimoError === ultimoFila);
+  ver('punto rojo: los demás, no', R.getDatos(Object.assign({}, V2, { yo: N_ })).ultimoError === '');
+  // 1200 cambios de hoy: llegan todos (los 1000 últimos no bastarían para la semana)
+  const hc = hojas.MESA_CAMBIOS;
+  for (let i = 0; i < 1200; i++) hc.filas.push(['2026-11-13T09:' + String(i % 60).padStart(2, '0') + ':00', N_, 'Jan', 'Apunta a Jan a la comida del 20/11']);
+  const ajC = R.getAjustes(M_, 'higuera');
+  ver('Control: con más de 1000 cambios en la semana, llegan todos los de 14 días', ajC.cambios.filter(x => x.cuando.slice(0, 10) === '2026-11-13').length >= 1200);
+  // y uno de hace un mes, más allá de los 1000 últimos, ya no
+  hc.filas.splice(1, 0, ['2026-10-01T10:00:00', N_, 'Jan', 'Viejo']);
+  ver('Control: lo de hace un mes, más allá de los 1000 últimos, no', !R.getAjustes(M_, 'higuera').cambios.some(x => x.cambio === 'Viejo'));
+}

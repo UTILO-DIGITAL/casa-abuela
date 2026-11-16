@@ -48,7 +48,7 @@ const HOJA_CAMBIOS = 'MESA_CAMBIOS';
 const HOJA_ALIAS = 'MESA_ALIAS';
 const HOJA_EVENTOS = 'MESA_EVENTOS';
 const HOJA_ERRORES = 'MESA_ERRORES';  // v5.32 (T0591): CUANDO | QUIEN_ID | ACCION | ERROR | DETALLE
-const MAX_ERRORES = 200, MAX_CAMBIOS_CONTROL = 1000;
+const MAX_ERRORES = 200, MAX_CAMBIOS_CONTROL = 1000, MAX_LEER_CONTROL = 6000, DIAS_CONTROL = 14;  // Control: al menos los 1000 últimos y todo lo de 14 días
 // Dónde va «quién lo hace» en los argumentos de cada acción (getDatos lo lleva dentro, en .yo)
 const QUIEN_EN_ = { guardarPersona: 2, guardarPersonas: 1, guardarDia: 2, guardarEvento: 1, getAjustes: 0, getPremios: 0, guardarAjustes: 1,
   borrarEvento: 1, apuntarEvento: 3, notaEvento: 3, guardarAusencia: 4, crearPersona: 1, darDeBaja: 1, avisoWeb: 0 };
@@ -161,6 +161,15 @@ function avisoWeb(quien, texto, donde) {
   filaError_(String(quien || '').slice(0, 80), 'web', t, String(donde || ''));
   return true;
 }
+/** v5.32: cuándo fue el último error o aviso (MESA_ERRORES), o '' */
+function ultimoError_(ss) {
+  try {
+    const h = ss.getSheetByName(HOJA_ERRORES);
+    if (!h || h.getLastRow() < 2) return '';
+    const v = h.getRange(h.getLastRow(), 1).getValue();
+    return v instanceof Date ? Utilities.formatDate(v, TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(v || '');
+  } catch (e) { return ''; }
+}
 function filaError_(quien, accion, error, detalle) {
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -247,6 +256,7 @@ function datos_(ss, p) {
     fijos: fijos.filter(function (f) { return !f.hasta || f.hasta >= hoy; }),
     dias: leerDias_(ss).filter(function (d) { return d.fecha >= desde && d.fecha <= hasta; }),
     admins: config.admins,  // v4.58: quién ve los Ajustes
+    ultimoError: esAdmin_(config, p.yo) ? ultimoError_(ss) : '',  // v5.32 (T0591): para el punto rojo de Control (solo a quien lleva la web)
     eventos: leerEventos_(ss).filter(function (e) { return e.hasta >= (desde < sumarDias_(hoy, -60) ? desde : sumarDias_(hoy, -60)); }),  // v4.28
     yoTop10: p.yo ? enTop_(categorias_(ss, config, personas).puntos, p.yo) : false,  // v4.81: la etiqueta dorada; v4.83: del top 10 general
     misProximas: p.yo ? efectivos_(crudos, fijos, hoy, sumarDias_(hoy, 60)).filter(function (a) { return a.persona === p.yo; }).slice(0, 12) : [],
@@ -1608,10 +1618,13 @@ function getAjustes(quien, claveAdmin) {
   comprobarAdmin_(config, quien, claveAdmin, 'Los ajustes son solo para quien lleva la web.');
   const hc = ss.getSheetByName(HOJA_CAMBIOS);
   const nc = hc ? Math.max(0, hc.getLastRow() - 1) : 0;
-  const desde = Math.max(0, nc - MAX_CAMBIOS_CONTROL);  // v5.32: los últimos 1000 (antes 500)
-  const cambios = nc ? hc.getRange(2 + desde, 1, nc - desde, 4).getValues().map(function (f) {
-    return { cuando: f[0] instanceof Date ? Utilities.formatDate(f[0], TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(f[0]), quien: String(f[1]), apodo: String(f[2]), cambio: String(f[3]) };
+  // v5.32: los últimos 1000 y, además, todo lo de los últimos 14 días (que las cuentas de la semana nunca se queden cortas)
+  const desde = Math.max(0, nc - MAX_LEER_CONTROL), corte = sumarDias_(hoy_(), -DIAS_CONTROL);
+  const texto = function (v) { return v instanceof Date ? Utilities.formatDate(v, TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(v); };
+  const todos = nc ? hc.getRange(2 + desde, 1, nc - desde, 4).getValues().map(function (f) {
+    return { cuando: texto(f[0]), quien: String(f[1]), apodo: String(f[2]), cambio: String(f[3]) };
   }).reverse() : [];
+  const cambios = todos.filter(function (x, i) { return i < MAX_CAMBIOS_CONTROL || x.cuando.slice(0, 10) >= corte; });
   const hv = ss.getSheetByName(HOJA_VISITAS);
   const nv = hv ? Math.max(0, hv.getLastRow() - 1) : 0;
   const visitas = nv ? hv.getRange(2, 1, nv, 3).getValues().filter(function (f) { return f[0]; }).map(function (f) {
@@ -1620,10 +1633,10 @@ function getAjustes(quien, claveAdmin) {
   // v5.32 (T0591): los errores de uso, los últimos 200
   const he = ss.getSheetByName(HOJA_ERRORES);
   const ne = he ? Math.max(0, he.getLastRow() - 1) : 0;
-  const de = Math.max(0, ne - MAX_ERRORES);
+  const de = Math.max(0, ne - MAX_LEER_CONTROL);
   const errores = ne ? he.getRange(2 + de, 1, ne - de, 5).getValues().map(function (f) {
-    return { cuando: f[0] instanceof Date ? Utilities.formatDate(f[0], TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(f[0]), quien: String(f[1]), accion: String(f[2]), error: String(f[3]), detalle: String(f[4]) };
-  }).reverse() : [];
+    return { cuando: texto(f[0]), quien: String(f[1]), accion: String(f[2]), error: String(f[3]), detalle: String(f[4]) };
+  }).reverse().filter(function (x, i) { return i < MAX_ERRORES || x.cuando.slice(0, 10) >= corte; }) : [];
   return {
     config: { clave: config.clave, pista: config.pista, horaComida: config.horaComida, horaCena: config.horaCena, horaDormir: config.horaDormir, avisoHoras: config.avisoHoras, inicio: config.inicio, noCuentan: config.noCuentan },
     cambios: cambios, visitas: visitas, errores: errores,
