@@ -21,6 +21,8 @@
  *   MESA_CAMBIOS  CUANDO | QUIEN_ID | QUIEN | CAMBIO   (registro de quién cambia qué)
  *   MESA_ALIAS    ID_ANTIGUO | ID_NUEVO | NOTA   (si a alguien se le cambia el apodo o la jerarquía en PERSONAS)
  *   MESA_VISITAS  PERSONA_ID | ULTIMA_VEZ | VECES (v4.58; se crea sola: quién abre la web, como mucho una vez por hora)
+ *   MESA_ERRORES  CUANDO | QUIEN_ID | ACCION | ERROR | DETALLE (v5.32, T0591; se crea sola: lo que alguien intentó y no se guardó, para Control › Actividad;
+ *                 ACCION «web»: un aviso de una ventana de la web, con la ventana en DETALLE)
  *   MESA_EVENTOS  ID | NOMBRE | DESDE | HASTA | CUANDO (DIA, COMIDA, CENA o DORMIR) | TEXTO | VAN | NO_VAN (Ids con «;») | CREADO_EN | BORRADO | LUGAR | HORA | TURNOS (v4.33: de cada día, los que se salta) (v4.28; se crea sola)
  *   MESA_CONFIG   CLAVE (v4.17: la clave de la familia; vacía, no se pide), PISTA (v4.18: se enseña al pedir la clave), ADMIN_IDS (v4.58: quién ve los Ajustes, Ids con «;»), NO_CUENTAN (v4.61: quién no cuenta en «Quién la usa»), FECHA_INICIO, EXCLUIR_IDS, HORA_COMIDA, HORA_CENA, HORA_DORMIR, AVISO_HORAS, URL_COMPARTIR
  *                 (EXCLUIR_IDS: no salen para apuntarse, pero pueden hacer cambios, como la abuela)
@@ -32,7 +34,7 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 5.28.0
+ * Versión 5.33.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -45,6 +47,11 @@ const HOJA_DIAS = 'MESA_DIAS';
 const HOJA_CAMBIOS = 'MESA_CAMBIOS';
 const HOJA_ALIAS = 'MESA_ALIAS';
 const HOJA_EVENTOS = 'MESA_EVENTOS';
+const HOJA_ERRORES = 'MESA_ERRORES';  // v5.32 (T0591): CUANDO | QUIEN_ID | ACCION | ERROR | DETALLE
+const MAX_ERRORES = 200, MAX_CAMBIOS_CONTROL = 1000, MAX_LEER_CONTROL = 6000, DIAS_CONTROL = 14;  // Control: al menos los 1000 últimos y todo lo de 14 días
+// Dónde va «quién lo hace» en los argumentos de cada acción (getDatos lo lleva dentro, en .yo)
+const QUIEN_EN_ = { guardarPersona: 2, guardarPersonas: 1, guardarDia: 2, guardarEvento: 1, getAjustes: 0, getPremios: 0, guardarAjustes: 1,
+  borrarEvento: 1, apuntarEvento: 3, notaEvento: 3, guardarAusencia: 4, crearPersona: 1, darDeBaja: 1, avisoWeb: 0 };
 const HOJA_VISITAS = 'MESA_VISITAS';  // v4.58: PERSONA_ID | ULTIMA_VEZ | VECES (la última vez que cada uno abrió la web; como mucho, una vez por hora)  // v4.28: los eventos (castañada, PortAventura…) con quién va
 const TURNOS = ['COMIDA', 'CENA', 'DORMIR'];
 // v5.28 (T0586): las visitas, ir por la mañana o por la tarde sin comer ni cenar. Se apuntan como un turno más
@@ -118,6 +125,7 @@ const API_ = {
   guardarAusencia: function (a) { return guardarAusencia(a[0], a[1], a[2], a[3], a[4], a[5]); },
   crearPersona: function (a) { return crearPersona(a[0], a[1], a[2]); },
   darDeBaja: function (a) { return darDeBaja(a[0], a[1], a[2]); },
+  avisoWeb: function (a) { return avisoWeb(a[0], a[1], a[2]); },  // v5.32 (T0591): lo que alguien hace mal en una ventana de la web
 };
 
 function api_(fn, args, clave) {
@@ -128,8 +136,48 @@ function api_(fn, args, clave) {
     salida = { ok: true, r: API_[fn](Array.isArray(args) ? args : []) };
   } catch (err) {
     salida = { ok: false, error: String((err && err.message) || err) };
+    apuntarError_(fn, args, salida.error);  // v5.32 (T0591)
   }
   return ContentService.createTextOutput(JSON.stringify(salida)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/** v5.32 (T0591): lo que alguien intentó y no se guardó, en MESA_ERRORES. Nunca rompe la respuesta: si no puede apuntarlo, lo deja. */
+function apuntarError_(fn, args, error) {
+  try {
+    if (/^CLAVE/.test(error)) return;  // la clave de la familia (la web la pide sola) no es un error de uso
+    if (fn === 'avisoWeb') return;  // un aviso de la web que no se pudo apuntar no se apunta otra vez
+    args = Array.isArray(args) ? args : [];
+    const i = QUIEN_EN_[fn];
+    const quien = String(fn === 'getDatos' ? ((args[0] || {}).yo || '') : (i !== undefined ? args[i] || '' : '')).slice(0, 80);
+    let detalle = '';
+    try { detalle = JSON.stringify(fn === 'guardarPersona' || fn === 'guardarDia' ? [args[0], args[1]] : args.slice(0, 2)); } catch (e) { detalle = ''; }
+    filaError_(quien, fn, error, detalle);
+  } catch (e) { /* sin hoja de errores, no pasa nada */ }
+}
+/** v5.32 (T0591): lo que alguien hace mal en una ventana de la web (no llega a guardarse): el aviso que vio y en qué ventana */
+function avisoWeb(quien, texto, donde) {
+  const t = String(texto || '').trim();
+  if (!t) throw new Error('Falta el aviso.');
+  filaError_(String(quien || '').slice(0, 80), 'web', t, String(donde || ''));
+  return true;
+}
+/** v5.32: cuándo fue el último error o aviso (MESA_ERRORES), o '' */
+function ultimoError_(ss) {
+  try {
+    const h = ss.getSheetByName(HOJA_ERRORES);
+    if (!h || h.getLastRow() < 2) return '';
+    const v = h.getRange(h.getLastRow(), 1).getValue();
+    return v instanceof Date ? Utilities.formatDate(v, TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(v || '');
+  } catch (e) { return ''; }
+}
+function filaError_(quien, accion, error, detalle) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const hoja = ss.getSheetByName(HOJA_ERRORES) || crearHoja_(ss, HOJA_ERRORES, ['CUANDO', 'QUIEN_ID', 'ACCION', 'ERROR', 'DETALLE']);
+    const rango = hoja.getRange(hoja.getLastRow() + 1, 1, 1, 5);
+    comoTexto_(rango);
+    rango.setValues([[ahora_(), String(quien || ''), String(accion || '').slice(0, 40), String(error).slice(0, 300), String(detalle || '').slice(0, 400)]]);
+  } catch (e) { /* sin hoja de errores, no pasa nada */ }
 }
 
 /**
@@ -208,6 +256,7 @@ function datos_(ss, p) {
     fijos: fijos.filter(function (f) { return !f.hasta || f.hasta >= hoy; }),
     dias: leerDias_(ss).filter(function (d) { return d.fecha >= desde && d.fecha <= hasta; }),
     admins: config.admins,  // v4.58: quién ve los Ajustes
+    ultimoError: esAdmin_(config, p.yo) ? ultimoError_(ss) : '',  // v5.32 (T0591): para el punto rojo de Control (solo a quien lleva la web)
     eventos: leerEventos_(ss).filter(function (e) { return e.hasta >= (desde < sumarDias_(hoy, -60) ? desde : sumarDias_(hoy, -60)); }),  // v4.28
     yoTop10: p.yo ? enTop_(categorias_(ss, config, personas).puntos, p.yo) : false,  // v4.81: la etiqueta dorada; v4.83: del top 10 general
     misProximas: p.yo ? efectivos_(crudos, fijos, hoy, sumarDias_(hoy, 60)).filter(function (a) { return a.persona === p.yo; }).slice(0, 12) : [],
@@ -1569,18 +1618,28 @@ function getAjustes(quien, claveAdmin) {
   comprobarAdmin_(config, quien, claveAdmin, 'Los ajustes son solo para quien lleva la web.');
   const hc = ss.getSheetByName(HOJA_CAMBIOS);
   const nc = hc ? Math.max(0, hc.getLastRow() - 1) : 0;
-  const desde = Math.max(0, nc - 500);
-  const cambios = nc ? hc.getRange(2 + desde, 1, nc - desde, 4).getValues().map(function (f) {
-    return { cuando: f[0] instanceof Date ? Utilities.formatDate(f[0], TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(f[0]), quien: String(f[1]), apodo: String(f[2]), cambio: String(f[3]) };
+  // v5.32: los últimos 1000 y, además, todo lo de los últimos 14 días (que las cuentas de la semana nunca se queden cortas)
+  const desde = Math.max(0, nc - MAX_LEER_CONTROL), corte = sumarDias_(hoy_(), -DIAS_CONTROL);
+  const texto = function (v) { return v instanceof Date ? Utilities.formatDate(v, TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(v); };
+  const todos = nc ? hc.getRange(2 + desde, 1, nc - desde, 4).getValues().map(function (f) {
+    return { cuando: texto(f[0]), quien: String(f[1]), apodo: String(f[2]), cambio: String(f[3]) };
   }).reverse() : [];
+  const cambios = todos.filter(function (x, i) { return i < MAX_CAMBIOS_CONTROL || x.cuando.slice(0, 10) >= corte; });
   const hv = ss.getSheetByName(HOJA_VISITAS);
   const nv = hv ? Math.max(0, hv.getLastRow() - 1) : 0;
   const visitas = nv ? hv.getRange(2, 1, nv, 3).getValues().filter(function (f) { return f[0]; }).map(function (f) {
     return { persona: String(f[0]).trim(), ultima: f[1] instanceof Date ? Utilities.formatDate(f[1], TZ, "yyyy-MM-dd'T'HH:mm:ss") : String(f[1]), veces: Number(f[2]) || 0 };
   }) : [];
+  // v5.32 (T0591): los errores de uso, los últimos 200
+  const he = ss.getSheetByName(HOJA_ERRORES);
+  const ne = he ? Math.max(0, he.getLastRow() - 1) : 0;
+  const de = Math.max(0, ne - MAX_LEER_CONTROL);
+  const errores = ne ? he.getRange(2 + de, 1, ne - de, 5).getValues().map(function (f) {
+    return { cuando: texto(f[0]), quien: String(f[1]), accion: String(f[2]), error: String(f[3]), detalle: String(f[4]) };
+  }).reverse().filter(function (x, i) { return i < MAX_ERRORES || x.cuando.slice(0, 10) >= corte; }) : [];
   return {
     config: { clave: config.clave, pista: config.pista, horaComida: config.horaComida, horaCena: config.horaCena, horaDormir: config.horaDormir, avisoHoras: config.avisoHoras, inicio: config.inicio, noCuentan: config.noCuentan },
-    cambios: cambios, visitas: visitas,
+    cambios: cambios, visitas: visitas, errores: errores,
   };
 }
 

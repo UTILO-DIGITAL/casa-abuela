@@ -526,3 +526,55 @@ ver('la pista llega con los datos, la clave no', conPista.config.pista === 'Lo q
   dv = R.guardarPersona(N_, { turnos: [{ fecha: '2026-11-18', turno: 'MANANA', apuntado: false }] }, N_, VV);
   ver('visitas: quitarse de la mañana no toca la comida', !dv.apuntes.some(a => a.fecha === '2026-11-18' && a.turno === 'MANANA' && a.persona === N_) && dv.apuntes.some(a => a.fecha === '2026-11-18' && a.turno === 'COMIDA' && a.persona === N_));
 }
+
+// ---------- v5.32 (T0591): los errores de uso, en MESA_ERRORES y en Control ----------
+{
+  const r1 = R.api_('guardarPersona', [N_, { turnos: [{ fecha: '2026-11-18', turno: 'SIESTA', apuntado: true }] }, N_, V2], 'paella');
+  ver('errores: la acción falla igual que antes', r1.ok === false && /Turno no válido/.test(r1.error));
+  const fe = (hojas.MESA_ERRORES || { filas: [] }).filas;
+  const ult = fe[fe.length - 1] || [];
+  ver('errores: se crea la pestaña con su cabecera', (fe[0] || []).join() === 'CUANDO,QUIEN_ID,ACCION,ERROR,DETALLE');
+  ver('errores: quién, qué acción, el error y lo que intentaba', ult[1] === N_ && ult[2] === 'guardarPersona' && /Turno no válido/.test(ult[3]) && /SIESTA/.test(ult[4]));
+  const n0 = fe.length;
+  R.api_('getDatos', [V2], 'otra');
+  R.api_('guardarPersona', [M_, { alergias: 'x' }, M_, V2], 'otra');
+  ver('errores: la clave de la familia (entrar o guardar) no se apunta', hojas.MESA_ERRORES.filas.length === n0);
+  R.api_('accionQueNoExiste', [], 'paella');
+  ver('errores: una acción que no existe, sí (sin quién)', hojas.MESA_ERRORES.filas.length === n0 + 1 && hojas.MESA_ERRORES.filas[n0][2] === 'accionQueNoExiste' && hojas.MESA_ERRORES.filas[n0][1] === '');
+  const r2 = R.api_('getDatos', [V2], 'paella');
+  ver('errores: lo que va bien no se apunta', r2.ok === true && hojas.MESA_ERRORES.filas.length === n0 + 1);
+  const ajE = R.getAjustes(M_, 'higuera');
+  ver('errores: Control los recibe, el último primero', Array.isArray(ajE.errores) && ajE.errores.length === 2 && ajE.errores[0].accion === 'accionQueNoExiste' && ajE.errores[1].quien === N_);
+  // si la hoja falla, la respuesta llega igual
+  const viejo = hojas.MESA_ERRORES; hojas.MESA_ERRORES = null;
+  const ins = ss.insertSheet; ss.insertSheet = () => { throw new Error('sin permiso'); };
+  const r3 = R.api_('guardarPersona', [N_, { turnos: [{ fecha: '2026-11-18', turno: 'SIESTA', apuntado: true }] }, N_, V2], 'paella');
+  ver('errores: si no se puede apuntar, la respuesta llega igual', r3.ok === false && /Turno no válido/.test(r3.error));
+  ss.insertSheet = ins; hojas.MESA_ERRORES = viejo;
+}
+// v5.32: los avisos de la web (lo que alguien hace mal en una ventana)
+{
+  const n0 = hojas.MESA_ERRORES.filas.length;
+  const r = R.api_('avisoWeb', [N_, 'Busca y toca primero a quién quieres apuntar.', 'Jueves 19/11'], 'paella');
+  const f = hojas.MESA_ERRORES.filas[n0] || [];
+  ver('avisos de la web: se apuntan con quién, el aviso y la ventana', r.ok === true && f[1] === N_ && f[2] === 'web' && /Busca y toca/.test(f[3]) && f[4] === 'Jueves 19/11');
+  const r2 = R.api_('avisoWeb', [N_, '   ', 'x'], 'paella');
+  ver('avisos de la web: sin texto, no (y ese fallo tampoco se apunta como aviso vacío)', r2.ok === false && !hojas.MESA_ERRORES.filas.some(x => x[2] === 'web' && !String(x[3]).trim()));
+  ver('avisos de la web: sin la clave, no se apuntan', R.api_('avisoWeb', [N_, 'algo', 'x'], 'otra').ok === false && hojas.MESA_ERRORES.filas.filter(x => x[3] === 'algo').length === 0);
+  const ajW = R.getAjustes(M_, 'higuera');
+  ver('avisos de la web: Control los recibe', ajW.errores.some(x => x.accion === 'web' && x.detalle === 'Jueves 19/11'));
+}
+// v5.32: Control nunca se queda corto en la semana, y el último error para el punto rojo
+{
+  const ultimoFila = hojas.MESA_ERRORES.filas[hojas.MESA_ERRORES.filas.length - 1][0];
+  ver('punto rojo: quien lleva la web recibe cuándo fue el último error', R.getDatos(Object.assign({}, V2, { yo: M_ })).ultimoError === ultimoFila);
+  ver('punto rojo: los demás, no', R.getDatos(Object.assign({}, V2, { yo: N_ })).ultimoError === '');
+  // 1200 cambios de hoy: llegan todos (los 1000 últimos no bastarían para la semana)
+  const hc = hojas.MESA_CAMBIOS;
+  for (let i = 0; i < 1200; i++) hc.filas.push(['2026-11-13T09:' + String(i % 60).padStart(2, '0') + ':00', N_, 'Jan', 'Apunta a Jan a la comida del 20/11']);
+  const ajC = R.getAjustes(M_, 'higuera');
+  ver('Control: con más de 1000 cambios en la semana, llegan todos los de 14 días', ajC.cambios.filter(x => x.cuando.slice(0, 10) === '2026-11-13').length >= 1200);
+  // y uno de hace un mes, más allá de los 1000 últimos, ya no
+  hc.filas.splice(1, 0, ['2026-10-01T10:00:00', N_, 'Jan', 'Viejo']);
+  ver('Control: lo de hace un mes, más allá de los 1000 últimos, no', !R.getAjustes(M_, 'higuera').cambios.some(x => x.cambio === 'Viejo'));
+}

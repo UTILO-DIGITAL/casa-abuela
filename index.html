@@ -628,6 +628,28 @@
   /* v4.58: Ajustes */
   .aj-sec { margin: 0 0 22px; padding: 14px 16px; border-radius: var(--radio); background: #fff; border: 1px solid var(--color-linea); display: grid; gap: 10px; }
   .aj-sec h2 { margin: 0; font-size: 18px; }
+  /* v5.32 (T0591): Control, con las pestañas de Eventos (subrayado) y los filtros de Eventos (píldoras) */
+  .ev-secciones.aj-secciones { grid-template-columns: repeat(4, minmax(0, 1fr)); }  /* las cuatro en una fila, también en el móvil */
+  @media (max-width: 480px) { .ev-secciones.aj-secciones button { font-size: 15px; } }
+  .aj-kpis.act-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }  /* en una fila: que no ocupe media pantalla */
+  .act-kpis .aj-kpi { padding: 8px 8px; }
+  .act-kpis .aj-kpi b { font-size: 22px; }
+  .act-kpis .aj-kpi span { font-size: 12px; }
+  button.enlace.act-quien, button.enlace.pr-nombre { display: inline; margin: 0; padding: 2px 0; font-weight: 800; color: var(--color-texto); text-decoration: underline dotted; text-underline-offset: 3px; text-align: left; }  /* nombres que se tocan, sin el margen de los enlaces */
+  .act-buscar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }  /* uno al lado del otro, también en el móvil */
+  .act-buscar .campo { min-width: 0; }
+  .act-buscar .campo select, .act-buscar .campo input { width: 100%; min-width: 0; box-sizing: border-box; }
+  .act-dia { margin: 10px 0 4px; font-size: 15px; }
+  .act-dia small { font-weight: 600; color: var(--color-texto-suave); }
+  .act-ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .act-item { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--color-linea); font-size: 14px; line-height: 1.4; }
+  .act-hora { color: var(--color-texto-suave); font-variant-numeric: tabular-nums; }
+  .act-texto { overflow-wrap: anywhere; }
+  .act-item.deshecho .act-texto { color: var(--color-texto-suave); }
+  .act-marca { display: inline-block; font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 999px; background: var(--color-destacado-claro); color: var(--color-texto); }  /* como .rt-marca */
+  .act-top { margin: 0 0 6px; }
+  .act-item.error { background: var(--color-destacado-claro); }
+  .act-err { font-weight: 700; }
   .aj-config fieldset { margin: 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--color-linea); display: grid; gap: 10px; min-width: 0; }
   .aj-config legend { float: left; width: 100%; padding: 0; margin: 0 0 2px; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--color-principal-oscuro); }
   .aj-config legend + * { clear: both; }
@@ -649,6 +671,8 @@
   .pr-texto { margin: 0; font-size: 12px; color: var(--color-texto-suave); }
   .pr-card ol { margin: 4px 0 0; padding-left: 22px; display: grid; gap: 2px; font-size: 14px; }
   .pr-card ol li span { font-weight: 700; }
+  .pr-toca { margin: 4px 0 0; font-size: 12px; }
+  .pr-desglose td small { color: var(--color-texto-suave); }
   .pr-card ol li b { float: right; font-size: 13px; }
   .pr-card ol li small { float: right; margin-right: 6px; margin-left: 6px; font-size: 11px; color: #8A5A00; font-weight: 800; }
   .pr-nadie { list-style: none; margin-left: -22px; color: var(--color-texto-suave); }
@@ -737,9 +761,6 @@
   .aj-chip.gris { background: var(--color-linea); }
   .aj-chip button { border: 0; border-radius: 999px; padding: 3px 8px; background: #fff; font: inherit; font-size: 12px; font-weight: 700; color: var(--color-texto-suave); cursor: pointer; }
   .aj-nunca-l b { color: var(--color-accion); }
-  .aj-hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; font-size: 14px; max-height: 60vh; overflow: auto; }
-  .aj-hist li { padding: 7px 0; border-top: 1px solid var(--color-linea); }
-  .aj-hist small { display: block; color: var(--color-texto-suave); font-weight: 700; font-size: 12px; }
   .comida.ya-paso .comida-cab h4 { color: var(--color-texto-suave); }
   .inf-prev { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 10px; }
   .inf-prev img { flex: 0 0 72%; max-width: 300px; aspect-ratio: 4 / 5; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.18); scroll-snap-align: center; }
@@ -865,6 +886,7 @@
   .ev-filtro-n { font-size: 13px; opacity: .85; }
   .ev-filtro-n.alerta { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--color-accion); color: #fff; opacity: 1; }
   .ev-lista { display: grid; gap: 14px; }
+  .nav-badge.punto { min-width: 0; width: 9px; height: 9px; padding: 0; margin-left: 4px; align-self: flex-start; margin-top: 8px; }  /* v5.32: errores nuevos en Control */
   .nav-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; margin-left: 5px; padding: 0 5px; border-radius: 9px; background: var(--color-accion); color: #fff; font-size: 12px; font-weight: 800; line-height: 1; }
   .nav-badge[hidden] { display: none; }
   nav.vistas a#nav-rellenar { color: #FFE2A8; }
@@ -1160,7 +1182,7 @@
       <a href="#personas" data-vista="personas">Personas</a>
       <a href="#huecos" data-vista="huecos">Huecos<span class="nav-badge" id="badge-huecos" hidden></span></a>
       <a href="#rellenar" data-vista="rellenar" id="nav-rellenar" hidden>Por rellenar<span class="nav-badge" id="badge-rellenar" hidden></span></a>
-      <a href="#ajustes" data-vista="ajustes" id="nav-ajustes" hidden>Ajustes</a>
+      <a href="#ajustes" data-vista="ajustes" id="nav-ajustes" hidden>Control<span class="nav-badge punto" id="badge-control" hidden aria-label="Hay errores nuevos"></span></a>
       <a href="#mas" id="nav-mas" role="button" aria-haspopup="dialog"><span id="nav-mas-t">Más</span> ▾<span class="nav-badge" id="badge-mas" hidden></span></a>
     </nav>
   </div>
@@ -1219,7 +1241,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.31.1</footer>
+  <footer>Hecho con cariño por Utilo · v5.33.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1805,8 +1827,10 @@
     // v5.16: «Más ▾» en el móvil
     const conMas = !$('nav-rellenar').hidden || !$('nav-ajustes').hidden;
     document.querySelector('nav.vistas').classList.toggle('con-mas', conMas);
-    $('badge-mas').hidden = $('nav-rellenar').hidden || !mios.length; $('badge-mas').textContent = mios.length;
-    $('nav-mas-t').textContent = vista === 'rellenar' ? 'Por rellenar' : vista === 'ajustes' ? 'Ajustes' : 'Más';
+    const errNuevos = erroresNuevos();  // v5.32 (T0591): errores nuevos desde la última vez que se abrió Control
+    $('badge-control').hidden = !errNuevos;
+    $('badge-mas').hidden = ($('nav-rellenar').hidden || !mios.length) && !errNuevos; $('badge-mas').textContent = mios.length || '';
+    $('nav-mas-t').textContent = vista === 'rellenar' ? 'Por rellenar' : vista === 'ajustes' ? 'Control' : 'Más';
     if (vista === 'rellenar' || vista === 'ajustes') $('nav-mas').setAttribute('aria-current', 'page'); else $('nav-mas').removeAttribute('aria-current');
     bordesNav();  // v4.87
     if (vista === 'ajustes') { if (!esAdmin()) { ponerVista('semana'); return; } if (!ajustes) pintarAjustes(); }  // v4.35: la Semana, los Eventos y (v4.37) las Personas, para mirar
@@ -2444,9 +2468,11 @@
   }
   /* v4.61: quién la usa, como un pequeño panel: cifras, por familia, los más activos y quién no la ha usado */
   function panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan) {
-    const h = hoy(), hace7 = sumar(h, -7), hace30 = sumar(h, -30);
+    const h = hoy(), hace7 = sumar(h, -7);
     const activos7 = gente.filter(function (p) { const v = visita[p.id]; return v && v.ultima.slice(0, 10) > hace7; }).length;
-    const cambios7 = ajustes.cambios.filter(function (x) { return x.cuando.slice(0, 10) > hace7; }).length;
+    // v5.32: los que entraron y no han vuelto en una semana (a quién darle un toque)
+    const noVuelven = gente.filter(function (p) { const v = visita[p.id]; return v && v.ultima.slice(0, 10) <= hace7; })
+      .sort(function (a, b) { return visita[a.id].ultima.localeCompare(visita[b.id].ultima); });
     const familiaRF = datos.personas.filter(function (p) { return !esServicio(p) && p.familia !== 'Otros' && !esFallecido(p) && !enCamino(p); });
     const completos = familiaRF.filter(function (p) { return !rfOblig(p).length; }).length;  // v5.19: lo obligatorio (cumpleaños y boda)
     const pct = function (a, b) { return b ? Math.round(a / b * 100) : 0; };
@@ -2458,27 +2484,25 @@
       const g = gente.filter(function (p) { return familiaDe(p) === f; }), u = g.filter(function (p) { return usan.indexOf(p) !== -1; });
       return { f: f, total: g.length, usan: u.length, nunca: g.filter(function (p) { return nunca.indexOf(p) !== -1; }) };
     }).sort(function (a, b) { return pct(b.usan, b.total) - pct(a.usan, a.total); });
-    // los más activos del último mes
-    const mes = {};
-    ajustes.cambios.forEach(function (x) { if (x.cuando.slice(0, 10) > hace30) mes[x.quien] = (mes[x.quien] || 0) + 1; });
-    const top = Object.keys(mes).sort(function (a, b) { return mes[b] - mes[a]; }).slice(0, 5);
-    const nombre = function (id) { return (quienEs(id) || {}).apodo || id; };
     const famNom = function (f) { return f === 'Abuelos' ? nombreGrande() : nombreFamilia(f).replace(/^Familia /, ''); };
     return '<section class="aj-sec"><h2>Quién la usa</h2>' +
       '<div class="aj-kpis">' +
         cifra(usan.length, gente.length, 'han entrado alguna vez') +
         cifra(activos7, null, 'han entrado esta semana') +
-        cifra(cambios7, null, 'cambios esta semana') +
+        cifra(noVuelven.length, null, 'no han vuelto en una semana') +
         cifra(pct(completos, familiaRF.length) + '%', null, 'con cumpleaños y boda', '<span class="aj-acc"><a href="#rellenar" class="enlace" data-ir-rellenar>Ver lo que falta</a><button type="button" class="enlace" id="aj-pedir">Pedirlo al grupo</button></span>') +
       '</div>' +
       '<h3 class="rf-sec">Por familia</h3><ul class="aj-fams">' + porFam.map(function (x) {
         return '<li><span class="aj-fam-n">' + esc(famNom(x.f)) + '</span><span class="aj-barra"><i style="width:' + pct(x.usan, x.total) + '%"></i></span><span class="aj-fam-c">' + x.usan + ' de ' + x.total + '</span></li>';
       }).join('') + '</ul>' +
-      (top.length ? '<h3 class="rf-sec">Los más activos (último mes)</h3><ol class="aj-top">' + top.map(function (id) { return '<li><b>' + esc(nombre(id)) + '</b> <span>' + (mes[id] === 1 ? '1 cambio' : mes[id] + ' cambios') + '</span></li>'; }).join('') + '</ol>' : '') +
+      (noVuelven.length ? '<h3 class="rf-sec">Entraron y no han vuelto en una semana (' + noVuelven.length + ')</h3><ol class="aj-top">' + noVuelven.map(function (p) {  // v5.32: en vez de «Los más activos» (ya está en Actividad)
+        const v = visita[p.id];
+        return '<li><b>' + esc(p.apodo) + '</b> <span>' + esc('la última vez, ' + haceCuanto(v.ultima) + (v.veces ? ' · ' + (v.veces === 1 ? '1 vez' : v.veces + ' veces') + ' en total' : '')) + '</span></li>';
+      }).join('') + '</ol>' : '') +
       '<h3 class="rf-sec">Última vez que entró cada uno</h3>' +
       (usan.length ? '<table class="aj-tabla"><thead><tr><th>Persona</th><th>Última vez</th><th class="n">Cambios</th></tr></thead><tbody>' + usan.map(function (p) {
         const v = visita[p.id];
-        return '<tr><td><b>' + esc(p.apodo) + '</b></td><td>' + esc(v ? haceCuanto(v.ultima) : '—') + '</td><td class="n">' + (cambiosDe[p.id] || 0) + '</td></tr>';
+        return '<tr><td>' + (cambiosDe[p.id] ? '<button type="button" class="enlace act-quien" data-uso-quien="' + esc(p.id) + '" title="Ver su actividad">' + esc(p.apodo) + '</button>' : '<b>' + esc(p.apodo) + '</b>') + '</td><td>' + esc(v ? haceCuanto(v.ultima) : '—') + '</td><td class="n">' + (cambiosDe[p.id] || 0) + '</td></tr>';  // v5.32: a su actividad
       }).join('') + '</tbody></table>' : '<p class="vacio">Aún nadie.</p>') +
       (nunca.length ? '<h3 class="rf-sec aj-aun">Aún no han entrado (' + nunca.length + ')</h3>' + porFam.filter(function (x) { return x.nunca.length; }).map(function (x) {
         return '<div class="aj-grupo"><p class="aj-grupo-t">' + esc(famNom(x.f)) + ' <span>' + x.nunca.length + '</span></p><ul class="aj-filas">' + x.nunca.map(function (p) {
@@ -2527,18 +2551,40 @@
     const u = UNIDAD_CAT[k] || ['', ''];
     return v + ' ' + (v === 1 ? u[0] : u[1]);
   }
+  /* v5.32 (T0591): en Premios, cada nombre se toca y abre de dónde salen sus puntos */
+  function prNombre(id, apodo) { return '<button type="button" class="enlace pr-nombre" data-pr-persona="' + esc(id) + '">' + esc(apodo) + '</button>'; }
+  function abrirDesglose(pr, id) {
+    const g = pr.general.find(function (x) { return x.id === id; }), apodo = g ? g.apodo : apodoDeId(id);
+    const puesto = g ? 1 + pr.general.filter(function (x) { return x.puntos > g.puntos; }).length : 0;
+    const filas = [];
+    pr.categorias.forEach(function (c) {
+      const x = c.gente.find(function (y) { return y.id === id; });
+      if (x) filas.push({ que: c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^./, function (k) { return k.toUpperCase(); }), detalle: valorCat(c.id, x.valor) + ' · ' + (11 - x.puntos) + '.º', puntos: x.puntos });
+    });
+    pr.medallas.forEach(function (m) { if (m.gente.indexOf(apodo) !== -1) filas.push({ que: 'Medalla: ' + m.titulo, detalle: '', puntos: m.puntos || pr.puntosMedalla }); });
+    filas.sort(function (a, b) { return b.puntos - a.puntos; });
+    const suma = filas.reduce(function (t, f) { return t + f.puntos; }, 0);
+    abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(apodo) + '</h2><div><small>' + (g ? g.puntos + ' puntos · ' + puesto + '.º de ' + pr.general.length : 'Sin puntos este mes') + '</small></div></div>' +
+      '<div class="dlg-cuerpo">' + (filas.length ? '<table class="aj-tabla pr-desglose"><thead><tr><th>De dónde</th><th class="n">Puntos</th></tr></thead><tbody>' + filas.map(function (f) {
+        return '<tr><td><b>' + esc(f.que) + '</b>' + (f.detalle ? '<br><small>' + esc(f.detalle) + '</small>' : '') + '</td><td class="n">+' + f.puntos + '</td></tr>';
+      }).join('') + '</tbody><tfoot><tr><td><b>Total</b></td><td class="n"><b>' + suma + '</b></td></tr></tfoot></table>' : '<p class="ayuda">Este mes aún no tiene puntos.</p>') +
+      '<p class="ayuda">Del último mes. Cada categoría da 10 puntos al 1.º, 9 al 2.º… y 1 al 10.º; cada medalla, ' + pr.puntosMedalla + ' si es de las difíciles y 1 si es de las fáciles.</p></div>' +
+      '<div class="dlg-pie"><div class="botones"><button type="button" class="accion" id="dlg-pr-act">Ver su actividad</button><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
+    $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    $('dlg-pr-act').addEventListener('click', function () { cerrarDialogo(); verActividadDe(id); });
+  }
   function htmlPremios(pr) {
     const t = pr.totales, top = pr.general.filter(function (g) { return g.top; });
     return '<h2>Premios <small class="aj-sub">del último mes (desde el ' + esc(ddmm(pr.desde)) + ')</small></h2>' +
       '<p class="pr-totales">Entre todos: <b>' + t.comidas + '</b> comidas, <b>' + t.cenas + '</b> cenas y <b>' + t.noches + '</b> noches con la abuela · <b>' + t.personas + '</b> personas distintas.</p>' +
       '<div><button type="button" class="principal" id="pr-compartir">Informe del mes para el grupo</button></div>' +
       '<div class="pr-grid">' +
-        '<article class="pr-card pr-oro"><h3>Top 10 general</h3><ol>' + (top.length ? top.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + g.puntos + ' puntos</b></li>'; }).join('') : '<li>Aún nadie.</li>') + '</ol>' +
-          (pr.general.length > top.length ? '<p class="pr-mas">Y ' + (pr.general.length - top.length) + ' más con puntos.</p>' : '') + '</article>' +
+        '<article class="pr-card pr-oro"><h3>Top 10 general</h3><ol>' + (top.length ? top.map(function (g) { return '<li><span>' + prNombre(g.id, g.apodo) + '</span><b>' + g.puntos + ' puntos</b></li>'; }).join('') : '<li>Aún nadie.</li>') + '</ol>' +
+          (pr.general.length > top.length ? '<p class="pr-mas">Y ' + (pr.general.length - top.length) + ' más con puntos.</p>' : '') + '<p class="ayuda pr-toca">Toca a alguien para ver de dónde salen sus puntos.</p></article>' +
         (pr.familias.length ? '<article class="pr-card"><h3>Familias del mes</h3><ol>' + pr.familias.map(function (f) { return '<li><span>' + esc(cortoFamilia(f.familia)) + '</span><b>' + f.visitas + (f.visitas === 1 ? ' visita' : ' visitas') + '</b></li>'; }).join('') + '</ol></article>' : '') +
         pr.categorias.map(function (c) {
           return '<article class="pr-card"><h3>' + esc(c.titulo.replace(/^Top 10 (en |de )?/, '').replace(/^./, function (x) { return x.toUpperCase(); })) + '</h3><p class="pr-texto">' + esc(c.texto) + '</p><ol>' +
-            (c.gente.length ? c.gente.map(function (g) { return '<li><span>' + esc(g.apodo) + '</span><b>' + esc(valorCat(c.id, g.valor)) + '</b><small>+' + g.puntos + '</small></li>'; }).join('') : '<li class="pr-nadie">Aún nadie.</li>') + '</ol></article>';
+            (c.gente.length ? c.gente.map(function (g) { return '<li><span>' + prNombre(g.id, g.apodo) + '</span><b>' + esc(valorCat(c.id, g.valor)) + '</b><small>+' + g.puntos + '</small></li>'; }).join('') : '<li class="pr-nadie">Aún nadie.</li>') + '</ol></article>';
         }).join('') +
         (pr.medallas.length ? '<article class="pr-card pr-ancha"><h3>Medallas</h3><ul class="pr-medallas">' + pr.medallas.map(function (m) { return '<li><b>' + esc(m.titulo) + '</b> <small class="pr-pts">' + (m.puntos || pr.puntosMedalla) + ((m.puntos || pr.puntosMedalla) === 1 ? ' punto' : ' puntos') + '</small> <span>' + esc(m.gente.join(', ')) + '</span></li>'; }).join('') + '</ul></article>' : '') +
         (pr.servicio.length ? '<article class="pr-card pr-ancha"><h3>Quienes la cuidan</h3><ul class="pr-medallas">' + pr.servicio.map(function (x) { return '<li><b>' + esc(x.apodo) + '</b> <span>' + esc(x.medallas.map(function (m) { return m.titulo; }).concat(['Gracias por cuidarla']).join(' · '))  /* v5.19: nunca «sin medallas» */ + '</span></li>'; }).join('') + '</ul></article>' : '') +
@@ -2563,6 +2609,8 @@
       '\n\nEn la web, tocando tu nombre, ves tus medallas.' + enlace;
   }
   function montarPremios(pr) {
+    const $p = $('aj-premios');
+    if ($p) $p.addEventListener('click', function (e) { const n = e.target.closest('[data-pr-persona]'); if (n) abrirDesglose(pr, n.dataset.prPersona); });  // v5.32
     const b = $('pr-compartir');
     if (b) b.addEventListener('click', function () { abrirInforme(pr); });  // v5.7: el informe visual
   }
@@ -3048,6 +3096,157 @@
         else { t.select(); document.execCommand('copy'); hecho(); }
       });
   }
+  /* ---------- v5.32 (T0591): Control › Actividad: el historial por días, con filtros, «deshecho» y los errores ---------- */
+  const CLAVE_CONTROL = 'casa-abuela-control', CLAVE_ERR_VISTO = 'casa-abuela-errores-visto';
+  function erroresNuevos() {
+    if (!esAdmin() || !datos.ultimoError) return false;
+    let visto = ''; try { visto = localStorage.getItem(CLAVE_ERR_VISTO) || ''; } catch (e) {}
+    return datos.ultimoError > visto;
+  }
+  function erroresVistos() {  // al abrir Control › Actividad, lo que hay ya está visto
+    const ult = [((ajustes && ajustes.errores) || [])[0], { cuando: (datos && datos.ultimoError) || '' }].map(function (x) { return (x && x.cuando) || ''; }).sort().pop();
+    if (!ult) return;
+    try { localStorage.setItem(CLAVE_ERR_VISTO, ult); } catch (e) {}
+    $('badge-control').hidden = true;
+    if (!$('badge-mas').textContent) $('badge-mas').hidden = true;
+  }
+  const PESTANAS_CONTROL = [['actividad', 'Actividad'], ['uso', 'Uso'], ['premios', 'Premios'], ['config', 'Ajustes']];  // cortas: caben las cuatro en el móvil
+  function controlPestana() { let v = ''; try { v = localStorage.getItem(CLAVE_CONTROL) || ''; } catch (e) {} return PESTANAS_CONTROL.some(function (x) { return x[0] === v; }) ? v : 'actividad'; }
+  let actFiltro = 'todo', actPersona = '';
+  const FILTROS_ACT = [['todo', 'Todo'], ['comidas', 'Comidas y visitas'], ['eventos', 'Eventos'], ['dias', 'Notas del día'], ['personas', 'Personas'], ['deshechos', 'Corregidos'], ['errores', 'Errores']];
+  const ACCION_ERROR = { guardarPersona: 'al apuntarse o cambiar a alguien', guardarPersonas: 'al apuntar a varios', guardarDia: 'al guardar el día', guardarEvento: 'al guardar un evento',
+    apuntarEvento: 'al contestar un evento', notaEvento: 'al poner una nota en un evento', borrarEvento: 'al quitar un evento', guardarAusencia: 'al marcar que la abuela no está',
+    crearPersona: 'al añadir a alguien', darDeBaja: 'al quitar a alguien', guardarAjustes: 'al guardar los ajustes', getDatos: 'al abrir la web', getAjustes: 'al abrir Control', getPremios: 'al ver los premios', web: 'en la web' };
+  /* Ir a Actividad con solo lo de una persona (desde Uso y desde Premios) */
+  function verActividadDe(id) {
+    actPersona = id; actFiltro = 'todo';
+    try { localStorage.setItem(CLAVE_CONTROL, 'actividad'); } catch (e) {}
+    if (vista !== 'ajustes') { ponerVista('ajustes'); history.replaceState(null, '', '#ajustes'); } else pintarAjustes();
+    window.scrollTo(0, 0);
+  }
+  function tipoCambio(t) {
+    if (/^(Apunta a|Quita a) .+ (a|de) la (comida|cena|noche|mañana|tarde) del /.test(t) || / (va siempre|deja de ir siempre) los /.test(t) ||
+      /^Nota de .+ en la (comida|cena|noche|mañana|tarde) del /.test(t) || / va a la (comida|cena|noche|mañana|tarde) del /.test(t)) return 'comidas';
+    if (/^(Día \d\d\/\d\d|Borra lo anotado|La abuela no está|Quita la ausencia)/.test(t)) return 'dias';
+    if (/evento| va a | no va a | sin decir si va a |^Nota de .+ en (?!la )/.test(t)) return 'eventos';
+    return 'personas';
+  }
+  function haceDias(n) { return sumar(hoy(), -n); }
+  function erroresRecientes() { return ajustes ? (ajustes.errores || []).filter(function (x) { return x.cuando.slice(0, 10) >= haceDias(6); }).length : 0; }
+  /* «Deshecho»: alguien apunta y quita (o al revés) lo mismo en menos de 15 minutos (las dos líneas).
+     «Corregido»: reescribe la nota del mismo día, o cambia la respuesta a un evento, en menos de 15 minutos (lo de antes; lo último, no) */
+  function marcarDeshechos(cambios) {
+    const marca = {}, ultimo = {};
+    const min = function (c) { return Date.parse(c.cuando) / 60000; };
+    cambios.map(function (c, i) { return { c: c, i: i }; }).reverse().forEach(function (o) {  // del más antiguo al más nuevo
+      const t = o.c.cambio;
+      let m = /^(Apunta|Quita) a (.+?) (?:a|de) la (\w+) del (\d\d\/\d\d)/.exec(t), clave = '', accion = '';
+      if (m) { clave = o.c.quien + '|' + m[2] + '|' + m[3] + '|' + m[4]; accion = m[1]; }
+      else if ((m = /^Día (\d\d\/\d\d):/.exec(t))) { clave = o.c.quien + '|dia|' + m[1]; accion = 'nota'; }
+      else if ((m = /^(.+?) (?:va a|no va a|sin decir si va a) (.+?)(?: \(solo .*\))?$/.exec(t)) && !/ va a la (comida|cena|noche|mañana|tarde) del /.test(t)) { clave = o.c.quien + '|ev|' + m[1] + '|' + m[2]; accion = 'nota'; }  // cambia su respuesta a un evento
+      if (!clave) return;
+      const u = ultimo[clave];
+      if (u && min(o.c) - min(u.c) <= 15) {
+        if (accion === 'nota') marca[u.i] = 'corregido';  // la nota anterior; la última es la buena
+        else if (u.accion !== accion) { marca[u.i] = 'deshecho'; marca[o.i] = 'deshecho'; }
+      }
+      ultimo[clave] = { c: o.c, i: o.i, accion: accion };
+    });
+    return marca;
+  }
+  function apodoDeId(id) { return ((quienEs(id) || deBaja(id) || {}).apodo) || String(id || '').replace(/^\([^)]*\) - /, '') || 'Alguien'; }
+  function htmlActividad() {
+    return '<h2>Actividad <small class="aj-sub">los últimos 7 días</small></h2><div class="aj-kpis act-kpis" id="act-resumen"></div>' +
+      '<div class="ev-filtros" id="act-filtros" role="tablist" aria-label="Qué ver"></div><div id="act-grupos"></div>' +
+      '<div class="act-buscar"><label class="campo" for="act-persona">Persona<select id="act-persona"></select></label>' +
+      '<label class="campo" for="act-q">Buscar<input id="act-q" type="search" autocomplete="off" placeholder="Palabra…"></label></div>' +
+      '<div id="act-lista"></div>';
+  }
+  function montarActividad() {
+    if (!$('act-lista')) return;
+    if (controlPestana() === 'actividad') erroresVistos();
+    const cambios = ajustes.cambios || [], errores = ajustes.errores || [];
+    const desh = marcarDeshechos(cambios);
+    const h7 = haceDias(6);
+    const c7 = cambios.filter(function (x) { return x.cuando.slice(0, 10) >= h7; });
+    const gente7 = {}; c7.forEach(function (x) { gente7[x.quien] = true; });
+    // cuántas veces, no cuántas líneas: un «deshecho» son dos líneas (apunta y quita); cada nota «corregida», una
+    const veces = function (indices) { const d = indices.filter(function (i) { return desh[i] === 'deshecho'; }).length; return indices.length - d + Math.ceil(d / 2); };
+    const desh7 = veces(cambios.map(function (x, i) { return i; }).filter(function (i) { return desh[i] && cambios[i].cuando.slice(0, 10) >= h7; }));
+    const deshTodos = veces(Object.keys(desh).map(Number));
+    const err7 = erroresRecientes();
+    const kpi = function (n, et) { return '<div class="aj-kpi"><b>' + n + '</b><span>' + et + '</span></div>'; };  // las mismas cifras que «Uso»
+    $('act-resumen').innerHTML = kpi(c7.length, c7.length === 1 ? 'cambio' : 'cambios') + kpi(Object.keys(gente7).length, Object.keys(gente7).length === 1 ? 'persona' : 'personas') +
+      kpi(desh7, desh7 === 1 ? 'corregido' : 'corregidos') + kpi(err7, err7 === 1 ? 'error' : 'errores');
+    const nombres = {};
+    cambios.forEach(function (x) { nombres[x.quien] = x.apodo; });
+    errores.forEach(function (x) { if (x.quien) nombres[x.quien] = nombres[x.quien] || apodoDeId(x.quien); });
+    $('act-persona').innerHTML = '<option value="">Todas</option>' + Object.keys(nombres).sort(function (a, b) { return nombres[a].localeCompare(nombres[b]); })
+      .map(function (id) { return '<option value="' + esc(id) + '"' + (id === actPersona ? ' selected' : '') + '>' + esc(nombres[id]) + '</option>'; }).join('');
+    const pintarFiltros = function () {
+      $('act-filtros').innerHTML = FILTROS_ACT.map(function (f) {
+        const n = f[0] === 'errores' ? errores.length : f[0] === 'deshechos' ? deshTodos : 0;
+        return '<button type="button" role="tab" data-act-filtro="' + f[0] + '" aria-selected="' + (actFiltro === f[0]) + '">' + f[1] + (n ? ' <span class="ev-filtro-n' + (f[0] === 'errores' && err7 ? ' alerta' : '') + '">' + n + '</span>' : '') + '</button>';
+      }).join('');
+    };
+    // v5.32: arriba de Errores y de Corregidos, lo que más se repite (que es lo que hay que arreglar)
+    const pintarGrupos = function () {
+      const g = {}, orden = [];
+      const suma = function (k, quien, cuando) { if (!g[k]) { g[k] = { n: 0, gente: {}, ultima: '' }; orden.push(k); } g[k].n++; if (quien) g[k].gente[quien] = true; if (cuando > g[k].ultima) g[k].ultima = cuando; };
+      if (actFiltro === 'errores') errores.forEach(function (x) { if (!actPersona || x.quien === actPersona) suma(x.error, x.quien ? apodoDeId(x.quien) : '', x.cuando); });
+      else if (actFiltro === 'deshechos') cambios.forEach(function (x, i) { if (desh[i] && (!actPersona || x.quien === actPersona)) suma(desh[i] === 'deshecho' ? 'Se apunta y se quita (o al revés)' : /^Día /.test(x.cambio) ? 'Reescribe la nota del día' : 'Cambia su respuesta a un evento', x.apodo, x.cuando); });
+      else { $('act-grupos').innerHTML = ''; return; }
+      if (actFiltro === 'deshechos' && g['Se apunta y se quita (o al revés)']) g['Se apunta y se quita (o al revés)'].n = Math.ceil(g['Se apunta y se quita (o al revés)'].n / 2);  // dos líneas, una vez
+      orden.sort(function (a, b) { return g[b].n - g[a].n; });
+      $('act-grupos').innerHTML = orden.length ? '<h3 class="rf-sec">' + (actFiltro === 'errores' ? 'Lo que más falla' : 'Lo que más se corrige') + '</h3><ol class="aj-top act-top">' + orden.slice(0, 6).map(function (k) {
+        const gente = Object.keys(g[k].gente);
+        return '<li><b>' + esc(k) + '</b> <span>' + (g[k].n === 1 ? '1 vez' : g[k].n + ' veces') + (gente.length ? ' · ' + esc(lista(gente.slice(0, 3)) + (gente.length > 3 ? ' y ' + (gente.length - 3) + ' más' : '')) : '') + ' · ' + esc(haceCuanto(g[k].ultima)) + '</span></li>';
+      }).join('') + '</ol>' : '';
+    };
+    const pintarLista = function () {
+      const q = sinAcentos($('act-q').value.trim());
+      let filas;
+      if (actFiltro === 'errores') {
+        filas = errores.filter(function (x) { return (!actPersona || x.quien === actPersona) && (!q || sinAcentos(apodoDeId(x.quien) + ' ' + x.error + ' ' + x.accion).indexOf(q) !== -1); })
+          .map(function (x) { return { cuando: x.cuando, error: true, html: botonPersona(x.quien, x.quien ? apodoDeId(x.quien) : 'Alguien') + ', ' + esc(x.accion === 'web' ? 'en «' + (x.detalle || 'la web') + '»' : ACCION_ERROR[x.accion] || x.accion) + ': <span class="act-err">' + esc(x.error) + '</span>' }; });
+      } else {
+        filas = cambios.map(function (x, i) { return { x: x, i: i }; }).filter(function (o) {
+          if (actPersona && o.x.quien !== actPersona) return false;
+          if (actFiltro === 'deshechos' ? !desh[o.i] : actFiltro !== 'todo' && tipoCambio(o.x.cambio) !== actFiltro) return false;
+          return !q || sinAcentos(o.x.apodo + ' ' + o.x.cambio).indexOf(q) !== -1;
+        }).map(function (o) { return { cuando: o.x.cuando, desh: desh[o.i] || '', html: botonPersona(o.x.quien, o.x.apodo) + ' ' + esc(o.x.cambio) }; });
+      }
+      pintarGrupos();
+      const total = filas.length;
+      filas = filas.slice(0, 300);
+      let html = '', dia = '';
+      filas.forEach(function (f) {
+        const d = f.cuando.slice(0, 10);
+        if (d !== dia) {
+          if (dia) html += '</ul>';
+          const n = filas.filter(function (g) { return g.cuando.slice(0, 10) === d; }).length;
+          html += '<h3 class="act-dia">' + esc(d === hoy() ? 'Hoy' : d === sumar(hoy(), -1) ? 'Ayer' : diaLargo(d)) + ' <small>' + n + '</small></h3><ul class="act-ul">';
+          dia = d;
+        }
+        html += '<li class="act-item' + (f.desh ? ' deshecho' : '') + (f.error ? ' error' : '') + '"><span class="act-hora">' + esc(f.cuando.slice(11, 16)) + '</span><span class="act-texto">' + f.html +
+          (f.desh ? ' <span class="act-marca">' + f.desh + '</span>' : '') + '</span></li>';
+      });
+      if (dia) html += '</ul>';
+      $('act-lista').innerHTML = html ? html + (total > 300 ? '<p class="ayuda">Se ven los 300 últimos de ' + total + '. Filtra para ver otros.</p>' : '') :
+        '<p class="ayuda">' + (actFiltro === 'errores' ? 'Ningún error. Bien.' : 'Nada con eso.') + '</p>';
+    };
+    const botonPersona = function (id, nombre) { return id ? '<button type="button" class="enlace act-quien" data-act-quien="' + esc(id) + '" title="Ver solo lo de ' + esc(nombre) + '">' + esc(nombre) + '</button>' : '<b>' + esc(nombre) + '</b>'; };
+    pintarFiltros();
+    pintarLista();
+    $('act-filtros').addEventListener('click', function (e) { const b = e.target.closest('[data-act-filtro]'); if (!b) return; actFiltro = b.dataset.actFiltro; pintarFiltros(); pintarLista(); });
+    $('act-lista').addEventListener('click', function (e) {  // tocar un nombre: solo lo suyo
+      const b = e.target.closest('[data-act-quien]'); if (!b) return;
+      actPersona = b.dataset.actQuien; $('act-persona').value = actPersona; pintarLista();
+      $('act-persona').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    $('act-persona').addEventListener('change', function () { actPersona = this.value; pintarLista(); });
+    $('act-q').addEventListener('input', pintarLista);
+  }
   function pintarAjustes() {
     const $a = $('ajustes');
     if (!ajustes) { $a.innerHTML = '<p class="vacio">Cargando…</p>'; cargarAjustes(); return; }
@@ -3065,29 +3264,31 @@
       .sort(function (a, b) { return ((visita[b.id] || {}).ultima || ultimoCambio[b.id] || '').localeCompare((visita[a.id] || {}).ultima || ultimoCambio[a.id] || ''); });
     const nunca = gente.filter(function (p) { return !visita[p.id] && !cambiosDe[p.id]; });
     const campo = function (id, et, tipo, v, extra) { return '<label class="campo" for="aj-' + id + '">' + et + '<input id="aj-' + id + '" type="' + tipo + '" value="' + esc(v == null ? '' : v) + '"' + (extra || '') + '></label>'; };
+    const pest = controlPestana();
+    const caja = function (id, html) { return '<div data-aj-sec="' + id + '"' + (pest === id ? '' : ' hidden') + '>' + html + '</div>'; };
     $a.innerHTML =
-      '<section class="aj-sec aj-config"><h2>Configuración</h2>' +  // v4.62: en bloques de una columna (en el móvil se descuadraba)
+      '<div class="ev-secciones aj-secciones" role="tablist">' + PESTANAS_CONTROL.map(function (x) {  // v5.32 (T0591): cada cosa en su pestaña, como Eventos | Fechas señaladas
+        return '<button type="button" role="tab" data-aj-pest="' + x[0] + '" aria-selected="' + (pest === x[0]) + '">' + x[1] + (x[0] === 'actividad' && erroresRecientes() ? ' <span class="ev-filtro-n alerta">' + erroresRecientes() + '</span>' : '') + '</button>';
+      }).join('') + '</div>' +
+      caja('actividad', '<section class="aj-sec">' + htmlActividad() + '</section>') +
+      caja('config', '<section class="aj-sec aj-config"><h2>Configuración</h2>' +  // v4.62: en bloques de una columna (en el móvil se descuadraba)
         '<fieldset><legend>Clave</legend>' + campo('clave', 'Clave de la familia', 'password', c.clave, ' maxlength="40" autocomplete="off" autocapitalize="off"') + '<label class="check"><input type="checkbox" id="aj-ver-clave"> Mostrar la clave</label>' + campo('pista', 'Pista', 'text', c.pista, ' maxlength="100" autocomplete="off"') +
           '<p class="ayuda">Si cambias la clave, a todos les pedirá la nueva la próxima vez que entren (con la pista).</p></fieldset>' +
         '<fieldset><legend>Horas</legend><div class="aj-horas">' + campo('comida', 'Comida', 'time', c.horaComida) + campo('cena', 'Cena', 'time', c.horaCena) + campo('dormir', 'Noche (hora de dormir)', 'time', c.horaDormir) + '</div></fieldset>' +
         '<fieldset><legend>Avisos y calendario</legend>' +
           '<label class="campo" for="aj-aviso">Avisar de «falta alguien»<span class="aj-con-sufijo"><input id="aj-aviso" type="number" min="0" max="48" inputmode="numeric" value="' + esc(c.avisoHoras) + '"><span>horas antes</span></span></label>' +
           campo('inicio', 'El calendario empieza el', 'date', c.inicio) + '</fieldset>' +
-        '<div><button type="button" class="principal" id="aj-guardar">Guardar ajustes</button></div></section>' +
-      panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan) +
-      '<section class="aj-sec" id="aj-premios"><h2>Premios</h2><p class="ayuda">Contando los premios del último mes…</p></section>' +  // v4.85
-      '<section class="aj-sec"><h2>Historial de cambios</h2>' +
-        '<label class="buscar" for="aj-q"><span class="oculto">Buscar</span><input id="aj-q" type="search" autocomplete="off" placeholder="Buscar"></label>' +
-        '<ul class="aj-hist" id="aj-hist"></ul></section>';
-    const pintarHist = function () {
-      const q = sinAcentos($('aj-q').value.trim());
-      const l = ajustes.cambios.filter(function (x) { return !q || sinAcentos(x.apodo + ' ' + x.cambio + ' ' + x.cuando).indexOf(q) !== -1; }).slice(0, 200);
-      $('aj-hist').innerHTML = l.length ? l.map(function (x) {
-        const f = x.cuando.slice(0, 10), h = x.cuando.slice(11, 16);
-        return '<li><small>' + esc(ddmm(f) + ' ' + h + ' · ' + x.apodo) + '</small>' + esc(x.cambio) + '</li>';
-      }).join('') : '<li>Nada con eso.</li>';
-    };
-    $('aj-q').addEventListener('input', pintarHist);
+        '<div><button type="button" class="principal" id="aj-guardar">Guardar ajustes</button></div></section>') +
+      caja('uso', panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan)) +
+      caja('premios', '<section class="aj-sec" id="aj-premios"><h2>Premios</h2><p class="ayuda">Contando los premios del último mes…</p></section>');  // v4.85
+    $a.querySelectorAll('[data-aj-pest]').forEach(function (b) { b.addEventListener('click', function () {
+      try { localStorage.setItem(CLAVE_CONTROL, b.dataset.ajPest); } catch (e) {}
+      $a.querySelectorAll('[data-aj-pest]').forEach(function (o) { o.setAttribute('aria-selected', String(o === b)); });
+      $a.querySelectorAll('[data-aj-sec]').forEach(function (sec) { sec.hidden = sec.dataset.ajSec !== b.dataset.ajPest; });
+      if (b.dataset.ajPest === 'actividad') erroresVistos();
+    }); });
+    montarActividad();
+    if (!$a.dataset.usoMontado) { $a.dataset.usoMontado = '1'; $a.addEventListener('click', function (e) { const b = e.target.closest('[data-uso-quien]'); if (b) verActividadDe(b.dataset.usoQuien); }); }  // v5.32: una sola vez
     $('aj-ver-clave').addEventListener('change', function () { $('aj-clave').type = this.checked ? 'text' : 'password'; });  // v4.91
     llamar('getPremios', [yo, claveAdmin()]).then(function (pr) { const $p = $('aj-premios'); if ($p) { $p.innerHTML = htmlPremios(pr); montarPremios(pr); } })
       .catch(function (err) { const $p = $('aj-premios'); if ($p) $p.innerHTML = '<h2>Premios</h2><p class="ayuda">' + esc(mensajeError(err)) + '</p>'; });
@@ -3109,7 +3310,6 @@
       });
     });
     const ir = $a.querySelector('[data-ir-rellenar]'); if (ir) ir.addEventListener('click', function (e) { e.preventDefault(); rfFamilia = ''; ponerVista('rellenar'); history.replaceState(null, '', '#rellenar'); window.scrollTo(0, 0); });
-    pintarHist();
     $('aj-guardar').addEventListener('click', function () {
       const aj = {}, v = function (id) { return $('aj-' + id).value.trim(); };
       if (v('clave') !== c.clave) aj.clave = v('clave');
@@ -4698,7 +4898,20 @@
     if (t) { t.setAttribute('tabindex', '-1'); try { t.focus({ preventScroll: true }); } catch (e) { t.focus(); } }
   }
   function cerrarDialogo() { if ($dlg.open) { if (typeof $dlg.close === 'function') $dlg.close(); else { $dlg.removeAttribute('open'); $dlg.innerHTML = ''; } } }
-  function errorDialogo(t) { const e = $('dlg-error'); if (e) { e.textContent = t; e.hidden = false; } }
+  function errorDialogo(t) { const e = $('dlg-error'); if (e) { e.textContent = t; e.hidden = false; } avisarUso(t); }
+  /* v5.32 (T0591): lo que alguien hace mal en una ventana (y no llega a guardarse), a MESA_ERRORES, para Control › Actividad.
+     Sin esperar respuesta ni avisar de nada; el mismo aviso, como mucho una vez por minuto. */
+  const avisosEnviados = {};
+  function avisarUso(texto) {
+    try {
+      if (!window.CASA_API || !texto) return;
+      const ahora = Date.now();
+      if (avisosEnviados[texto] && ahora - avisosEnviados[texto] < 60000) return;
+      avisosEnviados[texto] = ahora;
+      const t = $('dlg-titulo'), donde = t ? t.textContent.trim().slice(0, 60) : '';
+      fetch(window.CASA_API, { method: 'POST', credentials: 'omit', redirect: 'follow', body: JSON.stringify({ fn: 'avisoWeb', args: [yo || '', String(texto).slice(0, 300), donde], clave: leerClave() }) }).catch(function () {});
+    } catch (e) { /* nunca molesta */ }
+  }
   // El aviso «close» llega un momento después: si para entonces ya se ha abierto otra ventana, no se vacía (v4.12)
   $dlg.addEventListener('close', function () { if (!$dlg.open) $dlg.innerHTML = ''; });
   let dlgComprobar = null;
@@ -5621,7 +5834,7 @@
   }
 
   /* ---------- Vistas ---------- */
-  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', eventos: 'Lo que viene y quién va', rellenar: 'Rellenar lo que falta', ajustes: 'Solo para quien lleva la web', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
+  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', eventos: 'Lo que viene y quién va', rellenar: 'Rellenar lo que falta', ajustes: 'Cómo se usa la web (solo para quien la lleva)', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
   /* v4.87: la barra de pestañas se desliza: el difuminado dice si hay más a un lado o al otro, y la elegida se ve siempre */
   function bordesNav() {
     const n = document.querySelector('nav.vistas');
@@ -5642,7 +5855,7 @@
   function abrirMas() {  // v5.16: lo que no cabe en las pestañas del móvil
     const op = [];
     if (!$('nav-rellenar').hidden) op.push(['rellenar', 'Por rellenar', $('badge-rellenar').hidden ? '' : $('badge-rellenar').textContent]);
-    if (!$('nav-ajustes').hidden) op.push(['ajustes', 'Ajustes', '']);
+    if (!$('nav-ajustes').hidden) op.push(['ajustes', 'Control', erroresNuevos() ? '!' : '']);  // v5.32: antes «Ajustes»; «!» con errores nuevos
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Más</h2></div><div class="dlg-cuerpo"><div class="mas-menu">' +
       op.map(function (x) { return '<button type="button" class="accion" data-ir-vista="' + x[0] + '"><span>' + x[1] + '</span>' + (x[2] ? '<span class="nav-badge">' + esc(x[2]) + '</span>' : '') + '</button>'; }).join('') +
       '</div></div><div class="dlg-pie"><div class="botones"><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
