@@ -628,6 +628,29 @@
   /* v4.58: Ajustes */
   .aj-sec { margin: 0 0 22px; padding: 14px 16px; border-radius: var(--radio); background: #fff; border: 1px solid var(--color-linea); display: grid; gap: 10px; }
   .aj-sec h2 { margin: 0; font-size: 18px; }
+  /* v5.32 (T0591): Control, en pestañas; y Actividad */
+  .aj-pestanas { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+  .aj-pestanas button { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--color-linea); background: #fff; font: inherit; font-size: 15px; font-weight: 700; color: var(--color-texto-suave); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .aj-pestanas button[aria-selected="true"] { border-color: var(--color-principal); background: var(--color-principal-claro); color: var(--color-principal-oscuro); }
+  .act-resumen { margin: 0; padding: 10px 12px; border-radius: calc(var(--radio) / 2); background: var(--color-principal-claro); font-size: 15px; }
+  .act-filtros { display: flex; flex-wrap: wrap; gap: 6px; }
+  .act-filtro { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--color-linea); background: #fff; font: inherit; font-size: 14px; font-weight: 700; color: var(--color-texto-suave); cursor: pointer; }
+  .act-filtro small { font-weight: 600; }
+  .act-filtro[aria-pressed="true"] { border-color: var(--color-principal); background: var(--color-principal-claro); color: var(--color-principal-oscuro); }
+  .act-filtro.con-error { border-color: var(--color-accion); color: var(--color-accion); }
+  .act-buscar { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 12px; }
+  .act-buscar .campo { min-width: 0; }
+  .act-buscar .campo select, .act-buscar .campo input { width: 100%; min-width: 0; box-sizing: border-box; }
+  .act-dia { margin: 10px 0 4px; font-size: 15px; }
+  .act-dia small { font-weight: 600; color: var(--color-texto-suave); }
+  .act-ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .act-item { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--color-linea); font-size: 14px; line-height: 1.4; }
+  .act-hora { color: var(--color-texto-suave); font-variant-numeric: tabular-nums; }
+  .act-texto { overflow-wrap: anywhere; }
+  .act-item.deshecho .act-texto { color: var(--color-texto-suave); }
+  .act-marca { display: inline-block; padding: 0 6px; border-radius: 999px; background: var(--color-destacado-claro); color: var(--color-texto); font-size: 12px; font-weight: 700; }
+  .act-item.error { background: var(--color-destacado-claro); }
+  .act-err { font-weight: 700; }
   .aj-config fieldset { margin: 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--color-linea); display: grid; gap: 10px; min-width: 0; }
   .aj-config legend { float: left; width: 100%; padding: 0; margin: 0 0 2px; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--color-principal-oscuro); }
   .aj-config legend + * { clear: both; }
@@ -737,9 +760,6 @@
   .aj-chip.gris { background: var(--color-linea); }
   .aj-chip button { border: 0; border-radius: 999px; padding: 3px 8px; background: #fff; font: inherit; font-size: 12px; font-weight: 700; color: var(--color-texto-suave); cursor: pointer; }
   .aj-nunca-l b { color: var(--color-accion); }
-  .aj-hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; font-size: 14px; max-height: 60vh; overflow: auto; }
-  .aj-hist li { padding: 7px 0; border-top: 1px solid var(--color-linea); }
-  .aj-hist small { display: block; color: var(--color-texto-suave); font-weight: 700; font-size: 12px; }
   .comida.ya-paso .comida-cab h4 { color: var(--color-texto-suave); }
   .inf-prev { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 10px; }
   .inf-prev img { flex: 0 0 72%; max-width: 300px; aspect-ratio: 4 / 5; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.18); scroll-snap-align: center; }
@@ -1160,7 +1180,7 @@
       <a href="#personas" data-vista="personas">Personas</a>
       <a href="#huecos" data-vista="huecos">Huecos<span class="nav-badge" id="badge-huecos" hidden></span></a>
       <a href="#rellenar" data-vista="rellenar" id="nav-rellenar" hidden>Por rellenar<span class="nav-badge" id="badge-rellenar" hidden></span></a>
-      <a href="#ajustes" data-vista="ajustes" id="nav-ajustes" hidden>Ajustes</a>
+      <a href="#ajustes" data-vista="ajustes" id="nav-ajustes" hidden>Control</a>
       <a href="#mas" id="nav-mas" role="button" aria-haspopup="dialog"><span id="nav-mas-t">Más</span> ▾<span class="nav-badge" id="badge-mas" hidden></span></a>
     </nav>
   </div>
@@ -1219,7 +1239,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.31.1</footer>
+  <footer>Hecho con cariño por Utilo · v5.32.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1806,7 +1826,7 @@
     const conMas = !$('nav-rellenar').hidden || !$('nav-ajustes').hidden;
     document.querySelector('nav.vistas').classList.toggle('con-mas', conMas);
     $('badge-mas').hidden = $('nav-rellenar').hidden || !mios.length; $('badge-mas').textContent = mios.length;
-    $('nav-mas-t').textContent = vista === 'rellenar' ? 'Por rellenar' : vista === 'ajustes' ? 'Ajustes' : 'Más';
+    $('nav-mas-t').textContent = vista === 'rellenar' ? 'Por rellenar' : vista === 'ajustes' ? 'Control' : 'Más';
     if (vista === 'rellenar' || vista === 'ajustes') $('nav-mas').setAttribute('aria-current', 'page'); else $('nav-mas').removeAttribute('aria-current');
     bordesNav();  // v4.87
     if (vista === 'ajustes') { if (!esAdmin()) { ponerVista('semana'); return; } if (!ajustes) pintarAjustes(); }  // v4.35: la Semana, los Eventos y (v4.37) las Personas, para mirar
@@ -3048,6 +3068,111 @@
         else { t.select(); document.execCommand('copy'); hecho(); }
       });
   }
+  /* ---------- v5.32 (T0591): Control › Actividad: el historial por días, con filtros, «deshecho» y los errores ---------- */
+  const CLAVE_CONTROL = 'casa-abuela-control';
+  const PESTANAS_CONTROL = [['actividad', 'Actividad'], ['uso', 'Quién la usa'], ['premios', 'Premios'], ['config', 'Configuración']];
+  function controlPestana() { let v = ''; try { v = localStorage.getItem(CLAVE_CONTROL) || ''; } catch (e) {} return PESTANAS_CONTROL.some(function (x) { return x[0] === v; }) ? v : 'actividad'; }
+  let actFiltro = 'todo', actPersona = '';
+  const FILTROS_ACT = [['todo', 'Todo'], ['comidas', 'Comidas y visitas'], ['eventos', 'Eventos'], ['dias', 'Notas del día'], ['personas', 'Personas'], ['deshechos', 'Corregidos'], ['errores', 'Errores']];
+  const ACCION_ERROR = { guardarPersona: 'al apuntarse o cambiar a alguien', guardarPersonas: 'al apuntar a varios', guardarDia: 'al guardar el día', guardarEvento: 'al guardar un evento',
+    apuntarEvento: 'al contestar un evento', notaEvento: 'al poner una nota en un evento', borrarEvento: 'al quitar un evento', guardarAusencia: 'al marcar que la abuela no está',
+    crearPersona: 'al añadir a alguien', darDeBaja: 'al quitar a alguien', guardarAjustes: 'al guardar los ajustes', getDatos: 'al abrir la web', getAjustes: 'al abrir Control', getPremios: 'al ver los premios' };
+  function tipoCambio(t) {
+    if (/^(Apunta a|Quita a) .+ (a|de) la (comida|cena|noche|mañana|tarde) del /.test(t) || / (va siempre|deja de ir siempre) los /.test(t) ||
+      /^Nota de .+ en la (comida|cena|noche|mañana|tarde) del /.test(t) || / va a la (comida|cena|noche|mañana|tarde) del /.test(t)) return 'comidas';
+    if (/^(Día \d\d\/\d\d|Borra lo anotado|La abuela no está|Quita la ausencia)/.test(t)) return 'dias';
+    if (/evento| va a | no va a | sin decir si va a |^Nota de .+ en (?!la )/.test(t)) return 'eventos';
+    return 'personas';
+  }
+  function haceDias(n) { return sumar(hoy(), -n); }
+  function erroresRecientes() { return ajustes ? (ajustes.errores || []).filter(function (x) { return x.cuando.slice(0, 10) >= haceDias(6); }).length : 0; }
+  /* «Deshecho»: alguien apunta y quita (o al revés) lo mismo en menos de 15 minutos (las dos líneas).
+     «Corregido»: reescribe la nota del mismo día en menos de 15 minutos (las versiones anteriores; la última, no) */
+  function marcarDeshechos(cambios) {
+    const marca = {}, ultimo = {};
+    const min = function (c) { return Date.parse(c.cuando) / 60000; };
+    cambios.map(function (c, i) { return { c: c, i: i }; }).reverse().forEach(function (o) {  // del más antiguo al más nuevo
+      const t = o.c.cambio;
+      let m = /^(Apunta|Quita) a (.+?) (?:a|de) la (\w+) del (\d\d\/\d\d)/.exec(t), clave = '', accion = '';
+      if (m) { clave = o.c.quien + '|' + m[2] + '|' + m[3] + '|' + m[4]; accion = m[1]; }
+      else if ((m = /^Día (\d\d\/\d\d):/.exec(t))) { clave = o.c.quien + '|dia|' + m[1]; accion = 'nota'; }
+      if (!clave) return;
+      const u = ultimo[clave];
+      if (u && min(o.c) - min(u.c) <= 15) {
+        if (accion === 'nota') marca[u.i] = 'corregido';  // la nota anterior; la última es la buena
+        else if (u.accion !== accion) { marca[u.i] = 'deshecho'; marca[o.i] = 'deshecho'; }
+      }
+      ultimo[clave] = { c: o.c, i: o.i, accion: accion };
+    });
+    return marca;
+  }
+  function apodoDeId(id) { return ((quienEs(id) || deBaja(id) || {}).apodo) || String(id || '').replace(/^\([^)]*\) - /, '') || 'Alguien'; }
+  function htmlActividad() {
+    return '<h2>Actividad</h2><p class="act-resumen" id="act-resumen"></p>' +
+      '<div class="act-filtros" id="act-filtros" role="group" aria-label="Qué ver"></div>' +
+      '<div class="act-buscar"><label class="campo" for="act-persona">Persona<select id="act-persona"></select></label>' +
+      '<label class="campo" for="act-q">Buscar<input id="act-q" type="search" autocomplete="off" placeholder="Por ejemplo: PortAventura"></label></div>' +
+      '<div id="act-lista"></div>';
+  }
+  function montarActividad() {
+    if (!$('act-lista')) return;
+    const cambios = ajustes.cambios || [], errores = ajustes.errores || [];
+    const desh = marcarDeshechos(cambios);
+    const h7 = haceDias(6);
+    const c7 = cambios.filter(function (x) { return x.cuando.slice(0, 10) >= h7; });
+    const gente7 = {}; c7.forEach(function (x) { gente7[x.quien] = true; });
+    const desh7 = cambios.filter(function (x, i) { return desh[i] && x.cuando.slice(0, 10) >= h7; }).length;
+    const err7 = erroresRecientes();
+    $('act-resumen').innerHTML = '<b>Últimos 7 días:</b> ' + c7.length + (c7.length === 1 ? ' cambio' : ' cambios') + ' de ' + Object.keys(gente7).length + (Object.keys(gente7).length === 1 ? ' persona' : ' personas') +
+      ' · ' + desh7 + (desh7 === 1 ? ' corregido' : ' corregidos') + ' · ' + err7 + (err7 === 1 ? ' error' : ' errores');
+    const nombres = {};
+    cambios.forEach(function (x) { nombres[x.quien] = x.apodo; });
+    errores.forEach(function (x) { if (x.quien) nombres[x.quien] = nombres[x.quien] || apodoDeId(x.quien); });
+    $('act-persona').innerHTML = '<option value="">Todas</option>' + Object.keys(nombres).sort(function (a, b) { return nombres[a].localeCompare(nombres[b]); })
+      .map(function (id) { return '<option value="' + esc(id) + '"' + (id === actPersona ? ' selected' : '') + '>' + esc(nombres[id]) + '</option>'; }).join('');
+    const pintarFiltros = function () {
+      $('act-filtros').innerHTML = FILTROS_ACT.map(function (f) {
+        const n = f[0] === 'errores' ? errores.length : f[0] === 'deshechos' ? Object.keys(desh).length : 0;
+        return '<button type="button" class="act-filtro' + (f[0] === 'errores' && err7 ? ' con-error' : '') + '" data-act-filtro="' + f[0] + '" aria-pressed="' + (actFiltro === f[0]) + '">' + f[1] + (n ? ' <small>' + n + '</small>' : '') + '</button>';
+      }).join('');
+    };
+    const pintarLista = function () {
+      const q = sinAcentos($('act-q').value.trim());
+      let filas;
+      if (actFiltro === 'errores') {
+        filas = errores.filter(function (x) { return (!actPersona || x.quien === actPersona) && (!q || sinAcentos(apodoDeId(x.quien) + ' ' + x.error + ' ' + x.accion).indexOf(q) !== -1); })
+          .map(function (x) { return { cuando: x.cuando, error: true, html: '<b>' + esc(x.quien ? apodoDeId(x.quien) : 'Alguien') + '</b>, ' + esc(ACCION_ERROR[x.accion] || x.accion) + ': <span class="act-err">' + esc(x.error) + '</span>' }; });
+      } else {
+        filas = cambios.map(function (x, i) { return { x: x, i: i }; }).filter(function (o) {
+          if (actPersona && o.x.quien !== actPersona) return false;
+          if (actFiltro === 'deshechos' ? !desh[o.i] : actFiltro !== 'todo' && tipoCambio(o.x.cambio) !== actFiltro) return false;
+          return !q || sinAcentos(o.x.apodo + ' ' + o.x.cambio).indexOf(q) !== -1;
+        }).map(function (o) { return { cuando: o.x.cuando, desh: desh[o.i] || '', html: '<b>' + esc(o.x.apodo) + '</b> ' + esc(o.x.cambio) }; });
+      }
+      const total = filas.length;
+      filas = filas.slice(0, 300);
+      let html = '', dia = '';
+      filas.forEach(function (f) {
+        const d = f.cuando.slice(0, 10);
+        if (d !== dia) {
+          if (dia) html += '</ul>';
+          const n = filas.filter(function (g) { return g.cuando.slice(0, 10) === d; }).length;
+          html += '<h3 class="act-dia">' + esc(d === hoy() ? 'Hoy' : d === sumar(hoy(), -1) ? 'Ayer' : diaLargo(d)) + ' <small>' + n + '</small></h3><ul class="act-ul">';
+          dia = d;
+        }
+        html += '<li class="act-item' + (f.desh ? ' deshecho' : '') + (f.error ? ' error' : '') + '"><span class="act-hora">' + esc(f.cuando.slice(11, 16)) + '</span><span class="act-texto">' + f.html +
+          (f.desh ? ' <span class="act-marca">' + f.desh + '</span>' : '') + '</span></li>';
+      });
+      if (dia) html += '</ul>';
+      $('act-lista').innerHTML = html ? html + (total > 300 ? '<p class="ayuda">Se ven los 300 últimos de ' + total + '. Filtra para ver otros.</p>' : '') :
+        '<p class="ayuda">' + (actFiltro === 'errores' ? 'Ningún error. Bien.' : 'Nada con eso.') + '</p>';
+    };
+    pintarFiltros();
+    pintarLista();
+    $('act-filtros').addEventListener('click', function (e) { const b = e.target.closest('[data-act-filtro]'); if (!b) return; actFiltro = b.dataset.actFiltro; pintarFiltros(); pintarLista(); });
+    $('act-persona').addEventListener('change', function () { actPersona = this.value; pintarLista(); });
+    $('act-q').addEventListener('input', pintarLista);
+  }
   function pintarAjustes() {
     const $a = $('ajustes');
     if (!ajustes) { $a.innerHTML = '<p class="vacio">Cargando…</p>'; cargarAjustes(); return; }
@@ -3065,29 +3190,29 @@
       .sort(function (a, b) { return ((visita[b.id] || {}).ultima || ultimoCambio[b.id] || '').localeCompare((visita[a.id] || {}).ultima || ultimoCambio[a.id] || ''); });
     const nunca = gente.filter(function (p) { return !visita[p.id] && !cambiosDe[p.id]; });
     const campo = function (id, et, tipo, v, extra) { return '<label class="campo" for="aj-' + id + '">' + et + '<input id="aj-' + id + '" type="' + tipo + '" value="' + esc(v == null ? '' : v) + '"' + (extra || '') + '></label>'; };
+    const pest = controlPestana();
+    const caja = function (id, html) { return '<div data-aj-sec="' + id + '"' + (pest === id ? '' : ' hidden') + '>' + html + '</div>'; };
     $a.innerHTML =
-      '<section class="aj-sec aj-config"><h2>Configuración</h2>' +  // v4.62: en bloques de una columna (en el móvil se descuadraba)
+      '<div class="aj-pestanas" role="tablist">' + PESTANAS_CONTROL.map(function (x) {  // v5.32 (T0591): cada cosa en su pestaña
+        return '<button type="button" role="tab" data-aj-pest="' + x[0] + '" aria-selected="' + (pest === x[0]) + '">' + x[1] + (x[0] === 'actividad' && erroresRecientes() ? ' <span class="nav-badge">' + erroresRecientes() + '</span>' : '') + '</button>';
+      }).join('') + '</div>' +
+      caja('actividad', '<section class="aj-sec">' + htmlActividad() + '</section>') +
+      caja('config', '<section class="aj-sec aj-config"><h2>Configuración</h2>' +  // v4.62: en bloques de una columna (en el móvil se descuadraba)
         '<fieldset><legend>Clave</legend>' + campo('clave', 'Clave de la familia', 'password', c.clave, ' maxlength="40" autocomplete="off" autocapitalize="off"') + '<label class="check"><input type="checkbox" id="aj-ver-clave"> Mostrar la clave</label>' + campo('pista', 'Pista', 'text', c.pista, ' maxlength="100" autocomplete="off"') +
           '<p class="ayuda">Si cambias la clave, a todos les pedirá la nueva la próxima vez que entren (con la pista).</p></fieldset>' +
         '<fieldset><legend>Horas</legend><div class="aj-horas">' + campo('comida', 'Comida', 'time', c.horaComida) + campo('cena', 'Cena', 'time', c.horaCena) + campo('dormir', 'Noche (hora de dormir)', 'time', c.horaDormir) + '</div></fieldset>' +
         '<fieldset><legend>Avisos y calendario</legend>' +
           '<label class="campo" for="aj-aviso">Avisar de «falta alguien»<span class="aj-con-sufijo"><input id="aj-aviso" type="number" min="0" max="48" inputmode="numeric" value="' + esc(c.avisoHoras) + '"><span>horas antes</span></span></label>' +
           campo('inicio', 'El calendario empieza el', 'date', c.inicio) + '</fieldset>' +
-        '<div><button type="button" class="principal" id="aj-guardar">Guardar ajustes</button></div></section>' +
-      panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan) +
-      '<section class="aj-sec" id="aj-premios"><h2>Premios</h2><p class="ayuda">Contando los premios del último mes…</p></section>' +  // v4.85
-      '<section class="aj-sec"><h2>Historial de cambios</h2>' +
-        '<label class="buscar" for="aj-q"><span class="oculto">Buscar</span><input id="aj-q" type="search" autocomplete="off" placeholder="Buscar"></label>' +
-        '<ul class="aj-hist" id="aj-hist"></ul></section>';
-    const pintarHist = function () {
-      const q = sinAcentos($('aj-q').value.trim());
-      const l = ajustes.cambios.filter(function (x) { return !q || sinAcentos(x.apodo + ' ' + x.cambio + ' ' + x.cuando).indexOf(q) !== -1; }).slice(0, 200);
-      $('aj-hist').innerHTML = l.length ? l.map(function (x) {
-        const f = x.cuando.slice(0, 10), h = x.cuando.slice(11, 16);
-        return '<li><small>' + esc(ddmm(f) + ' ' + h + ' · ' + x.apodo) + '</small>' + esc(x.cambio) + '</li>';
-      }).join('') : '<li>Nada con eso.</li>';
-    };
-    $('aj-q').addEventListener('input', pintarHist);
+        '<div><button type="button" class="principal" id="aj-guardar">Guardar ajustes</button></div></section>') +
+      caja('uso', panelUso(gente, usan, nunca, visita, cambiosDe, noCuentan)) +
+      caja('premios', '<section class="aj-sec" id="aj-premios"><h2>Premios</h2><p class="ayuda">Contando los premios del último mes…</p></section>');  // v4.85
+    $a.querySelectorAll('[data-aj-pest]').forEach(function (b) { b.addEventListener('click', function () {
+      try { localStorage.setItem(CLAVE_CONTROL, b.dataset.ajPest); } catch (e) {}
+      $a.querySelectorAll('[data-aj-pest]').forEach(function (o) { o.setAttribute('aria-selected', String(o === b)); });
+      $a.querySelectorAll('[data-aj-sec]').forEach(function (sec) { sec.hidden = sec.dataset.ajSec !== b.dataset.ajPest; });
+    }); });
+    montarActividad();
     $('aj-ver-clave').addEventListener('change', function () { $('aj-clave').type = this.checked ? 'text' : 'password'; });  // v4.91
     llamar('getPremios', [yo, claveAdmin()]).then(function (pr) { const $p = $('aj-premios'); if ($p) { $p.innerHTML = htmlPremios(pr); montarPremios(pr); } })
       .catch(function (err) { const $p = $('aj-premios'); if ($p) $p.innerHTML = '<h2>Premios</h2><p class="ayuda">' + esc(mensajeError(err)) + '</p>'; });
@@ -3109,7 +3234,6 @@
       });
     });
     const ir = $a.querySelector('[data-ir-rellenar]'); if (ir) ir.addEventListener('click', function (e) { e.preventDefault(); rfFamilia = ''; ponerVista('rellenar'); history.replaceState(null, '', '#rellenar'); window.scrollTo(0, 0); });
-    pintarHist();
     $('aj-guardar').addEventListener('click', function () {
       const aj = {}, v = function (id) { return $('aj-' + id).value.trim(); };
       if (v('clave') !== c.clave) aj.clave = v('clave');
@@ -5621,7 +5745,7 @@
   }
 
   /* ---------- Vistas ---------- */
-  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', eventos: 'Lo que viene y quién va', rellenar: 'Rellenar lo que falta', ajustes: 'Solo para quien lleva la web', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
+  const SUBTITULOS = { semana: 'Quién viene a comer y a cenar', eventos: 'Lo que viene y quién va', rellenar: 'Rellenar lo que falta', ajustes: 'Cómo se usa la web (solo para quien la lleva)', personas: 'La familia y lo que come cada uno', huecos: 'Comidas, cenas y noches por cubrir' };
   /* v4.87: la barra de pestañas se desliza: el difuminado dice si hay más a un lado o al otro, y la elegida se ve siempre */
   function bordesNav() {
     const n = document.querySelector('nav.vistas');
@@ -5642,7 +5766,7 @@
   function abrirMas() {  // v5.16: lo que no cabe en las pestañas del móvil
     const op = [];
     if (!$('nav-rellenar').hidden) op.push(['rellenar', 'Por rellenar', $('badge-rellenar').hidden ? '' : $('badge-rellenar').textContent]);
-    if (!$('nav-ajustes').hidden) op.push(['ajustes', 'Ajustes', '']);
+    if (!$('nav-ajustes').hidden) op.push(['ajustes', 'Control', '']);  // v5.32: antes «Ajustes»
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Más</h2></div><div class="dlg-cuerpo"><div class="mas-menu">' +
       op.map(function (x) { return '<button type="button" class="accion" data-ir-vista="' + x[0] + '"><span>' + x[1] + '</span>' + (x[2] ? '<span class="nav-badge">' + esc(x[2]) + '</span>' : '') + '</button>'; }).join('') +
       '</div></div><div class="dlg-pie"><div class="botones"><button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
