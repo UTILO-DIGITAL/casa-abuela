@@ -913,6 +913,7 @@
   .dlg-cuerpo input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   /* v4.16: aniversarios y árbol genealógico */
   .nota-dia.recuerdo { background: var(--color-linea); }
+  .nota-dia.futuro { background: var(--color-futuro-claro); color: var(--color-futuro); }  /* v5.34 (T0594): lo que falta para una boda o un bebé, en el azul de lo que está por venir */
   #per-arbol-btn { position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 40; border-radius: 999px; padding: 12px 20px; min-height: 48px; border: 0; background: var(--color-principal-oscuro); color: #fff; font-weight: 800; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); }  /* v4.55: flotante */
   .arbol-barra { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
   .arbol-barra span { flex: 1; font-family: var(--letra-titulos); font-weight: 600; font-size: 20px; }
@@ -1241,7 +1242,7 @@
     <p>Esta web es un ejemplo. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.33.0</footer>
+  <footer>Hecho con cariño por Utilo · v5.34.0</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1636,9 +1637,58 @@
         if (c.slice(0, 5) !== dm || Number(c.slice(6, 10)) > ano) return;
         if (c.length === 5) { out.push(x[0] === 'boda' ? 'Aniversario de boda de ' + quienes : 'Aniversario de cuando empezaron a salir ' + quienes); return; }  // v4.30: sin año
         const n = ano - Number(c.slice(6, 10)), anos = n === 1 ? 'un año' : n + ' años';
-        if (!n) { if (x[0] === 'boda') out.push('Hoy se casan ' + quienes); return; }  // v4.23: el día de la boda
+        if (!n) { if (x[0] === 'boda') out.push((fecha === hoy() ? 'Hoy se casan ' : 'Se casan ') + quienes); return; }  // v4.23: el día de la boda; v5.34: «Hoy», solo si es hoy (en «Próximas fechas» salía «Dentro de 12 días · Hoy se casan»)
         out.push(x[0] === 'boda' ? x[1] + quienes + ': ' + anos : x[1].replace('{n}', anos) + quienes);
       });
+    });
+    return out;
+  }
+  /* v5.34 (T0594): lo que falta para una boda o para que nazca un bebé, solo en días señalados (no cada día).
+     La boda, con el día: cada mes el último año (y cada año antes), 100 y 50 días, 15 días, una semana y la víspera;
+     con solo el mes, el día 1 del mes anterior y el de ese mes. El bebé, por semanas (la fecha prevista casi nunca se
+     cumple): la mitad (20), quedan 10, la 37 y el día previsto; con solo el mes, el día 1 de ese mes. */
+  function restarMeses(iso, k) {
+    const a = Number(iso.slice(0, 4)), m = Number(iso.slice(5, 7)) - 1 - k, d = Number(iso.slice(8, 10));
+    const ano = a + Math.floor(m / 12), mes = ((m % 12) + 12) % 12, ultimo = new Date(Date.UTC(ano, mes + 1, 0)).getUTCDate();
+    return ano + '-' + String(mes + 1).padStart(2, '0') + '-' + String(Math.min(d, ultimo)).padStart(2, '0');  /* el 31, el último día de los meses más cortos */
+  }
+  function mesesAntes(fecha, objetivo) {  /* cuántos meses justos faltan, si «fecha» cae en el mismo día del mes */
+    for (let k = 1; k <= 120; k++) { const f = restarMeses(objetivo, k); if (f === fecha) return k; if (f < fecha) return 0; }
+    return 0;
+  }
+  function mesAnterior(c) { const m = Number(c.slice(3, 5)), a = Number(c.slice(6, 10)); return m === 1 ? (a - 1) + '-12-01' : a + '-' + String(m - 1).padStart(2, '0') + '-01'; }
+  function textoCuentaAtras(fecha) {
+    const out = [], todos = datos.personas.concat(datos.editores || []);
+    todos.forEach(function (p) {
+      const pa = parejaDe(p), c = p.boda || '';
+      if (!pa || p.id > pa.id || c.length < 10 || !Number(c.slice(6, 10)) || !Number(c.slice(3, 5))) return;
+      const quienes = p.apodo + ' y ' + pa.apodo;
+      if (!Number(c.slice(0, 2))) {  /* solo el mes */
+        if (fecha === mesAnterior(c)) out.push('El mes que viene se casan ' + quienes);
+        else if (fecha === c.slice(6, 10) + '-' + c.slice(3, 5) + '-01') out.push('Este mes se casan ' + quienes);
+        return;
+      }
+      const boda = c.slice(6, 10) + '-' + c.slice(3, 5) + '-' + c.slice(0, 2), n = diasEntre(fecha, boda);
+      if (n < 1) return;
+      const para = ' para la boda de ' + quienes;
+      if (n === 1) { out.push('Mañana se casan ' + quienes); return; }
+      if (n === 7) { out.push('Queda una semana' + para); return; }
+      if (n === 15 || n === 50 || n === 100) { out.push('Quedan ' + n + ' días' + para); return; }
+      const k = mesesAntes(fecha, boda);
+      if (k === 1) out.push('Queda un mes' + para);
+      else if (k > 1 && k < 12) out.push('Quedan ' + k + ' meses' + para);
+      else if (k === 12) out.push('Queda un año' + para);
+      else if (k > 12 && k % 12 === 0) out.push('Quedan ' + (k / 12) + ' años' + para);
+    });
+    todos.forEach(function (p) {
+      const c = p.cumple || '';
+      if (esFallecido(p) || c.length < 10 || !Number(c.slice(6, 10)) || !Number(c.slice(3, 5))) return;
+      if (!Number(c.slice(0, 2))) { if (fecha === c.slice(6, 10) + '-' + c.slice(3, 5) + '-01' && fecha >= hoy()) out.push('Este mes nacerá ' + p.apodo); return; }
+      const faltan = diasEntre(fecha, c.slice(6, 10) + '-' + c.slice(3, 5) + '-' + c.slice(0, 2));
+      if (faltan === 140) out.push('Mitad del camino para ' + p.apodo + ': ya van 20 semanas');
+      else if (faltan === 70) out.push('Quedan 10 semanas para que nazca ' + p.apodo);
+      else if (faltan === 21) out.push(p.apodo + ' ya puede nacer cualquier día');
+      else if (faltan === 0 && fecha >= hoy()) out.push('Día previsto para que nazca ' + p.apodo);
     });
     return out;
   }
@@ -1957,6 +2007,8 @@
     if (recuerdos.length) html += '<p class="nota-dia recuerdo">' + recuerdos.map(esc).join('<br>') + '</p>';
     const aniversarios = textoAniversarios(fecha).concat(textoOtrasFechas(fecha));  // v4.21; v4.28: y las otras fechas de cada uno
     if (aniversarios.length) html += '<p class="nota-dia cumple">' + aniversarios.map(esc).join('<br>') + '</p>';
+    const cuentaAtras = textoCuentaAtras(fecha);  // v5.34 (T0594)
+    if (cuentaAtras.length) html += '<p class="nota-dia futuro">' + cuentaAtras.map(esc).join('<br>') + '</p>';
     // v4.15: un evento puntual (la castañada…), destacado y con su botón para compartirlo
     if (nd && nd.evento) html += '<div class="evento-dia"><p class="evento-titulo">' + ICONO_EVENTO + '<b>' + esc(nd.evento) + '</b><span>' + (nd.eventoTurno === 'DORMIR' ? 'noche' : etiquetaTurno(nd.eventoTurno).toLowerCase()) + '</span></p>' +
       (nd.eventoTexto ? '<p class="evento-texto">' + esc(nd.eventoTexto) + '</p>' : '') +
@@ -3570,7 +3622,7 @@
     const h = hoy(), out = [];
     for (let i = 0; i <= 30; i++) {
       const f = sumar(h, i);
-      const cosas = textoCumples(f).concat(textoAniversarios(f), textoOtrasFechas(f), textoRecuerdos(f));
+      const cosas = textoCumples(f).concat(textoAniversarios(f), textoOtrasFechas(f), textoRecuerdos(f), textoCuentaAtras(f).filter(function (t) { return t.indexOf('Día previsto') === 0; }));  // v5.34: del bebé, el día previsto; los «quedan…», no
       if (!cosas.length) continue;
       const cuando = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : 'Dentro de ' + i + ' días';
       out.push('<li><small>' + cuando + ' · ' + esc(diaMes(f) + ' de ' + MESES[Number(f.slice(5, 7)) - 1]) + '</small>' + cosas.map(esc).join('<br>') + '</li>');
@@ -3696,7 +3748,7 @@
       }).join('') + '</div><span id="ev-hueco-buscar"></span></div>') +
       (evFiltro === 'fechas'
         ? (prox.length ? '<ul class="proximas">' + prox.join('') + '</ul>' : '<p class="vacio">Nada en los próximos 30 días.</p>') +
-          '<p class="ayuda">Cumpleaños, aniversarios y las fechas que cada uno guarda en su ficha (bautizo, primera comunión, santo…), de los próximos 30 días. Solo salen las que tienen el día y el mes.</p>'
+          '<p class="ayuda">Cumpleaños, aniversarios, bodas y bebés que vienen, y las fechas que cada uno guarda en su ficha (bautizo, primera comunión, santo…), de los próximos 30 días. Solo salen las que tienen el día y el mes.</p>'
         : lista.length ? '<div class="ev-lista">' + lista.map(tarjetaEvento).join('') + '</div>'
         : '<p class="vacio">' + (buscando ? 'Ningún evento con eso. Prueba con otra palabra o solo el año.' : evFiltro === 'pasados' ? 'Aún no ha pasado ningún evento.' : evFiltro === 'confirmar' ? '¡Lo tienes todo contestado!' : 'No hay ningún evento a la vista. Añade el primero: una comida especial, una excursión, un viaje…') + '</p>');
     colocarBuscador(qFoco, qPos);
@@ -5625,6 +5677,7 @@
       textoRecuerdos(f).forEach(function (c) { b += '\n🕯️ ' + c; });
       textoAniversarios(f).forEach(function (c) { b += '\n💍 ' + c; });
       textoOtrasFechas(f).forEach(function (c) { b += '\n⭐ ' + c; });
+      textoCuentaAtras(f).forEach(function (c) { b += '\n⏳ ' + c; });  // v5.34 (T0594)
       const nd = notaDia(f);
       if (nd && nd.nota) b += '\n📝 ' + nd.nota;
       TURNOS.forEach(function (t) {
