@@ -35,7 +35,7 @@
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
  *   MESA_AVISOS   TOKEN | PERSONA_ID | CREADO_EN | ULTIMO_ENVIO | ULTIMO_ERROR (v5.37, T0623; se crea sola: los móviles con avisos; MESA_CONFIG AVISOS_CALLA y AVISOS_HABLA, las horas sin avisos)
- * Versión 5.38.0
+ * Versión 5.39.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -2144,6 +2144,13 @@ function revisarAvisos() {
 /** v5.38: desde el editor (Ejecutar › probarAvisos): un aviso de prueba a todos los móviles de MESA_AVISOS.
  * La primera vez, Google pide el permiso de conectarse a un servicio externo (sin él, no sale ningún aviso). → qué ha pasado */
 function probarAvisos() {
+  // v5.39: si el permiso se quedó sin marcar, Google no lo vuelve a pedir solo; esto enseña otra vez la ventana con lo que falte
+  ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, ['https://www.googleapis.com/auth/script.external_request', 'https://www.googleapis.com/auth/script.scriptapp', 'https://www.googleapis.com/auth/spreadsheets']);
+  const salida = probarAvisos_();
+  console.log(salida);  // el editor no enseña lo que devuelve una función: así sale en el registro
+  return salida;
+}
+function probarAvisos_() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const moviles = leerAvisos_(ss);
   if (!moviles.length) return 'No hay ningún móvil con los avisos activados.';
