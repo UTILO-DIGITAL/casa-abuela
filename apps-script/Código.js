@@ -35,7 +35,7 @@
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
  *   MESA_AVISOS   TOKEN | PERSONA_ID | CREADO_EN | ULTIMO_ENVIO | ULTIMO_ERROR (v5.37, T0623; se crea sola: los móviles con avisos; MESA_CONFIG AVISOS_CALLA y AVISOS_HABLA, las horas sin avisos)
- * Versión 5.37.0
+ * Versión 5.38.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -2106,8 +2106,11 @@ function callado_(config, hora) {
 /** El disparador, cada 5 minutos. → lo que ha hecho, en una línea (para el editor y las pruebas) */
 function revisarAvisos() {
   reiniciar_();
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(1000)) return 'Ocupado';
+  // v5.38: sin el bloqueo de los guardados (LockService), que es de todo el script: con él, quien guardaba justo entonces
+  // veía «hay otra persona guardando». Solo se evita que dos revisiones vayan a la vez, con una marca de 4 minutos.
+  const cache = CacheService.getScriptCache();
+  if (cache.get('avisos_revisando')) return 'Ocupado';
+  try { cache.put('avisos_revisando', '1', 240); } catch (e) { /* sin caché, sigue */ }
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const moviles = leerAvisos_(ss);
@@ -2135,7 +2138,24 @@ function revisarAvisos() {
       else { hoja.getRange(m.fila, 5).setValue(String(r.error).slice(0, 300)); filaError_(m.persona, 'avisos', String(r.error).slice(0, 300), texto.slice(0, 200)); }
     });
     return 'Avisos: ' + mandados + ' · ' + texto;
-  } finally { lock.releaseLock(); }
+  } finally { try { cache.remove('avisos_revisando'); } catch (e) { /* caduca sola */ } }
+}
+
+/** v5.38: desde el editor (Ejecutar › probarAvisos): un aviso de prueba a todos los móviles de MESA_AVISOS.
+ * La primera vez, Google pide el permiso de conectarse a un servicio externo (sin él, no sale ningún aviso). → qué ha pasado */
+function probarAvisos() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const moviles = leerAvisos_(ss);
+  if (!moviles.length) return 'No hay ningún móvil con los avisos activados.';
+  const hoja = hojaAvisos_(ss);
+  const out = [];
+  moviles.slice().reverse().forEach(function (m) {
+    const r = mandarAviso_(m.token, 'Casa Abuela', 'Prueba: si ves esto, los avisos de Casa Abuela funcionan.', WEB_AVISOS);
+    if (r.ok) hoja.getRange(m.fila, 4, 1, 2).setValues([[ahora_(), '']]);
+    else if (!r.borrar) hoja.getRange(m.fila, 5).setValue(String(r.error).slice(0, 300));
+    out.push(m.persona + ': ' + (r.ok ? 'mandado' : r.borrar ? 'ese móvil ya no los recibe' : r.error));
+  });
+  return out.join('\n');
 }
 
 /** Un aviso a un móvil por FCM HTTP v1. → { ok } | { ok: false, borrar?, error } */
@@ -2143,14 +2163,19 @@ function mandarAviso_(token, titulo, texto, enlace) {
   let cuenta;
   try { cuenta = JSON.parse(PropertiesService.getScriptProperties().getProperty('FCM_CUENTA') || 'null'); } catch (e) { cuenta = null; }
   if (!cuenta || !cuenta.project_id || !cuenta.client_email || !cuenta.private_key) return { ok: false, error: 'Falta la cuenta de Firebase (FCM_CUENTA en las propiedades del script).' };
+  const sinPermiso = function (e) {
+    const t = String((e && e.message) || e);
+    return /UrlFetchApp|external_request/.test(t) ? 'Falta el permiso de conectarse a un servicio externo: en el editor, ejecuta probarAvisos y acéptalo.' : t;
+  };
   let acceso;
-  try { acceso = accesoFcm_(cuenta); } catch (e) { return { ok: false, error: 'Firebase no deja entrar: ' + ((e && e.message) || e) }; }
-  const r = UrlFetchApp.fetch('https://fcm.googleapis.com/v1/projects/' + encodeURIComponent(cuenta.project_id) + '/messages:send', {
+  try { acceso = accesoFcm_(cuenta); } catch (e) { return { ok: false, error: 'Firebase no deja entrar: ' + sinPermiso(e) }; }
+  let r;
+  try { r = UrlFetchApp.fetch('https://fcm.googleapis.com/v1/projects/' + encodeURIComponent(cuenta.project_id) + '/messages:send', {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + acceso },
     payload: JSON.stringify({ message: { token: token,
       data: { titulo: titulo, texto: texto, enlace: enlace },
       webpush: { headers: { Urgency: 'high', TTL: '43200' } } } }),
-  });
+  }); } catch (e) { return { ok: false, error: 'No se pudo hablar con Firebase: ' + sinPermiso(e) }; }
   const codigo = r.getResponseCode();
   if (codigo === 200) return { ok: true };
   const cuerpo = String(r.getContentText() || '');

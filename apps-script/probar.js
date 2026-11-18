@@ -53,14 +53,14 @@ const pad = n => String(n).padStart(2, '0');
 const ctx = {
   SpreadsheetApp: { openById: () => ss, flush: () => {}, DataValidationCriteria: { VALUE_IN_LIST: 'L' } },
   LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
-  CacheService: { getScriptCache: () => ({ get: () => null, put: () => {} }) },
+  CacheService: { getScriptCache: () => ({ get: () => null, put: () => {}, remove: () => {} }) },
   ScriptApp: { getService: () => ({ getUrl: () => '' }) },
   Utilities: { getUuid: () => 'u' + Math.random().toString(36).slice(2, 8),
     formatDate: (d, tz, f) => f === 'yyyy-MM-dd' ? HOY : HOY + 'T10:00:00' },
   ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, misNumeros, getPremios, guardarPersonas, getAjustes, guardarAjustes, api_, activarAvisos, quitarAvisos, revisarAvisos, cambiosAvisos_, textoAvisos_ };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, misNumeros, getPremios, guardarPersonas, getAjustes, guardarAjustes, api_, activarAvisos, quitarAvisos, revisarAvisos, probarAvisos, cambiosAvisos_, textoAvisos_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -669,6 +669,26 @@ ver('la pista llega con los datos, la clave no', conPista.config.pista === 'Lo q
   ver('avisos: si Firebase falla, el móvil se queda y se apunta el error', hojas.MESA_AVISOS.filas[1][0] === 'tok2' && /500/.test(hojas.MESA_AVISOS.filas[1][4]));
   respuestaFcm = () => ({ codigo: 200, texto: '{}' });
 
+  // v5.38: la prueba desde el editor, y la revisión sin el bloqueo de los guardados
+  respuestaFcm = () => ({ codigo: 200, texto: '{}' });
+  const nP = aFcm().length;
+  const rp = R.probarAvisos();
+  ver('probarAvisos: manda la prueba a cada móvil y dice cómo ha ido', aFcm().length === nP + 1 && /Prueba: si ves esto/.test(ultimoTexto()) && /Abuela: mandado/.test(rp));
+  const viejoFetch = ctx.UrlFetchApp.fetch;
+  ctx.UrlFetchApp.fetch = () => { throw new Error('No tienes permiso para llamar a UrlFetchApp.fetch.'); };
+  const rp2 = R.probarAvisos();
+  ver('probarAvisos: sin permiso, dice qué hacer y lo apunta en el móvil', /ejecuta probarAvisos/.test(rp2) && /ejecuta probarAvisos/.test(hojas.MESA_AVISOS.filas[1][4]));
+  ctx.UrlFetchApp.fetch = viejoFetch;
+  const lockViejo = ctx.LockService.getScriptLock;
+  ctx.LockService.getScriptLock = () => ({ tryLock: () => false, releaseLock: () => {} });
+  apuntar('av6', HOY, 'MANANA', M_);
+  R.revisarAvisos();
+  ver('avisos: la revisión no espera a los guardados (ni se los quita)', /Mercedes viene por la mañana/.test(ultimoTexto()));
+  ctx.LockService.getScriptLock = lockViejo;
+  const cacheVieja = ctx.CacheService.getScriptCache;
+  ctx.CacheService.getScriptCache = () => ({ get: k => (k === 'avisos_revisando' ? '1' : null), put: () => {}, remove: () => {} });
+  ver('avisos: si ya hay otra revisión en marcha, no se repite', R.revisarAvisos() === 'Ocupado');
+  ctx.CacheService.getScriptCache = cacheVieja;
   R.quitarAvisos('tok2', A_);
   ver('avisos: al quitarlos, el móvil sale de la lista', !hojas.MESA_AVISOS.filas.slice(1).some(f => f[0]) && /Quita los avisos/.test(hojas.MESA_CAMBIOS.filas.slice(-1)[0][3]));
   ver('avisos: quitar uno que no está, no pasa nada', R.quitarAvisos('no-existe', A_) === true);
