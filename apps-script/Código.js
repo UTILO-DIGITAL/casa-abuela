@@ -34,7 +34,8 @@
  * La web se sirve desde GitHub Pages y habla con este script como API (doPost, JSON, sin cookies):
  * así funciona aunque el móvil tenga varias cuentas de Google. doGet sigue sirviendo la web antigua.
  * Despliegue: Ejecutar como «Yo», acceso «Cualquier usuario» (excepción acordada en T0471).
- * Versión 5.33.0
+ *   MESA_AVISOS   TOKEN | PERSONA_ID | CREADO_EN | ULTIMO_ENVIO | ULTIMO_ERROR (v5.37, T0623; se crea sola: los móviles con avisos; MESA_CONFIG AVISOS_CALLA y AVISOS_HABLA, las horas sin avisos)
+ * Versión 5.37.0
  */
 
 const SPREADSHEET_ID = '1O5S1h0nlggV8ZBf7PifW2RcCg7tUP0n8WmSpvcmdSIY';
@@ -51,7 +52,7 @@ const HOJA_ERRORES = 'MESA_ERRORES';  // v5.32 (T0591): CUANDO | QUIEN_ID | ACCI
 const MAX_ERRORES = 200, MAX_CAMBIOS_CONTROL = 1000, MAX_LEER_CONTROL = 6000, DIAS_CONTROL = 14;  // Control: al menos los 1000 últimos y todo lo de 14 días
 // Dónde va «quién lo hace» en los argumentos de cada acción (getDatos lo lleva dentro, en .yo)
 const QUIEN_EN_ = { guardarPersona: 2, guardarPersonas: 1, guardarDia: 2, guardarEvento: 1, getAjustes: 0, getPremios: 0, guardarAjustes: 1,
-  borrarEvento: 1, apuntarEvento: 3, notaEvento: 3, guardarAusencia: 4, crearPersona: 1, darDeBaja: 1, avisoWeb: 0 };
+  borrarEvento: 1, apuntarEvento: 3, notaEvento: 3, guardarAusencia: 4, crearPersona: 1, darDeBaja: 1, avisoWeb: 0, activarAvisos: 1, quitarAvisos: 1 };
 const HOJA_VISITAS = 'MESA_VISITAS';  // v4.58: PERSONA_ID | ULTIMA_VEZ | VECES (la última vez que cada uno abrió la web; como mucho, una vez por hora)  // v4.28: los eventos (castañada, PortAventura…) con quién va
 const TURNOS = ['COMIDA', 'CENA', 'DORMIR'];
 // v5.28 (T0586): las visitas, ir por la mañana o por la tarde sin comer ni cenar. Se apuntan como un turno más
@@ -126,6 +127,8 @@ const API_ = {
   crearPersona: function (a) { return crearPersona(a[0], a[1], a[2]); },
   darDeBaja: function (a) { return darDeBaja(a[0], a[1], a[2]); },
   avisoWeb: function (a) { return avisoWeb(a[0], a[1], a[2]); },  // v5.32 (T0591): lo que alguien hace mal en una ventana de la web
+  activarAvisos: function (a) { return activarAvisos(a[0], a[1]); },  // v5.37 (T0623): avisos al móvil de la abuela
+  quitarAvisos: function (a) { return quitarAvisos(a[0], a[1]); },
 };
 
 function api_(fn, args, clave) {
@@ -606,6 +609,8 @@ function leerConfigSin_(ss) {
     pista: String(mapa.PISTA || '').trim(),
     admins: String(mapa.ADMIN_IDS || '').split(';').map(function (s) { return s.trim(); }).filter(Boolean),  // v4.58
     claveAdmin: String(mapa.CLAVE_ADMIN || '').trim(),  // v4.91 (nunca sale hacia la web)
+    avisosCalla: mapa.AVISOS_CALLA === '' || mapa.AVISOS_CALLA == null || isNaN(Number(mapa.AVISOS_CALLA)) ? 22 : Number(mapa.AVISOS_CALLA),  // v5.37 (T0623): de qué hora a qué hora no salen avisos
+    avisosHabla: mapa.AVISOS_HABLA === '' || mapa.AVISOS_HABLA == null || isNaN(Number(mapa.AVISOS_HABLA)) ? 8 : Number(mapa.AVISOS_HABLA),
     noCuentan: String(mapa.NO_CUENTAN || '').split(';').map(function (s) { return s.trim(); }).filter(Boolean),  // v4.61: quién no cuenta en «Quién la usa»
   };
 }
@@ -1970,3 +1975,204 @@ function diaSemana_(iso) { return new Date(aUTC_(iso)).getUTCDay(); }
 function lunesDe_(iso) { const dow = diaSemana_(iso) || 7; return sumarDias_(iso, 1 - dow); }
 function ddmm_(iso) { return iso.slice(8, 10) + '/' + iso.slice(5, 7); }
 
+
+/* ---------- v5.37 (T0623): avisos al móvil de la abuela (Firebase Cloud Messaging) ----------
+ * MESA_AVISOS  TOKEN | PERSONA_ID | CREADO_EN | ULTIMO_ENVIO | ULTIMO_ERROR (se crea sola): los móviles con los avisos activados.
+ * Solo los puede activar la abuela (EXCLUIR_IDS); si va bien, se abrirá al resto en otra tarea.
+ * Cada 5 minutos (disparador de revisarAvisos), se compara quién viene hoy y mañana con la vez anterior (la «foto»,
+ * en las propiedades del script) y, si algo ha cambiado, sale un solo aviso con todo. De AVISOS_CALLA a AVISOS_HABLA
+ * (MESA_CONFIG; por defecto, de 22 a 8) no se manda nada y la foto no se toca: lo de la noche llega por la mañana.
+ * La cuenta de servicio de Firebase, en la propiedad del script FCM_CUENTA (el JSON entero), nunca en el código.
+ */
+const HOJA_AVISOS = 'MESA_AVISOS';
+const MAX_TOKEN = 4096, MAX_MOVILES = 10;
+const WEB_AVISOS = 'https://utilo-digital.github.io/casa-abuela/';
+const FRASE_TURNO_ = { MANANA: 'por la mañana', COMIDA: 'a comer', TARDE: 'por la tarde', CENA: 'a cenar', DORMIR: 'a dormir' };
+
+function hojaAvisos_(ss) { return ss.getSheetByName(HOJA_AVISOS) || crearHoja_(ss, HOJA_AVISOS, ['TOKEN', 'PERSONA_ID', 'CREADO_EN', 'ULTIMO_ENVIO', 'ULTIMO_ERROR']); }
+function leerAvisos_(ss) {
+  const h = ss.getSheetByName(HOJA_AVISOS);
+  if (!h || h.getLastRow() < 2) return [];
+  return h.getRange(2, 1, h.getLastRow() - 1, 5).getValues()
+    .map(function (f, i) { return { fila: i + 2, token: String(f[0] || ''), persona: String(f[1] || '') }; })
+    .filter(function (a) { return a.token; });
+}
+function puedeAvisos_(ss, quien) {
+  const config = leerConfig_(ss);
+  return !!quien && config.excluir.indexOf(String(quien).trim()) !== -1 && leerEditores_(ss, config.excluir).some(function (p) { return p.id === quien && !p.fallecio; });
+}
+
+/** La web, al pulsar «Activar avisos» (y cada vez que la abre la abuela, por si el móvil cambia el token). → true */
+function activarAvisos(token, quien) {
+  token = String(token || '').trim();
+  if (!token || token.length > MAX_TOKEN || /\s/.test(token)) throw new Error('Este móvil no ha dado un código de avisos válido.');
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  if (!puedeAvisos_(ss, quien)) throw new Error('Los avisos al móvil, de momento, solo son para la abuela.');
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) throw new Error('Hay otra persona guardando. Prueba otra vez.');
+  try {
+    const hoja = hojaAvisos_(ss);
+    const lista = leerAvisos_(ss);
+    if (lista.some(function (a) { return a.token === token; })) return true;
+    if (lista.length >= MAX_MOVILES) throw new Error('Ya hay ' + MAX_MOVILES + ' móviles con los avisos activados.');
+    const rango = hoja.getRange(hoja.getLastRow() + 1, 1, 1, 5);
+    comoTexto_(rango);
+    rango.setValues([[token, String(quien), ahora_(), '', '']]);
+    if (!lista.length) guardarFoto_(fotoAvisos_(ss));  // el primer móvil: se empieza de lo que hay ahora, sin avisar de lo de antes
+    try { asegurarDisparador_(); } catch (e) { filaError_(quien, 'avisos', 'No se pudo crear el disparador: ' + ((e && e.message) || e), ''); }
+    registrar_(ss, autor_(leerEditores_(ss, leerConfig_(ss).excluir), quien), ['Activa los avisos en el móvil']);
+  } finally { lock.releaseLock(); }
+  return true;
+}
+
+/** La web, al quitarlos (o si el móvil ya no deja). → true */
+function quitarAvisos(token, quien) {
+  token = String(token || '').trim();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const a = leerAvisos_(ss).filter(function (x) { return x.token === token; })[0];
+  if (a) {
+    hojaAvisos_(ss).deleteRow(a.fila);
+    const config = leerConfig_(ss);
+    try { registrar_(ss, autor_(leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir)), quien || a.persona), ['Quita los avisos del móvil']); } catch (e) { /* quien ya no está: se quita igual */ }
+  }
+  return true;
+}
+
+/** Una vez, desde el editor (Ejecutar › instalarAvisos): da los permisos nuevos y crea el disparador de cada 5 minutos. */
+function instalarAvisos() { asegurarDisparador_(); return 'Listo: los avisos se revisan cada 5 minutos.'; }
+function asegurarDisparador_() {
+  const hay = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'revisarAvisos'; });
+  if (!hay) ScriptApp.newTrigger('revisarAvisos').timeBased().everyMinutes(5).create();
+}
+
+/** Quién viene hoy y mañana: { 'aaaa-mm-dd': { TURNO: { id: acompañantes } } } */
+function fotoAvisos_(ss) {
+  const hoy = hoy_(), manana = sumarDias_(hoy, 1);
+  const foto = {};
+  foto[hoy] = {}; foto[manana] = {};
+  efectivos_(leerApuntesTodos_(ss), leerFijosTodos_(ss), hoy, manana, TODOS_TURNOS).forEach(function (a) {
+    (foto[a.fecha][a.turno] = foto[a.fecha][a.turno] || {})[a.persona] = a.acompanantes || 0;
+  });
+  return foto;
+}
+function guardarFoto_(foto) { PropertiesService.getScriptProperties().setProperty('avisos_foto', JSON.stringify(foto)); }
+
+/** Lo que ha cambiado entre dos fotos, solo en los días que están en las dos. → [{ fecha, turno, id, que: 'viene'|'no'|'mas', mas }] */
+function cambiosAvisos_(antes, ahora) {
+  const out = [];
+  Object.keys(ahora).sort().forEach(function (fecha) {
+    if (!antes[fecha]) return;
+    TODOS_TURNOS.forEach(function (t) {
+      const a = antes[fecha][t] || {}, b = ahora[fecha][t] || {};
+      Object.keys(b).forEach(function (id) {
+        if (!(id in a)) out.push({ fecha: fecha, turno: t, id: id, que: 'viene', mas: b[id] });
+        else if (a[id] !== b[id]) out.push({ fecha: fecha, turno: t, id: id, que: 'mas', mas: b[id] });
+      });
+      Object.keys(a).forEach(function (id) { if (!(id in b)) out.push({ fecha: fecha, turno: t, id: id, que: 'no', mas: 0 }); });
+    });
+  });
+  return out;
+}
+
+/** El texto del aviso, en palabras para la abuela: «Hoy: Marta y Pablo vienen a comer. Jan ya no viene a cenar.» */
+function textoAvisos_(cambios, ahora, hoy, gente) {
+  const nombre = function (id) { return (gente[id] && gente[id].apodo) || String(id).replace(/^\([^)]*\) - /, ''); };
+  const y = function (l) { return l.length < 2 ? l.join('') : l.slice(0, -1).join(', ') + ' y ' + l[l.length - 1]; };
+  const conMas = function (c) { return nombre(c.id) + (c.mas ? ' (con ' + c.mas + (c.mas === 1 ? ' más)' : ' más)') : ''); };
+  const lineas = [];
+  [hoy, sumarDias_(hoy, 1)].forEach(function (fecha) {
+    const frases = [];
+    TODOS_TURNOS.forEach(function (t) {
+      const de = cambios.filter(function (c) { return c.fecha === fecha && c.turno === t; });
+      if (!de.length) return;
+      const vienen = de.filter(function (c) { return c.que === 'viene'; }), noVienen = de.filter(function (c) { return c.que === 'no'; }), mas = de.filter(function (c) { return c.que === 'mas'; });
+      if (vienen.length) frases.push(y(vienen.map(conMas)) + (vienen.length > 1 ? ' vienen ' : ' viene ') + FRASE_TURNO_[t] + '.');
+      mas.forEach(function (c) { frases.push(nombre(c.id) + ' viene ' + FRASE_TURNO_[t] + (c.mas ? ' con ' + c.mas + ' más.' : ' sin nadie más.')); });
+      if (noVienen.length) frases.push(y(noVienen.map(function (c) { return nombre(c.id); })) + (noVienen.length > 1 ? ' ya no vienen ' : ' ya no viene ') + FRASE_TURNO_[t] + '.');
+      // si se queda sin nadie (en comida y cena, el servicio no cuenta como compañía)
+      const quedan = Object.keys((ahora[fecha] || {})[t] || {}).filter(function (id) { return t === 'DORMIR' || t === 'MANANA' || t === 'TARDE' || !(gente[id] && gente[id].familia === 'Servicio'); });
+      if (noVienen.length && !quedan.length && (t === 'COMIDA' || t === 'CENA' || t === 'DORMIR')) frases.push('No queda nadie para ' + { COMIDA: 'comer', CENA: 'cenar', DORMIR: 'dormir' }[t] + '.');
+    });
+    if (frases.length) lineas.push((fecha === hoy ? 'Hoy: ' : 'Mañana: ') + frases.join(' '));
+  });
+  return lineas.join('\n');
+}
+
+function callado_(config, hora) {
+  const de = Number(config.avisosCalla), a = Number(config.avisosHabla);
+  return de > a ? (hora >= de || hora < a) : (hora >= de && hora < a);
+}
+
+/** El disparador, cada 5 minutos. → lo que ha hecho, en una línea (para el editor y las pruebas) */
+function revisarAvisos() {
+  reiniciar_();
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) return 'Ocupado';
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const moviles = leerAvisos_(ss);
+    if (!moviles.length) return 'Sin móviles';
+    const config = leerConfig_(ss);
+    if (callado_(config, Number(Utilities.formatDate(new Date(), TZ, 'H')))) return 'Callado';
+    const props = PropertiesService.getScriptProperties();
+    let antes = null;
+    try { antes = JSON.parse(props.getProperty('avisos_foto') || 'null'); } catch (e) { antes = null; }
+    const ahora = fotoAvisos_(ss);
+    guardarFoto_(ahora);
+    if (!antes) return 'Primera foto';
+    const cambios = cambiosAvisos_(antes, ahora);
+    if (!cambios.length) return 'Sin cambios';
+    const gente = {};
+    leerPersonas_(ss, config.excluir).concat(leerEditores_(ss, config.excluir), leerBajas_(ss)).forEach(function (p) { gente[p.id] = p; });
+    const texto = textoAvisos_(cambios, ahora, hoy_(), gente);
+    if (!texto) return 'Sin cambios';
+    const hoja = hojaAvisos_(ss);
+    let mandados = 0;
+    moviles.slice().reverse().forEach(function (m) {  // de abajo arriba, para poder borrar filas sin descolocar las demás
+      const r = mandarAviso_(m.token, 'Casa Abuela', texto, WEB_AVISOS);
+      if (r.ok) { mandados++; hoja.getRange(m.fila, 4, 1, 2).setValues([[ahora_(), '']]); }
+      else if (r.borrar) { hoja.deleteRow(m.fila); filaError_(m.persona, 'avisos', 'Ese móvil ya no recibe avisos; se quita de la lista.', ''); }
+      else { hoja.getRange(m.fila, 5).setValue(String(r.error).slice(0, 300)); filaError_(m.persona, 'avisos', String(r.error).slice(0, 300), texto.slice(0, 200)); }
+    });
+    return 'Avisos: ' + mandados + ' · ' + texto;
+  } finally { lock.releaseLock(); }
+}
+
+/** Un aviso a un móvil por FCM HTTP v1. → { ok } | { ok: false, borrar?, error } */
+function mandarAviso_(token, titulo, texto, enlace) {
+  let cuenta;
+  try { cuenta = JSON.parse(PropertiesService.getScriptProperties().getProperty('FCM_CUENTA') || 'null'); } catch (e) { cuenta = null; }
+  if (!cuenta || !cuenta.project_id || !cuenta.client_email || !cuenta.private_key) return { ok: false, error: 'Falta la cuenta de Firebase (FCM_CUENTA en las propiedades del script).' };
+  let acceso;
+  try { acceso = accesoFcm_(cuenta); } catch (e) { return { ok: false, error: 'Firebase no deja entrar: ' + ((e && e.message) || e) }; }
+  const r = UrlFetchApp.fetch('https://fcm.googleapis.com/v1/projects/' + encodeURIComponent(cuenta.project_id) + '/messages:send', {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + acceso },
+    payload: JSON.stringify({ message: { token: token,
+      data: { titulo: titulo, texto: texto, enlace: enlace },
+      webpush: { headers: { Urgency: 'high', TTL: '43200' } } } }),
+  });
+  const codigo = r.getResponseCode();
+  if (codigo === 200) return { ok: true };
+  const cuerpo = String(r.getContentText() || '');
+  if (codigo === 404 || /UNREGISTERED/.test(cuerpo)) return { ok: false, borrar: true, error: cuerpo };
+  return { ok: false, error: 'Firebase dice ' + codigo + ': ' + cuerpo.slice(0, 200) };
+}
+
+/** El permiso de una hora para hablar con FCM, con la cuenta de servicio (JWT firmado con RS256). Se guarda 50 minutos. */
+function accesoFcm_(cuenta) {
+  const cache = CacheService.getScriptCache();
+  const guardado = cache.get('fcm_acceso');
+  if (guardado) return guardado;
+  const b64 = function (x) { return Utilities.base64EncodeWebSafe(x).replace(/=+$/, ''); };
+  const ahora = Math.floor(Date.now() / 1000);
+  const cabeza = b64(JSON.stringify({ alg: 'RS256', typ: 'JWT' })) + '.' + b64(JSON.stringify({
+    iss: cuenta.client_email, scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token', iat: ahora, exp: ahora + 3600 }));
+  const firma = b64(Utilities.computeRsaSha256Signature(cabeza, cuenta.private_key));
+  const r = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', { method: 'post', muteHttpExceptions: true,
+    payload: { grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: cabeza + '.' + firma } });
+  const j = JSON.parse(r.getContentText() || '{}');
+  if (!j.access_token) throw new Error(j.error_description || j.error || ('código ' + r.getResponseCode()));
+  try { cache.put('fcm_acceso', j.access_token, 3000); } catch (e) { /* sin caché, se pide cada vez */ }
+  return j.access_token;
+}

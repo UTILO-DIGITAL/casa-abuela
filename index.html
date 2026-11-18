@@ -1097,6 +1097,11 @@
   button.enlace { display: inline; margin-left: 6px; padding: 12px 0; border: 0; background: none; font: inherit; font-weight: 800; color: var(--color-principal-oscuro); text-decoration: underline; cursor: pointer; }
 
   /* v2: mis próximas, arriba del todo */
+  /* v5.37 (T0623): activar los avisos al móvil (solo la abuela) */
+  .avisos-movil { margin: 0 0 20px; padding: 14px 16px; background: var(--color-principal-claro); border-radius: var(--radio); display: grid; gap: 10px; }
+  .avisos-movil p { margin: 0; font-size: 18px; line-height: 1.35; }
+  .avisos-movil .principal { justify-self: start; min-height: 52px; font-size: 18px; padding: 0 22px; }
+  .avisos-movil small { font-size: 15px; color: var(--color-texto-suave, inherit); }
   .mis-proximas { margin: 0 0 20px; padding: 12px 14px; background: var(--color-principal-claro); border-radius: var(--radio); display: grid; gap: 8px; }
   .mis-proximas h2 { margin: 0; font-size: 17px; font-weight: 800; }
   .mis-proximas p { margin: 0; font-size: 15px; color: var(--color-texto); }
@@ -1194,6 +1199,7 @@
 
 <div class="pagina">
   <div id="mis-proximas" class="mis-proximas" hidden></div>
+  <div id="avisos-movil" class="avisos-movil" hidden></div>
   <p id="actualizando" class="actualizando" hidden>Actualizando…</p>
   <div id="navegador" class="navegador"></div>
   <div id="herramientas" class="herramientas"></div>
@@ -1245,7 +1251,7 @@
     <p>Esta web es un ejemplo; en <a href="https://utilo.digital" target="_blank" rel="noopener">utilo.digital</a> podéis ver lo que hacemos. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.36</footer>
+  <footer>Hecho con cariño por Utilo · v5.37</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -1260,6 +1266,9 @@
 <script>
   /* Casa Abuela · web en GitHub Pages: los datos van y vienen de Apps Script como API */
   window.CASA_API = 'https://script.google.com/macros/s/AKfycbyEAsOys1duUwy_df2eGsH6QbLY_kx65ww1k3KAUCO0hnzwG7RVQWAIIGzQ0kiSWpU6/exec';
+  /* v5.37 (T0623): los avisos al móvil (Firebase Cloud Messaging). No es secreto: es la configuración web de Firebase y su clave pública.
+     Sin ella (null), no sale el botón de los avisos. */
+  window.CASA_FIREBASE = null;
 </script>
 <script>
 (function () {
@@ -1896,6 +1905,7 @@
     if (vista === 'rellenar' && rfSucio) { rfSucio = false; pintarRellenar(); }  // v4.40: solo al entrar, al cambiar de familia o al guardar
     pintarQuienSoy();
     pintarMisProximas();
+    pintarAvisosMovil();  // v5.37 (T0623)
     pintarHuerfanos();
     pintarPersonas();
     pintarHuecos();
@@ -2219,6 +2229,73 @@
       : 'Para apuntarte, toca el icono de la persona con el más en la comida o la cena que quieras. La web te preguntará quién eres.' +
         '<span class="acciones-yo"><button type="button" class="enlace" data-cambiar-yo>Decir quién soy</button>' + comidaAbuela + '</span>';
   }
+
+  /* ---------- v5.37 (T0623): avisos al móvil de la abuela ----------
+     Solo la abuela (es «editora»: EXCLUIR_IDS) ve «Activar avisos». Al pulsarlo, el móvil pide permiso, Firebase da un código
+     de este móvil (token) y se guarda en el Sheet (activarAvisos). El Apps Script mira cada 5 minutos si ha cambiado algo de hoy
+     o de mañana y lo manda; firebase-messaging-sw.js lo enseña aunque la app esté cerrada. Una vez al día, al abrirla, se vuelve
+     a mandar el código, por si el móvil lo ha cambiado. */
+  const FIREBASE_VER = '10.14.1';
+  const CLAVE_AVISOS = 'casa-abuela-avisos';  // { token, dia }: el código de este móvil y el último día que se mandó
+  let avisosOcupado = false, avisosRefrescado = false;
+  function leerAvisosMovil() { try { return JSON.parse(localStorage.getItem(CLAVE_AVISOS) || 'null'); } catch (e) { return null; } }
+  function guardarAvisosMovil(v) { try { if (v) localStorage.setItem(CLAVE_AVISOS, JSON.stringify(v)); else localStorage.removeItem(CLAVE_AVISOS); } catch (e) {} }
+  function avisosPosibles() { return !!(window.CASA_FIREBASE && window.CASA_API && !window.MESA_PREVIEW && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window); }
+  function avisosParaMi() { const e = yo && datos && editor(yo); return !!(e && !e.fallecio) && avisosPosibles(); }
+  function tokenAvisos() {
+    return navigator.serviceWorker.register('firebase-messaging-sw.js', { scope: './' }).then(function (reg) {
+      return Promise.all([import('https://www.gstatic.com/firebasejs/' + FIREBASE_VER + '/firebase-app.js'), import('https://www.gstatic.com/firebasejs/' + FIREBASE_VER + '/firebase-messaging.js')]).then(function (m) {
+        const app = m[0].getApps().length ? m[0].getApp() : m[0].initializeApp(window.CASA_FIREBASE.config);
+        return m[1].getToken(m[1].getMessaging(app), { vapidKey: window.CASA_FIREBASE.vapid, serviceWorkerRegistration: reg });
+      });
+    }).then(function (t) { if (!t) throw new Error('sin token'); return t; });
+  }
+  function mandarTokenAvisos(t) {
+    return llamar('activarAvisos', [t, yo]).then(function () { guardarAvisosMovil({ token: t, dia: hoy() }); });
+  }
+  function activarAvisosMovil() {
+    if (avisosOcupado) return;
+    avisosOcupado = true; pintarAvisosMovil();
+    Notification.requestPermission().then(function (permiso) {
+      if (permiso !== 'granted') { avisosOcupado = false; pintarAvisosMovil(); return; }
+      return tokenAvisos().then(mandarTokenAvisos).then(function () {
+        avisosOcupado = false; pintarAvisosMovil();
+        aviso('Listo. El móvil te avisará cuando alguien se apunte o se quite para hoy o para mañana.', 6000);
+      });
+    }).catch(function (e) {
+      avisosOcupado = false; pintarAvisosMovil();
+      aviso('No se han podido activar los avisos. Prueba otra vez en un rato.');
+      avisarUso('No se pudieron activar los avisos: ' + String((e && e.message) || e).slice(0, 200));  // a Control › Actividad
+      console.warn('avisos', e);
+    });
+  }
+  /* Una vez al día, al abrirla con los avisos ya activados: el código de ahora, por si el móvil lo ha cambiado */
+  function refrescarAvisosMovil() {
+    if (avisosRefrescado) return;
+    avisosRefrescado = true;
+    const g = leerAvisosMovil();
+    if (!g || g.dia === hoy() || Notification.permission !== 'granted') return;
+    tokenAvisos().then(mandarTokenAvisos).catch(function (e) { console.warn('avisos', e); });
+  }
+  function pintarAvisosMovil() {
+    const $a = $('avisos-movil');
+    if (!$a) return;
+    const mio = vista === 'semana' && avisosParaMi();
+    const permiso = mio ? Notification.permission : '';
+    const activos = permiso === 'granted' && !!leerAvisosMovil();
+    if (mio && activos) refrescarAvisosMovil();
+    $a.hidden = !mio || activos;
+    if ($a.hidden) return;
+    $a.innerHTML = permiso === 'denied'
+      ? '<p>🔔 Los avisos están apagados en este móvil.</p><small>Para encenderlos: mantén pulsado el icono de Casa Abuela, toca «Información de la app» › «Notificaciones» y actívalas. Luego vuelve aquí.</small>'
+      : '<p>🔔 ¿Quieres que el móvil te avise cuando alguien se apunte o se quite para hoy o para mañana?</p>' +
+        '<button type="button" class="principal" data-activar-avisos' + (avisosOcupado ? ' disabled' : '') + '>' + (avisosOcupado ? 'Activando…' : 'Activar avisos') + '</button>';
+    if (!$a.dataset.montado) {
+      $a.dataset.montado = '1';
+      $a.addEventListener('click', function (e) { if (e.target.closest('[data-activar-avisos]')) activarAvisosMovil(); });
+    }
+  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.tipo === 'avisos-recargar' && datos) cargar(true); });  // al tocar el aviso con la app abierta, lo de ahora
 
   function pintarMisProximas() {
     const $m = $('mis-proximas');
