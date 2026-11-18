@@ -2,4 +2,5 @@
 Casa Abuela · calendario familiar (Utilo, T0471)
 
 - `index.html`: la web (GitHub Pages). Llega a la web al fusionar en `main`.
-- `apps-script/`: el código del proyecto de Apps Script «Casa Abuela» (desde T0479), que guarda en el Sheet. Fusionar no lo despliega: se sube con `clasp push` y se actualiza la implementación de la API con `clasp deploy -i <id de la URL de CASA_API>`, siempre antes de fusionar la web que lo necesita. Prueba: `node apps-script/probar.js apps-script/Código.js`.
+- `apps-script/`: el código del proyecto de Apps Script «Casa Abuela» (desde T0479), que guarda en el Sheet. Fusionar no lo despliega: se sube con `clasp push` y se actualiza la implementación de la API con `clasp deploy -i <id de la URL de CASA_API>`, siempre antes de fusionar la web que lo necesita. Al desplegarlo, un tag en ese commit con la versión de la implementación (`git tag apps-script-v34 && git push origin apps-script-v34`): así su tarea del DAILY sabe que ya está en uso.
+- `utilo.json`: cómo se publica cada cosa, para que las tareas pasen solas a Entregada (T0611; en utilo-apps, `docs/PROYECTO_SUELTO.md`). Prueba: `node apps-script/probar.js apps-script/Código.js`.
