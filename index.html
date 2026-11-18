@@ -874,10 +874,13 @@
   .ev-marca .ico-marca { width: 18px; height: 18px; }
   .evento-botones .ev-compartir { display: inline-flex; align-items: center; justify-content: center; padding: 0 12px; margin-left: auto; }
   .evento-botones .ev-compartir svg { width: 20px; height: 20px; }
-  .forma-ev { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--color-principal); border-radius: 12px; overflow: hidden; }
+  .evento-botones .ev-preguntar { display: inline-flex; align-items: center; gap: 6px; }  /* v5.36: la abuela */
+  .evento-botones .ev-preguntar svg { width: 18px; height: 18px; flex: none; }
+  .forma-ev { display: grid; grid-template-columns: repeat(3, 1fr); border: 2px solid var(--color-principal); border-radius: 12px; overflow: hidden; }
   .forma-ev[hidden] { display: none; }
   .forma-ev button { min-height: 44px; border: 0; background: #fff; font: inherit; font-weight: 800; color: var(--color-principal-oscuro); cursor: pointer; }
   .forma-ev button[aria-pressed="true"] { background: var(--color-principal); color: #fff; }
+  #dlg-forma button { min-height: 48px; padding: 4px 6px; line-height: 1.15; }  /* v5.36: tres, y en el móvil «Lista completa» y «Sin contestar» en dos líneas */
   .aviso-servicio { margin: 0; padding: 10px 14px; border-radius: var(--radio); background: var(--color-destacado-claro); color: var(--color-texto); font-weight: 700; border-left: 4px solid var(--color-accion); }
   /* v4.80: pestañitas de Eventos y avisos de las pestañas */
   .ev-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
@@ -1242,7 +1245,7 @@
     <p>Esta web es un ejemplo; en <a href="https://utilo.digital" target="_blank" rel="noopener">utilo.digital</a> podéis ver lo que hacemos. Si conocéis a alguien a quien le vendría bien algo así, escribidnos a <a href="mailto:utilo.digital@gmail.com">utilo.digital@gmail.com</a>.</p>
   </section>
   <p class="salir-sencillo" id="salir-sencillo" hidden><button type="button" class="enlace" data-salir-sencillo>Salir de la vista sencilla</button></p>
-  <footer>Hecho con cariño por Utilo · v5.35.1</footer>
+  <footer>Hecho con cariño por Utilo · v5.36</footer>
 </div>
 <!-- v5.12: lo que flota, fuera de .pagina: con su zoom, algunos Chrome lo sacaban de la pantalla -->
 <div class="flotantes">
@@ -3444,6 +3447,7 @@
         '<button type="button" class="accion" data-ev-voy="' + esc(e.id) + '" aria-pressed="' + voy + '">' + (voy ? ICONO_SI + 'Voy' : 'Voy') + '</button>' +
         '<button type="button" class="accion" data-ev-novoy="' + esc(e.id) + '" aria-pressed="' + noVoy + '">' + (noVoy ? ICONO_NO + 'No voy' : 'No voy') + '</button>') +
       '<button type="button" class="accion ev-ver-btn" data-ev-ver="' + esc(e.id) + '">Ver quién va</button>' +
+      (modoAbuela() && !pasado && !enEscritorio() && cuentaEvento(e).faltan ? '<button type="button" class="accion ev-preguntar" data-ev-preguntar="' + esc(e.id) + '">' + ICONO_COMPARTIR + 'Preguntar a los que faltan</button>' : '') +  // v5.36 (T0622): la abuela, directo a WhatsApp
       (modoAbuela() ? '' : '<button type="button" class="accion ev-compartir" data-ev-compartir="' + esc(e.id) + '" aria-label="Compartir por WhatsApp" title="Compartir">' + ICONO_COMPARTIR + '</button>') + '</div>' +  // v4.71
       (pasado || modoAbuela() || !(voy || noVoy) ? '' : '<div class="ev-mio"><p class="ev-estado-yo ' + (voy ? 'si' : 'no') + '">' + (voy ? ICONO_SI + 'Has dicho que vas' + (diasDe(e, yo) ? ' (' + textoDias(diasDe(e, yo)) + ')' : '') : ICONO_NO + 'Has dicho que no puedes') + '</p>' +  // v4.68: tus días y tu nota, sin abrir el evento
         (voy && diasDelEvento(e).length > 1 ? botonesDias(e, yo, 'Qué días vas:') : '') + lineaNota(e, yo) + '</div>') +
@@ -3584,10 +3588,12 @@
     const e = evento(id);
     if (!e) return;
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">' + esc(e.nombre) + '</h2></div><div class="dlg-cuerpo" id="dlg-ev-detalle" data-ev="' + esc(e.id) + '">' + htmlDetalleEvento(e) + '</div>' +
-      '<div class="dlg-pie"><div class="botones">' + (modoAbuela() ? '' : '<button type="button" class="accion" id="dlg-ev-compartir">Compartir</button>' +
+      '<div class="dlg-pie"><div class="botones">' + (modoAbuela() && e.hasta >= hoy() && !enEscritorio() && cuentaEvento(e).faltan ? '<button type="button" class="principal con-icono" id="dlg-ev-preguntar">' + ICONO_COMPARTIR + 'Preguntar a los que faltan</button>' : '') +  // v5.36
+      (modoAbuela() ? '' : '<button type="button" class="accion" id="dlg-ev-compartir">Compartir</button>' +
       '<button type="button" class="accion" id="dlg-ev-cambiar">Cambiar el evento</button>') +
       '<button type="button" class="accion quitar" id="dlg-cerrar">Cerrar</button></div></div>');
     $('dlg-cerrar').addEventListener('click', cerrarDialogo);
+    if ($('dlg-ev-preguntar')) $('dlg-ev-preguntar').addEventListener('click', function () { abrirWhatsApp(mensajeEv(id, 'faltan')); });  // v5.36
     if ($('dlg-ev-compartir')) $('dlg-ev-compartir').addEventListener('click', function () { abrirCompartir('ev:' + id); });
     if ($('dlg-ev-cambiar')) $('dlg-ev-cambiar').addEventListener('click', function () { abrirEvento(evento(id)); });
   }
@@ -3839,8 +3845,9 @@
   $('ev-anadir').addEventListener('click', function () { abrirEvento(null); });
   document.addEventListener('click', function (ev) {
     if (ev.target.closest('[data-salir-sencillo]')) { salirSencillo(); return; }
-    const b = ev.target.closest('[data-ev-tuyos], [data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p], [data-ev-dias], [data-ev-dia], [data-ev-nota], [data-ev-compartir], [data-ev-dia-yo]');
+    const b = ev.target.closest('[data-ev-tuyos], [data-ev-voy], [data-ev-novoy], [data-ev-ver], [data-ev-p], [data-ev-dias], [data-ev-dia], [data-ev-nota], [data-ev-compartir], [data-ev-preguntar], [data-ev-dia-yo]');
     if (!b) return;
+    if (b.dataset.evPreguntar) { abrirWhatsApp(mensajeEv(b.dataset.evPreguntar, 'faltan')); return; }  // v5.36 (T0622): la abuela, a los que faltan
     if (modoAbuela() && !b.dataset.evVer) return;  // v4.35: en el modo sencillo, solo ver
     if (b.dataset.evTuyos) { abrirTuyos(b.dataset.evTuyos); return; }  // v5.18
     if (b.dataset.evVoy) apuntarEv(b.dataset.evVoy, true);
@@ -5566,7 +5573,8 @@
   }
   /* v4.28: el mensaje de un evento de la pestaña Eventos.
      v4.71: arriba el resumen (WhatsApp solo enseña las primeras líneas); luego, por familias y no persona a persona; al final, las notas */
-  function mensajeEv(id, completa) {
+  function mensajeEv(id, forma) {
+    const completa = forma === 'lista';
     const e = evento(id) || { nombre: 'Evento', van: [], noVan: [], desde: hoy(), hasta: hoy(), cuando: 'DIA' };
     const enlace = datos.url ? '\n\n👉 Di si vas aquí: ' + datos.url.replace(/#.*$/, '') + '#evento-' + e.id : '';  // v4.51: abre este evento
     const c = cuentaEvento(e), dias = diasDelEvento(e);
@@ -5587,6 +5595,15 @@
       return '• ' + cortoFamilia(x.f) + ': ' + x.van + ' de ' + x.gente.length + (sueltos.length ? ' _(' + sueltos.join('; ') + ')_' : '');
     });
     const notas = e.van.filter(function (id) { return notaDe(e, id) && quienEs(id); }).map(function (id) { return '• ' + quienEs(id).apodo + ': _' + notaDe(e, id) + '_'; });
+    if (forma === 'faltan') {  // v5.36 (T0622): solo los que aún no han dicho nada, por familias y núcleos, para pedirles que contesten
+      const bloquesF = porFamiliaEvento(e).filter(function (x) { return x.pend; }).map(function (x) {
+        return '*' + cortoFamilia(x.f) + ' (' + x.pend + ')*\n' + ordenPorNucleos(x.gente).filter(function (y) { return e.van.indexOf(y.p.id) === -1 && e.noVan.indexOf(y.p.id) === -1; })
+          .map(function (y) { return '• ' + y.p.apodo; }).join('\n');
+      });
+      const cabeza = '🎉 *' + e.nombre + '*\n📅 ' + cuando + (e.lugar ? '\n📍 ' + e.lugar : '');
+      if (!c.faltan) return cabeza + '\n\n✅ Ya ha contestado todo el mundo. ¡Gracias!' + enlace;
+      return cabeza + '\n\n' + (c.van ? '*Van: ' + c.van + '*\n\n' : '') + '🙋 *Falta que digáis si venís (' + c.faltan + ')*\n\n' + bloquesF.join('\n\n') + enlace;
+    }
     if (completa) {  // v4.72: la lista completa: por familias, cada uno con sus días y su nota
       const bloques = porFamiliaEvento(e).filter(function (x) { return x.van; }).map(function (x) {
         return '*' + cortoFamilia(x.f) + ' (' + x.van + ')*\n' + ordenPorNucleos(x.gente).filter(function (y) { return e.van.indexOf(y.p.id) !== -1; })
@@ -5637,7 +5654,7 @@
     }).join('');
   }
   function mensaje(tipo) {
-    if (tipo.indexOf('ev:') === 0) return mensajeEv(tipo.slice(3), formaEv === 'lista');
+    if (tipo.indexOf('ev:') === 0) return mensajeEv(tipo.slice(3), formaEv);  // v5.36: resumen, lista o los que faltan
     if (tipo.indexOf('evento:') === 0) return mensajeEvento(tipo.slice(7));
     const dias = semana(lunesSel);
     // v5.31 (T0589): un día o una comida sola, el enlace abre ese día; varios días o Huecos, la web
@@ -5723,7 +5740,7 @@
     abrirDialogo('<div class="dlg-cab"><h2 id="dlg-titulo">Compartir por WhatsApp</h2></div>' +
       '<div class="dlg-cuerpo"><label class="campo" for="dlg-que">Qué quieres compartir<select id="dlg-que">' +
       opciones.map(function (o) { return '<option value="' + o.v + '"' + (o.v === inicial ? ' selected' : '') + '>' + esc(o.t) + '</option>'; }).join('') + '</select></label>' +
-      '<div class="forma-ev" id="dlg-forma" role="group" aria-label="Cómo"><button type="button" data-forma="resumen">Resumen</button><button type="button" data-forma="lista">Lista completa</button></div>' +  // v4.72
+      '<div class="forma-ev" id="dlg-forma" role="group" aria-label="Cómo"><button type="button" data-forma="resumen">Resumen</button><button type="button" data-forma="lista">Lista completa</button><button type="button" data-forma="faltan">Sin contestar</button></div>' +  // v4.72; v5.36: los que faltan
       '<label class="campo" for="dlg-texto">Mensaje (puedes cambiarlo)<textarea id="dlg-texto"></textarea></label></div>' +
       // v4.15.1: solo copiar (se pega en el grupo); sin «Abrir WhatsApp»
       '<div class="dlg-pie"><div class="botones"><button type="button" class="principal" id="dlg-wa">Enviar por WhatsApp</button><button type="button" class="accion" id="dlg-copiar">Copiar</button>' +
