@@ -60,7 +60,7 @@ const ctx = {
   ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
 };
 vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, misNumeros, getPremios, guardarPersonas, getAjustes, guardarAjustes, api_ };', ctx);
+vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, misNumeros, getPremios, guardarPersonas, getAjustes, guardarAjustes, api_, activarAvisos, quitarAvisos, revisarAvisos, cambiosAvisos_, textoAvisos_ };', ctx);
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
@@ -577,4 +577,115 @@ ver('la pista llega con los datos, la clave no', conPista.config.pista === 'Lo q
   // y uno de hace un mes, más allá de los 1000 últimos, ya no
   hc.filas.splice(1, 0, ['2026-10-01T10:00:00', N_, 'Jan', 'Viejo']);
   ver('Control: lo de hace un mes, más allá de los 1000 últimos, no', !R.getAjustes(M_, 'higuera').cambios.some(x => x.cambio === 'Viejo'));
+}
+// v5.37 (T0623): los avisos al móvil de la abuela, con un Firebase falso
+{
+  const A_ = '(A) - Abuela';
+  const props = {}, disparadores = [], llamadas = [];
+  let HORA = 10, respuestaFcm = () => ({ codigo: 200, texto: '{"name":"projects/casa-abuela/messages/1"}' });
+  ctx.PropertiesService = { getScriptProperties: () => ({ getProperty: k => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = String(v); } }) };
+  ctx.ScriptApp.getProjectTriggers = () => disparadores.map(f => ({ getHandlerFunction: () => f }));
+  ctx.ScriptApp.newTrigger = f => ({ timeBased: () => ({ everyMinutes: () => ({ create: () => disparadores.push(f) }) }) });
+  const fmt = ctx.Utilities.formatDate;
+  ctx.Utilities.formatDate = (d, tz, f) => f === 'H' ? String(HORA) : fmt(d, tz, f);
+  ctx.Utilities.base64EncodeWebSafe = x => Buffer.from(typeof x === 'string' ? x : Buffer.from(x)).toString('base64url') + '==';
+  ctx.Utilities.computeRsaSha256Signature = () => [1, 2, 3];
+  ctx.UrlFetchApp = { fetch: (url, o) => {
+    llamadas.push({ url, o });
+    if (/oauth2/.test(url)) return { getResponseCode: () => 200, getContentText: () => '{"access_token":"ya29.falso"}' };
+    const r = respuestaFcm(JSON.parse(o.payload));
+    return { getResponseCode: () => r.codigo, getContentText: () => r.texto };
+  } };
+  props.FCM_CUENTA = JSON.stringify({ project_id: 'casa-abuela', client_email: 'avisos@casa-abuela.iam.gserviceaccount.com', private_key: '-----BEGIN PRIVATE KEY-----\nfalsa\n-----END PRIVATE KEY-----\n' });
+  const aFcm = () => llamadas.filter(l => /fcm\.googleapis/.test(l.url));
+  const ultimoTexto = () => { const l = aFcm().slice(-1)[0]; return l ? JSON.parse(l.o.payload).message.data.texto : ''; };
+  const MANANA = '2026-11-14';
+  const apuntar = (id, fecha, turno, persona, extra) => hojas.MESA_APUNTES.filas.push([id, fecha, turno, persona, '', '', (extra || {}).estado || '', '', '', (extra || {}).mas || '']);
+
+  ver('avisos: sin móviles, no se mira nada ni se manda', R.revisarAvisos() === 'Sin móviles' && !llamadas.length);
+  let e = ''; try { R.activarAvisos('tok-mercedes', M_); } catch (x) { e = x.message; }
+  ver('avisos: de momento, solo la abuela los activa', /solo son para la abuela/.test(e) && !hojas.MESA_AVISOS);
+  e = ''; try { R.activarAvisos('  ', A_); } catch (x) { e = x.message; }
+  ver('avisos: sin código del móvil, no', /código de avisos válido/.test(e));
+  e = ''; try { R.activarAvisos('a b', A_); } catch (x) { e = x.message; }
+  ver('avisos: un código con espacios, tampoco', /código de avisos válido/.test(e));
+
+  R.activarAvisos('tok1', A_);
+  ver('avisos: la abuela los activa: su móvil, en MESA_AVISOS', hojas.MESA_AVISOS.filas.length === 2 && hojas.MESA_AVISOS.filas[1][0] === 'tok1' && hojas.MESA_AVISOS.filas[1][1] === A_);
+  ver('avisos: se crea el disparador de cada 5 minutos', disparadores.length === 1 && disparadores[0] === 'revisarAvisos');
+  ver('avisos: la foto de ahora, para no avisar de lo que ya había', !!props.avisos_foto && JSON.parse(props.avisos_foto)[HOY] !== undefined);
+  ver('avisos: queda en el registro de cambios', /Activa los avisos/.test(hojas.MESA_CAMBIOS.filas.slice(-1)[0][3]));
+  R.activarAvisos('tok1', A_);
+  ver('avisos: el mismo móvil otra vez no se repite (ni otro disparador)', hojas.MESA_AVISOS.filas.length === 2 && disparadores.length === 1);
+  ver('avisos: sin cambios, no se manda nada', R.revisarAvisos() === 'Sin cambios' && !aFcm().length);
+
+  apuntar('av1', MANANA, 'COMIDA', M_);
+  apuntar('av2', HOY, 'CENA', J_, { mas: 2 });
+  let r = R.revisarAvisos();
+  const m = aFcm()[0] ? JSON.parse(aFcm()[0].o.payload).message : {};
+  ver('avisos: un cambio de hoy y otro de mañana, un solo aviso', aFcm().length === 1 && m.token === 'tok1');
+  ver('avisos: «Hoy: Jordi P (con 2 más) viene a cenar.» (con su apodo de ahora)', /^Hoy: .*Jordi P \(con 2 más\) viene a cenar\./.test(m.data.texto));
+  ver('avisos: «Mañana: Mercedes viene a comer.»', /\nMañana: .*Mercedes viene a comer\./.test(m.data.texto));
+  ver('avisos: con el título y el enlace a la web', m.data.titulo === 'Casa Abuela' && m.data.enlace === 'https://utilo-digital.github.io/casa-abuela/');
+  ver('avisos: con permiso de Firebase de la cuenta de servicio', llamadas.some(l => /oauth2/.test(l.url)) && aFcm()[0].o.headers.Authorization === 'Bearer ya29.falso' && /projects\/casa-abuela\//.test(aFcm()[0].url));
+  ver('avisos: se apunta cuándo se mandó', hojas.MESA_AVISOS.filas[1][3] === HOY + 'T10:00:00');
+  ver('avisos: la segunda vez, sin cambios, nada', R.revisarAvisos() === 'Sin cambios' && aFcm().length === 1);
+
+  hojas.MESA_APUNTES.filas.find(f => f[0] === 'av1')[6] = 'NO';
+  R.revisarAvisos();
+  ver('avisos: «Mercedes ya no viene a comer» mañana', aFcm().length === 2 && /Mañana: .*Mercedes ya no viene a comer\./.test(ultimoTexto()) && !/Hoy:/.test(ultimoTexto()));
+
+  HORA = 23;
+  apuntar('av3', MANANA, 'DORMIR', N_);
+  ver('avisos: de noche, callado (y no se pierde)', R.revisarAvisos() === 'Callado' && aFcm().length === 2);
+  HORA = 7;
+  ver('avisos: a las 7, aún callado', R.revisarAvisos() === 'Callado');
+  HORA = 8;
+  R.revisarAvisos();
+  ver('avisos: a las 8 llega lo de la noche', aFcm().length === 3 && /Jan viene a dormir/.test(ultimoTexto()));
+
+  hojas.MESA_CONFIG.filas.push(['AVISOS_CALLA', 0], ['AVISOS_HABLA', 0]);
+  HORA = 3;
+  apuntar('av4', MANANA, 'TARDE', M_);
+  R.revisarAvisos();
+  ver('avisos: con AVISOS_CALLA y AVISOS_HABLA a 0, no se calla nunca', aFcm().length === 4 && /Mercedes viene por la tarde/.test(ultimoTexto()));
+  hojas.MESA_CONFIG.filas.splice(-2, 2); HORA = 10;
+
+  const cuenta = props.FCM_CUENTA; delete props.FCM_CUENTA;
+  hojas.MESA_APUNTES.filas.find(f => f[0] === 'av4')[6] = 'NO';
+  const nErr = hojas.MESA_ERRORES.filas.length;
+  r = R.revisarAvisos();
+  ver('avisos: sin la cuenta de Firebase, no manda, lo apunta y el móvil se queda', aFcm().length === 4 && /FCM_CUENTA/.test(hojas.MESA_AVISOS.filas[1][4]) && hojas.MESA_ERRORES.filas.length === nErr + 1 && hojas.MESA_ERRORES.filas[nErr][2] === 'avisos');
+  props.FCM_CUENTA = cuenta;
+
+  R.activarAvisos('tok2', A_);
+  respuestaFcm = p => p.message.token === 'tok1' ? { codigo: 404, texto: '{"error":{"status":"NOT_FOUND","details":[{"errorCode":"UNREGISTERED"}]}}' } : { codigo: 200, texto: '{}' };
+  apuntar('av5', HOY, 'COMIDA', N_);
+  R.revisarAvisos();
+  ver('avisos: un móvil que ya no los recibe se quita; el otro sí lo recibe', hojas.MESA_AVISOS.filas.slice(1).filter(f => f[0]).map(f => f[0]).join() === 'tok2' && aFcm().slice(-2).map(l => JSON.parse(l.o.payload).message.token).sort().join() === 'tok1,tok2');
+  respuestaFcm = () => ({ codigo: 500, texto: 'Internal' });
+  hojas.MESA_APUNTES.filas.find(f => f[0] === 'av5')[6] = 'NO';
+  R.revisarAvisos();
+  ver('avisos: si Firebase falla, el móvil se queda y se apunta el error', hojas.MESA_AVISOS.filas[1][0] === 'tok2' && /500/.test(hojas.MESA_AVISOS.filas[1][4]));
+  respuestaFcm = () => ({ codigo: 200, texto: '{}' });
+
+  R.quitarAvisos('tok2', A_);
+  ver('avisos: al quitarlos, el móvil sale de la lista', !hojas.MESA_AVISOS.filas.slice(1).some(f => f[0]) && /Quita los avisos/.test(hojas.MESA_CAMBIOS.filas.slice(-1)[0][3]));
+  ver('avisos: quitar uno que no está, no pasa nada', R.quitarAvisos('no-existe', A_) === true);
+
+  // el texto y los cambios, solos
+  const g = { a: { apodo: 'Marta' }, b: { apodo: 'Pablo' }, c: { apodo: 'Rosa', familia: 'Servicio' } };
+  let t = R.textoAvisos_([{ fecha: HOY, turno: 'CENA', id: 'a', que: 'viene', mas: 0 }, { fecha: HOY, turno: 'CENA', id: 'b', que: 'viene', mas: 1 }], { [HOY]: { CENA: { a: 0, b: 1 } } }, HOY, g);
+  ver('avisos (texto): dos que vienen, en plural', t === 'Hoy: Marta y Pablo (con 1 más) vienen a cenar.');
+  t = R.textoAvisos_([{ fecha: MANANA, turno: 'COMIDA', id: 'a', que: 'no', mas: 0 }], { [MANANA]: { COMIDA: { c: 0 } } }, HOY, g);
+  ver('avisos (texto): si solo queda el servicio, «No queda nadie para comer»', t === 'Mañana: Marta ya no viene a comer. No queda nadie para comer.');
+  t = R.textoAvisos_([{ fecha: MANANA, turno: 'DORMIR', id: 'a', que: 'no', mas: 0 }], { [MANANA]: { DORMIR: { c: 0 } } }, HOY, g);
+  ver('avisos (texto): para dormir, el servicio sí cuenta', t === 'Mañana: Marta ya no viene a dormir.');
+  t = R.textoAvisos_([{ fecha: HOY, turno: 'COMIDA', id: 'b', que: 'mas', mas: 0 }, { fecha: HOY, turno: 'TARDE', id: 'a', que: 'mas', mas: 3 }], {}, HOY, g);
+  ver('avisos (texto): cambian los que vienen con alguien', t === 'Hoy: Pablo viene a comer sin nadie más. Marta viene por la tarde con 3 más.');
+  t = R.textoAvisos_([{ fecha: HOY, turno: 'COMIDA', id: '(N) - Desconocido', que: 'viene', mas: 0 }], {}, HOY, {});
+  ver('avisos (texto): alguien que ya no está en la lista, por su apodo', t === 'Hoy: Desconocido viene a comer.');
+  const c = R.cambiosAvisos_({ '2026-11-13': { CENA: { a: 0 } }, '2026-11-14': { COMIDA: { a: 0 } } }, { '2026-11-14': { COMIDA: { a: 0, b: 0 } }, '2026-11-15': { COMIDA: { c: 0 } } });
+  ver('avisos (cambios): al cambiar de día, solo se compara lo que está en las dos fotos', c.length === 1 && c[0].id === 'b' && c[0].fecha === '2026-11-14' && c[0].que === 'viene');
+  ver('avisos (cambios): fotos iguales, nada', R.cambiosAvisos_({ x: { CENA: { a: 2 } } }, { x: { CENA: { a: 2 } } }).length === 0);
 }
