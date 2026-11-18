@@ -1267,8 +1267,12 @@
   /* Casa Abuela · web en GitHub Pages: los datos van y vienen de Apps Script como API */
   window.CASA_API = 'https://script.google.com/macros/s/AKfycbyEAsOys1duUwy_df2eGsH6QbLY_kx65ww1k3KAUCO0hnzwG7RVQWAIIGzQ0kiSWpU6/exec';
   /* v5.37 (T0623): los avisos al móvil (Firebase Cloud Messaging). No es secreto: es la configuración web de Firebase y su clave pública.
-     Sin ella (null), no sale el botón de los avisos. */
-  window.CASA_FIREBASE = null;
+     Sin ella (null), no sale el botón de los avisos. Proyecto de Firebase: casa-abuela-7a048 (cuenta de Javi, plan gratuito). */
+  window.CASA_FIREBASE = {
+    config: { apiKey: 'AIzaSyCztx28zX52NP9St51FeTlKvYb9_1UZNw8', authDomain: 'casa-abuela-7a048.firebaseapp.com', projectId: 'casa-abuela-7a048',
+      storageBucket: 'casa-abuela-7a048.firebasestorage.app', messagingSenderId: '381350567493', appId: '1:381350567493:web:ee393b7220da448c96cd2c' },
+    vapid: 'BIceDVVn-UKgzkOSHrmfYAMqZ2IeECfqXQvlkFuuKzK1yYaSTvF00sw4xag9M8WqCw3CZKNjut99lYTjQhK8VLc',
+  };
 </script>
 <script>
 (function () {
