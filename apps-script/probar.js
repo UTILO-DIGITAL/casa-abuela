@@ -671,14 +671,20 @@ ver('la pista llega con los datos, la clave no', conPista.config.pista === 'Lo q
 
   // v5.38: la prueba desde el editor, y la revisión sin el bloqueo de los guardados
   respuestaFcm = () => ({ codigo: 200, texto: '{}' });
+  const pedidos = [];
+  ctx.ScriptApp.requireScopes = (modo, l) => pedidos.push(l);
+  ctx.ScriptApp.AuthMode = { FULL: 'FULL' };
+  const logs = []; const logViejo = ctx.console; ctx.console = { log: x => logs.push(x), warn: () => {} };
   const nP = aFcm().length;
   const rp = R.probarAvisos();
   ver('probarAvisos: manda la prueba a cada móvil y dice cómo ha ido', aFcm().length === nP + 1 && /Prueba: si ves esto/.test(ultimoTexto()) && /Abuela: mandado/.test(rp));
+  ver('probarAvisos: pide el permiso de servicio externo si falta', pedidos.length === 1 && pedidos[0].includes('https://www.googleapis.com/auth/script.external_request'));
+  ver('probarAvisos: el resultado sale en el registro del editor', logs.some(x => /Abuela: mandado/.test(x)));
   const viejoFetch = ctx.UrlFetchApp.fetch;
   ctx.UrlFetchApp.fetch = () => { throw new Error('No tienes permiso para llamar a UrlFetchApp.fetch.'); };
   const rp2 = R.probarAvisos();
   ver('probarAvisos: sin permiso, dice qué hacer y lo apunta en el móvil', /ejecuta probarAvisos/.test(rp2) && /ejecuta probarAvisos/.test(hojas.MESA_AVISOS.filas[1][4]));
-  ctx.UrlFetchApp.fetch = viejoFetch;
+  ctx.UrlFetchApp.fetch = viejoFetch; ctx.console = logViejo;
   const lockViejo = ctx.LockService.getScriptLock;
   ctx.LockService.getScriptLock = () => ({ tryLock: () => false, releaseLock: () => {} });
   apuntar('av6', HOY, 'MANANA', M_);
