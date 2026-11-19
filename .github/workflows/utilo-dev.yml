@@ -1,0 +1,42 @@
+# Utilo DEV (T0655): la web de cada rama, con datos inventados, en la app «Utilo DEV»
+# (https://utilo-digital.github.io/utilo-web/dev-ramas/). Lo hace la acción «DEV ramas» de utilo-apps; esta solo la llama:
+#   - push a main o a una rama T0xxx: sube su web (lo que dice utilo.json · dev);
+#   - PR cerrada o rama borrada: la quita.
+# Necesita el secreto UTILO_DEV_TOKEN (una llave que puede lanzar acciones de utilo-apps). Sin él, no hace nada.
+# Es igual en todos los proyectos sueltos: se copia tal cual (utilo-apps, docs/PROYECTO_SUELTO.md).
+name: Utilo DEV
+
+on:
+  push:
+    branches:
+      - main
+      - 'T[0-9][0-9][0-9][0-9]*'
+  pull_request:
+    types: [closed]
+  delete:
+
+permissions:
+  contents: read
+
+jobs:
+  dev:
+    if: github.event_name != 'delete' || github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Llamar a «DEV ramas» de utilo-apps
+        env:
+          GH_TOKEN: ${{ secrets.UTILO_DEV_TOKEN }}
+          REPO: ${{ github.event.repository.name }}
+          RAMA: ${{ github.event.pull_request.head.ref || github.event.ref || github.ref_name }}
+          EVENTO: ${{ github.event_name }}
+        run: |
+          RAMA="${RAMA#refs/heads/}"
+          if [ -z "$GH_TOKEN" ]; then echo "Falta el secreto UTILO_DEV_TOKEN: esta rama no se sube a la app DEV."; exit 0; fi
+          case "$RAMA" in main|T[0-9][0-9][0-9][0-9]*) ;; *) echo "«$RAMA» no es main ni una rama de tarea: nada."; exit 0;; esac
+          ACCION=subir; [ "$EVENTO" != "push" ] && ACCION=quitar
+          [ "$ACCION" = "quitar" ] && [ "$RAMA" = "main" ] && exit 0
+          # La llamada directa (solo necesita el permiso «Actions: Read and write» en utilo-apps).
+          gh api -X POST repos/UTILO-DIGITAL/utilo-apps/actions/workflows/dev-ramas.yml/dispatches \
+            -f ref=main -f "inputs[repo]=$REPO" -f "inputs[rama]=$RAMA" -f "inputs[accion]=$ACCION"
+          echo "→ «DEV ramas» de utilo-apps: $ACCION $REPO · $RAMA"

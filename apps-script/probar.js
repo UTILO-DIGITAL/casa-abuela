@@ -1,32 +1,7 @@
 // Prueba de Apps Script con un Google falso (T0479): node apps-script/probar.js apps-script/Código.js
-const fs = require('fs'), vm = require('vm');
+const fs = require('fs'), path = require('path'), vm = require('vm');
+const { hoja, contexto, ejecutar } = require(path.join(__dirname, '..', 'dev', 'google-falso.js'));  // T0655: el mismo que usa la web en DEV
 const codigo = fs.readFileSync(process.argv[2], 'utf8');
-function hoja(nombre, filas) {
-  const h = { nombre, filas, validacion: null };
-  const celda = (r, c) => { while (h.filas.length < r) h.filas.push([]); const f = h.filas[r - 1]; while (f.length < c) f.push(''); return f; };
-  h.getLastRow = () => { let n = h.filas.length; while (n && h.filas[n - 1].every(v => v === '' || v == null)) n--; return n; };
-  h.getMaxColumns = () => Math.max(...h.filas.map(f => f.length), 1);
-  h.insertColumnsAfter = (c, n) => { h.filas.forEach(f => { while (f.length < c + n) f.push(''); }); };
-  h.insertRowAfter = r => h.filas.splice(r, 0, []);
-  h.deleteRow = r => h.filas.splice(r - 1, 1);
-  h.setFrozenRows = () => {};
-  h.getDataRange = () => h.getRange(1, 1, h.getLastRow(), h.getMaxColumns());
-  h.getRange = (r, c, nr = 1, nc = 1) => ({
-    getValues: () => { const o = []; for (let i = 0; i < nr; i++) { const f = []; for (let j = 0; j < nc; j++) f.push(((h.filas[r - 1 + i] || [])[c - 1 + j]) ?? ''); o.push(f); } return o; },
-    setValues: v => {
-      // Como el Google de verdad: el ancho de los datos tiene que ser el del intervalo
-      if (v.length !== nr || v.some(f => f.length !== nc)) throw new Error('El número de columnas de los datos no coincide con el del intervalo. Los datos tienen ' + (v[0] || []).length + ' y el intervalo, ' + nc + '.');
-      v.forEach((f, i) => f.forEach((x, j) => { celda(r + i, c + j)[c - 1 + j] = x; })); h.formula && h.formula();
-    },
-    setValue: x => { celda(r, c)[c - 1] = x; h.formula && h.formula(); },
-    getValue: () => ((h.filas[r - 1] || [])[c - 1]) ?? '',
-    setNumberFormat: () => { if (h.tabla && nc > 1) throw new Error('Haz una selección en una sola columna para realizar acciones a nivel de columna.'); },
-    getDataValidation: () => null,
-    getSheet: () => h, getRow: () => r, getColumn: () => c, getNumRows: () => nr, getNumColumns: () => nc,
-    copyTo: () => {},
-  });
-  return h;
-}
 const HOY = '2026-11-13';
 const hojas = {
   PERSONAS: hoja('PERSONAS', [['Id', 'Apodo', 'Jerarquia', 'Familia', 'Cama', 'Menu', 'Alergias', 'Cumple'],
@@ -48,19 +23,11 @@ const hojas = {
 // La columna A de PERSONAS es una fórmula: «(» + inicial de la jerarquía + «+1» si la lleva + «) - » + apodo
 hojas.PERSONAS.formula = () => hojas.PERSONAS.filas.slice(1).forEach(f => { if (f[1]) f[0] = '(' + String(f[2]).charAt(0) + (String(f[2]).indexOf('+1') !== -1 ? '+1' : '') + ') - ' + f[1]; });
 hojas.PERSONAS.filas.push(['(T+1) - Jordi', 'Jordi', 'Tios +1', 'Canela', '', '🌕 Entero', '', '']);
-const ss = { getSheetByName: n => hojas[n] || null, insertSheet: n => (hojas[n] = hoja(n, [])) };
 const pad = n => String(n).padStart(2, '0');
-const ctx = {
-  SpreadsheetApp: { openById: () => ss, flush: () => {}, DataValidationCriteria: { VALUE_IN_LIST: 'L' } },
-  LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
-  CacheService: { getScriptCache: () => ({ get: () => null, put: () => {}, remove: () => {} }) },
-  ScriptApp: { getService: () => ({ getUrl: () => '' }) },
-  Utilities: { getUuid: () => 'u' + Math.random().toString(36).slice(2, 8),
-    formatDate: (d, tz, f) => f === 'yyyy-MM-dd' ? HOY : HOY + 'T10:00:00' },
-  ContentService: { createTextOutput: x => ({ setMimeType: () => JSON.parse(x) }), MimeType: { JSON: 'json' } }, HtmlService: {}, console,
-};
-vm.createContext(ctx);
-vm.runInContext(codigo + '\nthis.__ = { darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, misNumeros, getPremios, guardarPersonas, getAjustes, guardarAjustes, api_, activarAvisos, quitarAvisos, revisarAvisos, probarAvisos, cambiosAvisos_, textoAvisos_ };', ctx);
+// La fecha, siempre la de HOY (las pruebas no dependen del día en que se pasan)
+const ctx = contexto({ hojas, uuid: () => 'u' + Math.random().toString(36).slice(2, 8), formatDate: (d, tz, f) => f === 'yyyy-MM-dd' ? HOY : HOY + 'T10:00:00' });
+const ss = ctx.ss;
+ctx.__ = ejecutar(codigo, ctx, ' darDeBaja, crearPersona, getDatos, guardarPersona, guardarEvento, borrarEvento, apuntarEvento, notaEvento, misNumeros, getPremios, guardarPersonas, getAjustes, guardarAjustes, api_, activarAvisos, quitarAvisos, revisarAvisos, probarAvisos, cambiosAvisos_, textoAvisos_ '.split(', '));
 const R = ctx.__;
 const ver = (t, ok) => { console.log((ok ? '✔ ' : '✘ ') + t); if (!ok) process.exitCode = 1; };
 const V = { desde: '2026-11-09', hasta: '2026-11-22', yo: '(T) - Mercedes' };
