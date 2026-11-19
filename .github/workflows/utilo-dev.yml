@@ -36,5 +36,7 @@ jobs:
           case "$RAMA" in main|T[0-9][0-9][0-9][0-9]*) ;; *) echo "«$RAMA» no es main ni una rama de tarea: nada."; exit 0;; esac
           ACCION=subir; [ "$EVENTO" != "push" ] && ACCION=quitar
           [ "$ACCION" = "quitar" ] && [ "$RAMA" = "main" ] && exit 0
-          gh workflow run dev-ramas.yml -R UTILO-DIGITAL/utilo-apps -f repo="$REPO" -f rama="$RAMA" -f accion="$ACCION"
+          # La llamada directa (solo necesita el permiso «Actions: Read and write» en utilo-apps).
+          gh api -X POST repos/UTILO-DIGITAL/utilo-apps/actions/workflows/dev-ramas.yml/dispatches \
+            -f ref=main -f "inputs[repo]=$REPO" -f "inputs[rama]=$RAMA" -f "inputs[accion]=$ACCION"
           echo "→ «DEV ramas» de utilo-apps: $ACCION $REPO · $RAMA"
